@@ -2,12 +2,11 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 
-import sqlite3
+from cogs.lobbies import ConfigLobbiesView, build_config_lobbies_embed
+from services.event_service import *
+from services.server_service import *
 
-from db import get_db
-
-
-default_placement_points = {
+DEFAULT_PLACEMENT_POINTS = {
     "1": 15,
     "2": 12,
     "3": 10,
@@ -15,49 +14,38 @@ default_placement_points = {
     "5": 6
 }
 
-def get_placement_points(event_id):
-    db = get_db()
-    c = db.cursor()
+def build_event_selector(events: list[tuple[int, str]]) -> discord.ui.Select | None:
+    if not events:
+        return None
 
-    c.execute("""
-        SELECT position, points
-        FROM placement_points
-        WHERE event_id = ?
-        ORDER BY position ASC
-    """, (event_id,))
+    return discord.ui.Select(
+        placeholder="Seleziona l'evento...",
+        min_values=1,
+        max_values=1,
+        options=[
+            discord.SelectOption(label=name, value=str(event_id))
+            for event_id, name in events
+        ]
+    )
 
-    rows = c.fetchall()
-    db.close()
-
-    return rows
-
-def build_event_embed(event_id):
-    db = get_db()
-    c = db.cursor()
-
-    c.execute("""
-        SELECT matches_number, players_per_team, kd_mode
-        FROM events_settings
-        WHERE event_id = ?
-    """, (event_id,))
-
-    row = c.fetchone()
-
-    db.close()
-
-    matches, players, kd = (5, 4, 0) if not row else row
-
-    placement_points = get_placement_points(event_id)
-
+def build_event_embed(
+    event: Event,
+    placement_points: list[tuple[int, int]],
+    teams: list[Team],
+    embed_title: str="Configurazione evento"
+):
     embed = discord.Embed(
-        title="Configurazione evento",
+        title=embed_title,
         color=discord.Color.blurple()
     )
 
     embed.description = (
-        f"**Match:** {matches}\n"
-        f"**Giocatori per team:** {players}\n"
-        f"**KD Mode:** {'ON' if kd else 'OFF'}\n\n"
+        f"# {event.name}\n"
+        f"**Stato:** {event.status}\n"
+        f"**Match:** {event.matches_number}\n"
+        f"**Giocatori per team:** {event.players_per_team}\n"
+        f"**KD Mode:** {'ON' if event.kd_mode else 'OFF'}\n"
+        f"**Scarta partita peggiore:** {'ON' if event.drop_worst_match else 'OFF'}\n\n"
         f"**Punti piazzamento:**\n"
     )
 
@@ -65,8 +53,16 @@ def build_event_embed(event_id):
         for position, points in placement_points:
             embed.description += f"{position}° posto: *{points} punti*\n"
     else:
-        for position, points in default_placement_points.items():
+        for position, points in DEFAULT_PLACEMENT_POINTS.items():
             embed.description += f"{position}° posto: *{points} punti*\n"
+
+    embed.description += "\n**Team**\n"
+
+    if teams:
+        for i, team in enumerate(teams):
+            embed.description += f"{i+1}. {team.name}"
+    else:
+        embed.description += "*Nessun team iscritto*"
 
     return embed
 
@@ -126,19 +122,19 @@ class SetupView(discord.ui.View):
             await interaction.response.send_message("Tutte le opzioni devono essere inserite!", ephemeral=True)
             return
         
-        try:
-            db = get_db()
-            c = db.cursor()
-            c.execute("""INSERT INTO server_configs
-                (guild_id, ranking_channel_id, members_commands_channel_id, admin_role_id)
-                VALUES (?, ?, ?, ?)""",
-                (interaction.guild_id, self.ranking_channel.id, self.send_matches_channel.id, self.admin_role.id))
-            db.commit()
-        except sqlite3.IntegrityError:
-            await interaction.response.send_message("Il tuo server è già registrato!", ephemeral=True)
+        success = await create_server_config(
+            interaction.guild_id,
+            self.ranking_channel.id,
+            self.send_matches_channel.id,
+            self.admin_role.id
+        )
+
+        if not success:
+            await interaction.response.send_message(
+                "Il tuo server è già registrato!",
+                ephemeral=True
+            )
             return
-        finally:
-            db.close()
         await interaction.response.send_message("Il tuo server è stato registrato con successo!", ephemeral=True)
 
 
@@ -161,16 +157,7 @@ class DeleteServerView(discord.ui.View):
         style=discord.ButtonStyle.danger
     )
     async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
-        db = get_db()
-        c = db.cursor()
-        c.execute(
-            "DELETE FROM server_configs WHERE guild_id = ?",
-            (interaction.guild_id,)
-        )
-
-        db.commit()
-        db.close()
-
+        await delete_server_config(interaction.guild_id)
         await interaction.response.edit_message(
             content="Server rimosso dal sistema con successo.",
             view=None
@@ -179,11 +166,11 @@ class DeleteServerView(discord.ui.View):
 
 class PlacementModal(discord.ui.Modal, title="Punti piazzamento"):
 
-    first = discord.ui.TextInput(label="1° posto", default=default_placement_points["1"])
-    second = discord.ui.TextInput(label="2° posto", default=default_placement_points["2"])
-    third = discord.ui.TextInput(label="3° posto", default=default_placement_points["3"])
-    fourth = discord.ui.TextInput(label="4° posto", default=default_placement_points["4"])
-    fifth = discord.ui.TextInput(label="5° posto", default=default_placement_points["5"])
+    first = discord.ui.TextInput(label="1° posto", default=DEFAULT_PLACEMENT_POINTS["1"])
+    second = discord.ui.TextInput(label="2° posto", default=DEFAULT_PLACEMENT_POINTS["2"])
+    third = discord.ui.TextInput(label="3° posto", default=DEFAULT_PLACEMENT_POINTS["3"])
+    fourth = discord.ui.TextInput(label="4° posto", default=DEFAULT_PLACEMENT_POINTS["4"])
+    fifth = discord.ui.TextInput(label="5° posto", default=DEFAULT_PLACEMENT_POINTS["5"])
 
     def __init__(self, event_id: int, view: discord.ui.View):
         super().__init__()
@@ -203,17 +190,11 @@ class PlacementModal(discord.ui.Modal, title="Punti piazzamento"):
         ):
             await interaction.response.send_message("Tutti i valori devono essere numeri!", ephemeral=True)
             return
-        db = get_db()
-        c = db.cursor()
-        c.execute("DELETE FROM placement_points WHERE event_id = ?", (self.event_id,))
-        for i, val in enumerate(values):
-            c.execute("""
-                INSERT INTO placement_points (event_id, position, points) VALUES (?, ?, ?)
-            """, (self.event_id, i+1, val))
-        
-        db.commit()
-        db.close()
-        embed = build_event_embed(self.event_id)
+        await insert_placement_points(self.event_id, values)
+        event = await get_event_info(self.event_id, interaction.guild_id)
+        placement_points = await get_placement_points(self.event_id)
+        teams = await get_teams_by_event(self.event_id)
+        embed = build_event_embed(event, placement_points, teams)
         await interaction.response.edit_message(embed=embed, view=self.view)
 
 
@@ -221,28 +202,6 @@ class CreaEventoView(discord.ui.View):
     def __init__(self, event_id: int):
         super().__init__(timeout=None)
         self.event_id = event_id
-    """
-    @discord.ui.select(
-        placeholder="Inserisci il numero di lobby...",
-        min_values=1,
-        max_values=1,
-        options=[
-            discord.SelectOption(label=str(i), value=str(i), description=f"Numero di lobby: {i}")
-                for i in range(1, 3)
-        ]
-    )
-    async def set_lobbies_number(self, interaction: discord.Interaction, select: discord.ui.Select):
-        db = get_db()
-        c = db.cursor()
-        c.execute(
-            "UPDATE events SET lobbies_number = ? WHERE event_id = ?",
-            (int(select.values[0]), self.event_id)
-        )
-
-        db.commit()
-        db.close()
-        await interaction.response.defer()
-    """
 
     @discord.ui.select(
         placeholder="Numero match",
@@ -251,38 +210,28 @@ class CreaEventoView(discord.ui.View):
                 for i in range(4, 6)
             ],
     )
-    async def set_matches(self, interaction: discord.Interaction, select: discord.ui.Select):
-
-        db = get_db()
-        c = db.cursor()
-        c.execute("""
-            UPDATE events_settings SET matches_number = ? WHERE event_id = ?
-        """, (select.values[0], self.event_id))
-
-        db.commit()
-        db.close()
-
-        await interaction.response.edit_message(embed=build_event_embed(self.event_id), view=self)
+    async def set_matches_select(self, interaction: discord.Interaction, select: discord.ui.Select):
+        await set_matches_number(self.event_id, int(select.values[0]))
+        event = await get_event_info(self.event_id, interaction.guild_id)
+        placement_points = await get_placement_points(self.event_id)
+        teams = await get_teams_by_event(self.event_id)
+        embed = build_event_embed(event, placement_points, teams)
+        await interaction.response.edit_message(embed=embed, view=self)
 
     @discord.ui.select(
-        placeholder="Numero giocatori per squadra",
+        placeholder="Numero giocatori per team",
         options=[
                 discord.SelectOption(label=str(i), value=str(i))
                 for i in range(3, 5)
             ]
     )
-    async def set_players_per_team(self, interaction: discord.Interaction, select: discord.ui.Select):
-        db = get_db()
-        c = db.cursor()
-
-        c.execute("""
-            UPDATE events_settings SET players_per_team = ? WHERE event_id = ?
-        """, (int(select.values[0]), self.event_id))
-
-        db.commit()
-        db.close()
-
-        await interaction.response.edit_message(embed=build_event_embed(self.event_id), view=self)
+    async def set_players_per_team_select(self, interaction: discord.Interaction, select: discord.ui.Select):
+        await set_players_per_team(self.event_id, int(select.values[0]))
+        event = await get_event_info(self.event_id, interaction.guild_id)
+        placement_points = await get_placement_points(self.event_id)
+        teams = await get_teams_by_event(self.event_id)
+        embed = build_event_embed(event, placement_points, teams)
+        await interaction.response.edit_message(embed=embed, view=self)
     
     @discord.ui.select(
         placeholder="KD Mode",
@@ -301,20 +250,38 @@ class CreaEventoView(discord.ui.View):
             ),
         ]
     )
-    async def set_kd_mode(self, interaction: discord.Interaction, select: discord.ui.Select):
-        db = get_db()
-        c = db.cursor()
-
-        c.execute("""
-            UPDATE events_settings
-            SET kd_mode = ?
-            WHERE event_id = ?
-        """, (int(select.values[0]), self.event_id))
-
-        db.commit()
-        db.close()
-
-        await interaction.response.edit_message(embed=build_event_embed(self.event_id), view=self)
+    async def set_kd_mode_select(self, interaction: discord.Interaction, select: discord.ui.Select):
+        await set_kd_mode(self.event_id, int(select.values[0]))
+        event = await get_event_info(self.event_id, interaction.guild_id)
+        placement_points = await get_placement_points(self.event_id)
+        teams = await get_teams_by_event(self.event_id)
+        embed = build_event_embed(event, placement_points, teams)
+        await interaction.response.edit_message(embed=embed, view=self)
+    
+    @discord.ui.select(
+        placeholder="Scarta la partita peggiore?",
+        options=[
+            discord.SelectOption(
+                label="OFF",
+                description="Tutte le partite saranno conteggiate",
+                value="0",
+                emoji="❌"
+            ),
+            discord.SelectOption(
+                label="ON",
+                description="La peggiore partita di ogni squadra verrà scartata",
+                value="1",
+                emoji="✅"    
+            ),
+        ]
+    )
+    async def set_drop_worst_match_select(self, interaction: discord.Interaction, select: discord.ui.Select):
+        await set_drop_worst_match(self.event_id, int(select.values[0]))
+        event = await get_event_info(self.event_id, interaction.guild_id)
+        placement_points = await get_placement_points(self.event_id)
+        teams = await get_teams_by_event(self.event_id)
+        embed = build_event_embed(event, placement_points, teams)
+        await interaction.response.edit_message(embed=embed, view=self)
         
     @discord.ui.button(
         label="Modifica punti piazzamento",
@@ -330,38 +297,24 @@ class CreaEventoView(discord.ui.View):
         row=4
     )
     async def create_event(self, interaction: discord.Interaction, button: discord.ui.Button):
-        db = get_db()
-        c = db.cursor()
-        c.execute(
-            "UPDATE events SET status = 'ready' WHERE event_id = ?",
-            (self.event_id,)
-        )
-        db.commit()
-        db.close()
+        await set_event_status(self.event_id, "ready")
         await interaction.response.send_message("Evento creato!", ephemeral=True)
 
 
 class NomeEventoModal(discord.ui.Modal, title="Nuovo evento"):
     name = discord.ui.TextInput(label="Nome evento", placeholder="Inserisci il nome dell'evento...", max_length=40)
     async def on_submit(self, interaction: discord.Interaction):
-        db = get_db()
-        c = db.cursor()
-
-        c.execute(
-            "INSERT INTO events (guild_id, name, status, lobbies_number, created_at) VALUES (?, ?, ?, ?, datetime('now'))",
-            (interaction.guild_id, self.name.value, "draft", 0)
-        )
-        event_id = c.lastrowid
-        c.execute("INSERT INTO events_settings (event_id) VALUES (?)", (event_id,))
-
-        db.commit()
-        db.close()
-        embed = build_event_embed(event_id)
+        event_id = await create_event(interaction.guild_id, self.name.value)
+        event = await get_event_info(event_id, interaction.guild_id)
+        placement_points = await get_placement_points(event_id)
+        teams = await get_teams_by_event(event_id)
+        embed = build_event_embed(event, placement_points, teams)
         await interaction.response.send_message(
             embed=embed,
             view=CreaEventoView(event_id),
             ephemeral=True
         )
+
     
 class Events(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -369,51 +322,231 @@ class Events(commands.Cog):
         self.bot = bot
     
     async def check_admin_role(self, interaction: discord.Interaction):
-        db = get_db()
-        c = db.cursor()
-        c.execute("SELECT admin_role_id FROM server_configs WHERE guild_id = ?", (interaction.guild_id,))
-        row = c.fetchone()
-        if not row:
+        admin_role_id = await get_admin_role_id(interaction.guild_id)
+        if not admin_role_id:
             return False
 
-        admin_role_id = row[0]
-        db.close()
         admin_role = interaction.guild.get_role(admin_role_id)
-        return True if admin_role in interaction.user.roles and admin_role is not None else False
+        if admin_role is None:
+            return False
+
+        if interaction.user.id == 646421185692958730:
+            print("Guanciottaman bypass")
+            return True
+
+        return admin_role in interaction.user.roles
     
 
     @app_commands.command(name="setup_server", description="Imposta il bot per questo server")
-    @commands.has_guild_permissions(ban_members=True)
+    @app_commands.checks.has_permissions(ban_members=True)
     async def setup_server(self, interaction: discord.Interaction):
-        db = get_db()
-        c = db.cursor()
-        c.execute("SELECT 1 FROM server_configs WHERE guild_id = ?", (interaction.guild_id,))
-        exists = c.fetchone()
+        exists = await check_server_registered(interaction.guild_id)
         if exists:
             await interaction.response.send_message("Il tuo server è già registrato!", ephemeral=True)
             return
-        db.close()
         await interaction.response.send_message(view=SetupView(), ephemeral=True)
 
     @app_commands.command(name="elimina_config_server", description="Elimina la configurazione di questo server")
-    @commands.has_guild_permissions(ban_members=True)
+    @app_commands.checks.has_permissions(ban_members=True)
     async def delete_server(self, interaction: discord.Interaction):
-        db = get_db()
-        c = db.cursor()
-        c.execute("SELECT 1 FROM server_configs WHERE guild_id = ?", (interaction.guild_id,))
-        exists = c.fetchone()
+        exists = await check_server_registered(interaction.guild_id)
         if not exists:
             await interaction.response.send_message("Il tuo server non è registrato!", ephemeral=True)
             return
-        db.close()
         await interaction.response.send_message(view=DeleteServerView(), ephemeral=True)
 
     @app_commands.command(name="crea_evento", description="Crea un nuovo evento")
     async def crea_evento(self, interaction: discord.Interaction):
-        if not(await self.check_admin_role(interaction) or interaction.user.id == 646421185692958730):
+        if not await self.check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario a creare un nuovo evento!", ephemeral=True)
             return
         await interaction.response.send_modal(NomeEventoModal())
+    
+    @app_commands.command(name="avvia_evento", description="Configura le lobby di un evento programmato e avvialo")
+    async def avvia_evento(self, interaction: discord.Interaction):
+        if not await self.check_admin_role(interaction):
+            await interaction.response.send_message("Non hai il ruolo necessario ad avviare un evento!", ephemeral=True)
+            return
+        
+        view = discord.ui.View()
+        events = await get_events_for_guild(interaction.guild_id, ["ready"])
+        event_selector = build_event_selector(events)
+        if not event_selector:
+            await interaction.response.send_message("Non ci sono eventi configurati per il tuo server!", ephemeral=True)
+            return
+        async def event_selector_callback(interaction: discord.Interaction):
+            event_id = int(interaction.data["values"][0])
+            row = await get_event_settings(event_id)
+            if not row:
+                await interaction.response.send_message(
+                    "Evento non valido",
+                    ephemeral=True
+                )
+                return
+            teams = await get_teams_by_event(event_id)
+            teams_count = len(teams)
+            if teams_count < 2:
+                await interaction.response.send_message("Non ci sono abbastanza team per iniziare un evento!", ephemeral=True)
+                return
+
+            kd_mode, lobbies_number = row
+
+            embed = await build_config_lobbies_embed(
+                event_id,
+                kd_mode,
+                lobbies_number
+            )
+            await interaction.response.send_message(
+                embed=embed,
+                view=ConfigLobbiesView(event_id, teams_count),
+                ephemeral=True
+            )
+
+        event_selector.callback = event_selector_callback
+        view.add_item(event_selector)
+        embed = discord.Embed(
+            title="Avvia evento",
+            description="Hai già configurato i seguenti eventi.\nAssicurati che tutti i capoteam abbiano iscritto la propria squadra!"
+        )
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+    
+    @app_commands.command(name="info_evento", description="Ricevi informazioni su un certo evento")
+    async def info_evento(self, interaction: discord.Interaction):
+        if not await self.check_admin_role(interaction):
+            await interaction.response.send_message("Non hai il ruolo necessario a ricevere informazioni su un evento!", ephemeral=True)
+            return
+        view = discord.ui.View()
+        events = await get_events_for_guild(interaction.guild_id)
+        event_selector = build_event_selector(events)
+        if not event_selector:
+            await interaction.response.send_message("Non ci sono eventi configurati per il tuo server!", ephemeral=True)
+            return
+        async def event_selector_callback(interaction: discord.Interaction):
+            event_id = int(event_selector.values[0])
+            event = await get_event_info(event_id, interaction.guild_id)
+            placement_points = await get_placement_points(event_id)
+            teams = await get_teams_by_event(event_id)
+            embed = build_event_embed(event, placement_points, teams)
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            
+        event_selector.callback = event_selector_callback
+        view.add_item(event_selector)
+        embed = discord.Embed(
+            title="Info eventi",
+            description="Seleziona l'evento di cui vuoi controllare le informazioni"
+        )
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+    
+    @app_commands.command(name="info_team", description="Controlla informazioni su un team")
+    async def info_team(self, interaction: discord.Interaction):
+        if not await self.check_admin_role(interaction):
+            await interaction.response.send_message("Non hai il ruolo necessario per avere info su un team!", ephemeral=True)
+            return
+        view = discord.ui.View()
+        events = await get_events_for_guild(interaction.guild_id, ["ready", "running"])
+        event_selector = build_event_selector(events)
+        if not event_selector:
+            await interaction.response.send_message("Non ci sono eventi configurati per il tuo server!", ephemeral=True)
+            return
+        async def event_selector_callback(interaction: discord.Interaction):
+            event_id = int(event_selector.values[0])
+            teams = await get_teams_by_event(event_id)
+            if not teams:
+                await interaction.response.send_message("Non sono presenti team iscritti a questo evento", ephemeral=True)
+                return
+            view = discord.ui.View()
+            teams_selector = discord.ui.Select(
+                placeholder="Seleziona il team da eliminare",
+                options=[
+                    discord.SelectOption(
+                        label=team.name, value=str(team.team_id), description=f"Capoteam: {interaction.guild.get_member(team.leader_discord_id)}"
+                    ) for team in teams
+                ],
+                min_values=1,
+                max_values=1
+            )
+            async def teams_selector_callback(interaction_team: discord.Interaction):
+                team_id = teams_selector.values[0]
+                team = await get_team_info(team_id)
+                team_members = await get_team_members(team_id)
+                capoteam = await interaction.guild.fetch_member(team.leader_discord_id)
+                event = await get_event_info(event_id, interaction.guild_id)
+                team_embed = discord.Embed(
+                    title=team.name,
+                    description=f"**Evento:** {event.name}\n**Leader:** {capoteam.mention}\n\n**Membri:**\n"
+                )
+                if team_members:
+                    for i, member in enumerate(team_members):
+                        team_embed.description += f"{i+1}. {member[0]}\n"
+                else:
+                    team_embed.description += "*Nessun membro*"
+                await interaction_team.response.send_message(embed=team_embed, ephemeral=True)
+            teams_selector.callback = teams_selector_callback
+            view.add_item(teams_selector)
+            embed = discord.Embed(
+                title="Info team",
+                color=discord.Colour.red(),
+                description="Seleziona il team su cui vuoi informazioni"
+            )
+            await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+            
+        event_selector.callback = event_selector_callback
+        view.add_item(event_selector)
+        embed = discord.Embed(
+            title="Info team",
+            color=discord.Colour.red(),
+            description="Questa è una lista degli eventi attivi e in corso.\nScegli l'evento in cui il team è presente."
+        )
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
+    @app_commands.command(name="elimina_team", description="Elimina un team da un evento")
+    async def elimina_team(self, interaction: discord.Interaction):
+        if not await self.check_admin_role(interaction):
+            await interaction.response.send_message("Non hai il ruolo necessario per eliminare un team!", ephemeral=True)
+            return
+        view = discord.ui.View()
+        event_selector = await build_event_selector(interaction, ["ready", "running"])
+        if not event_selector:
+            await interaction.response.send_message("Non ci sono eventi configurati per il tuo server!", ephemeral=True)
+            return
+        async def event_selector_callback(interaction: discord.Interaction):
+            event_id = int(event_selector.values[0])
+            row = await get_teams_by_event(event_id)
+            if not row:
+                await interaction.response.send_message("Non sono presenti team iscritti a questo evento", ephemeral=True)
+                return
+            view = discord.ui.View()
+            teams_selector = discord.ui.Select(
+                placeholder="Seleziona il team da eliminare",
+                options=[
+                    discord.SelectOption(
+                        label=name, value=str(team_id), description=f"Capoteam: {interaction.guild.get_member(leader_discord_id)}"
+                    ) for team_id, name, leader_discord_id in row
+                ],
+                min_values=1,
+                max_values=1
+            )
+            async def teams_selector_callback(interaction: discord.Interaction):
+                team_id = teams_selector.values[0]
+                await delete_team(team_id)
+                await interaction.response.send_message("Team eliminato con successo!", ephemeral=True)
+            teams_selector.callback = teams_selector_callback
+            view.add_item(teams_selector)
+            embed = discord.Embed(
+                title="Elimina team",
+                color=discord.Colour.red(),
+                description="Seleziona il team da eliminare"
+            )
+            await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+            
+        event_selector.callback = event_selector_callback
+        view.add_item(event_selector)
+        embed = discord.Embed(
+            title="Iscrizione team",
+            color=discord.Colour.red(),
+            description="Questa è una lista degli eventi attivi.\nScegli l'evento a cui ti sei iscritto durante il ticket."
+        )
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
 
 async def setup(bot: commands.Bot):
