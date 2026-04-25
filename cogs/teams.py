@@ -58,14 +58,6 @@ class Teams(commands.Cog):
     
     @app_commands.command(name="registra_team", description="Registra il tuo team a un evento")
     async def registra_team(self, interaction: discord.Interaction):
-        correct_channel_id = await get_members_commands_channel_id(interaction.guild_id)
-        if not correct_channel_id:
-            await interaction.response.send_message("Questo server non è stato configurato!", ephemeral=True)
-            return
-        if interaction.channel_id != correct_channel_id:
-            correct_channel = await interaction.guild.fetch_channel(correct_channel_id)
-            await interaction.response.send_message(f"Devi scrivere i comandi in {correct_channel.mention}", ephemeral=True)
-            return
         view = discord.ui.View()
         events = await get_events_for_guild(interaction.guild_id)
         event_selector = build_event_selector(events)

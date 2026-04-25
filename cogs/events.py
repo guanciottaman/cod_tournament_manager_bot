@@ -70,7 +70,6 @@ class SetupView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
         self.ranking_channel: discord.TextChannel = None
-        self.send_matches_channel: discord.TextChannel = None
         self.admin_role: discord.Role = None
 
     @discord.ui.select(
@@ -85,24 +84,13 @@ class SetupView(discord.ui.View):
         self.ranking_channel = select.values[0]
         await interaction.response.defer()
 
-    @discord.ui.select(
-        cls=discord.ui.ChannelSelect,
-        channel_types=[discord.ChannelType.text],
-        placeholder="Seleziona il canale per i comandi dei membri",
-        min_values=1,
-        max_values=1,
-        row=1
-    )
-    async def select_members_commands_channel(self, interaction: discord.Interaction, select: discord.ui.ChannelSelect):
-        self.send_matches_channel = select.values[0]
-        await interaction.response.defer()
     
     @discord.ui.select(
         cls=discord.ui.RoleSelect,
         placeholder="Seleziona il ruolo che potrà dare penalità o gestire eventi",
         min_values=1,
         max_values=1,
-        row=2
+        row=1
     )
     async def select_admin_role(self, interaction: discord.Interaction, select: discord.ui.RoleSelect):
         self.admin_role = select.values[0]
@@ -111,12 +99,11 @@ class SetupView(discord.ui.View):
     @discord.ui.button(
         label="Conferma",
         style=discord.ButtonStyle.green,
-        row=3
+        row=2
     )
     async def confirm_setup(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not all([
             self.ranking_channel,
-            self.send_matches_channel,
             self.admin_role
         ]):
             await interaction.response.send_message("Tutte le opzioni devono essere inserite!", ephemeral=True)
@@ -125,7 +112,6 @@ class SetupView(discord.ui.View):
         success = await create_server_config(
             interaction.guild_id,
             self.ranking_channel.id,
-            self.send_matches_channel.id,
             self.admin_role.id
         )
 
