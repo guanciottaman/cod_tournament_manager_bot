@@ -139,7 +139,7 @@ class ConfigLobbiesView(discord.ui.View):
 
         kd_mode, lobbies_number = row
 
-        lobbies = create_lobbies(self.event_id, bool(kd_mode), lobbies_number)
+        lobbies = await create_lobbies(self.event_id, bool(kd_mode), lobbies_number)
 
         if not lobbies:
             await interaction.response.send_message(

@@ -60,9 +60,9 @@ def build_event_embed(
 
     if teams:
         for i, team in enumerate(teams):
-            embed.description += f"{i+1}. {team.name}"
+            embed.description += f"{i+1}. {team.name}\n"
     else:
-        embed.description += "*Nessun team iscritto*"
+        embed.description += "*Nessun team iscritto*\n"
 
     return embed
 
@@ -193,7 +193,7 @@ class CreaEventoView(discord.ui.View):
         placeholder="Numero match",
         options=[
                 discord.SelectOption(label=str(i), value=str(i))
-                for i in range(4, 6)
+                for i in range(3, 6)
             ],
     )
     async def set_matches_select(self, interaction: discord.Interaction, select: discord.ui.Select):
@@ -442,7 +442,7 @@ class Events(commands.Cog):
                 return
             view = discord.ui.View()
             teams_selector = discord.ui.Select(
-                placeholder="Seleziona il team da eliminare",
+                placeholder="Seleziona il team su cui vuoi informazioni",
                 options=[
                     discord.SelectOption(
                         label=team.name, value=str(team.team_id), description=f"Capoteam: {interaction.guild.get_member(team.leader_discord_id)}"

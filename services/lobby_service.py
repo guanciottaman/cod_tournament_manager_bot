@@ -5,8 +5,8 @@ from services.team_service import get_teams
 from db.db import *
 
 
-def create_lobbies(event_id: int, kd_mode: bool, lobbies_number: int) -> list[Lobby]:
-    teams = get_teams(event_id)
+async def create_lobbies(event_id: int, kd_mode: bool, lobbies_number: int) -> list[Lobby]:
+    teams = await get_teams(event_id)
     if not teams:
         return None
     

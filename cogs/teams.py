@@ -13,15 +13,15 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
         label="Nome team",
         placeholder="Inserisci il nome del tuo team...",
         min_length=3,
-        max_length=20
+        max_length=40
     )
     capoteam = discord.ui.TextInput(
         label="Nome capoteam",
         placeholder="Inserisci il tuo username di CoD (compreso il numero)...",
-        min_length=5,
-        max_length=20
+        min_length=3,
+        max_length=40
     )
-    def __init__(self, event_id: int, members_number: int):
+    def __init__(self, event_id: int, members_number: int, edit_mode: bool = False):
         super().__init__()
         self.event_id = event_id
         self.members_number = members_number
@@ -32,8 +32,8 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
             inp = discord.ui.TextInput(
                 label=f"Giocatore {i+2}",
                 placeholder=f"Inserisci l'username di CoD del giocatore {i+2} (compreso il numero)...",
-                min_length=5,
-                max_length=20
+                min_length=3,
+                max_length=40
             )
 
             self.inputs.append(inp)
@@ -77,6 +77,30 @@ class Teams(commands.Cog):
             title="Scegli l'evento a cui iscriverti",
             color=discord.Colour.red(),
             description="Questa è una lista degli eventi attivi.\nScegli l'evento a cui ti sei iscritto durante il ticket."
+        )
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
+    @app_commands.command(name="modifica_team", description="Modifica il tuo team")
+    async def modifica_team(self, interaction: discord.Interaction):
+        view = discord.ui.View()
+        events = await get_events_for_guild(interaction.guild_id)
+        event_selector = build_event_selector(events)
+        if not event_selector:
+            await interaction.response.send_message("Non ci sono eventi configurati per il tuo server!", ephemeral=True)
+            return
+        async def event_selector_callback(interaction: discord.Interaction):
+            event_id = int(event_selector.values[0])
+            players_per_team = await get_players_per_team(event_id)
+            await interaction.response.send_modal(
+                RegistraTeamModal(event_id=event_id, members_number=players_per_team)
+            )
+
+        event_selector.callback = event_selector_callback
+        view.add_item(event_selector)
+        embed = discord.Embed(
+            title="Scegli l'evento a cui iscriverti",
+            color=discord.Colour.red(),
+            description="Questa è una lista degli eventi attivi.\nScegli l'evento del team che vuoi modificare."
         )
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
