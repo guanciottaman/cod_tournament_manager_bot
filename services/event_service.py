@@ -88,6 +88,14 @@ async def set_matches_number(event_id: int, value: int):
     )
 
 
+async def get_matches_number(event_id: int):
+    matches_number = await fetch_one(
+        "SELECT matches_number FROM events_settings WHERE event_id = ?",
+        (event_id,)
+    )
+    return matches_number[0] if matches_number else None
+
+
 async def set_players_per_team(event_id: int, value: int):
     await execute("""
         UPDATE events_settings SET players_per_team = ? WHERE event_id = ?
@@ -146,6 +154,9 @@ async def create_event(guild_id: int, name: str) -> int:
     )
 
     return event_id
+
+async def delete_event(guild_id: int, event_id: int):
+    await execute("DELETE FROM events WHERE guild_id = ? AND event_id = ?", (guild_id, event_id))
 
 async def get_teams_by_event(event_id: int):
     rows = await fetch_all(

@@ -301,6 +301,27 @@ class NomeEventoModal(discord.ui.Modal, title="Nuovo evento"):
             ephemeral=True
         )
 
+
+class EliminaEventoView(discord.ui.View):
+    def __init__(self, event_id: int):
+        super().__init__(timeout=None)
+        self.event_id = event_id
+    
+    @discord.ui.button(
+        label="Annulla",
+        style=discord.ButtonStyle.secondary
+    )
+    async def cancel_delete_event(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.send_message("Eliminazione evento annullata.", ephemeral=True)
+
+    @discord.ui.button(
+            label="🗑️Conferma eliminazione",
+            style=discord.ButtonStyle.danger
+    )
+    async def delete_event_confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await delete_event(interaction.guild_id, self.event_id)
+        await interaction.response.send_message("Evento eliminato con successo!", ephemeral=True)
+
     
 class Events(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -423,6 +444,33 @@ class Events(commands.Cog):
         )
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
     
+    @app_commands.command(name="elimina_evento", description="Elimina un evento creato")
+    async def elimina_evento(self, interaction: discord.Interaction):
+        if not await self.check_admin_role(interaction):
+            await interaction.response.send_message("Non hai il ruolo necessario per eliminare un evento!", ephemeral=True)
+            return
+        view = discord.ui.View()
+        events = await get_events_for_guild(interaction.guild_id)
+        event_selector = build_event_selector(events)
+        if not event_selector:
+            await interaction.response.send_message("Non ci sono eventi configurati per il tuo server!", ephemeral=True)
+            return
+        async def event_selector_callback(interaction: discord.Interaction):
+            event_id = int(event_selector.values[0])
+            event = await get_event_info(event_id, interaction.guild_id)
+            placement_points = await get_placement_points(event_id)
+            teams = await get_teams_by_event(event_id)
+            embed = build_event_embed(event, placement_points, teams, embed_title="Elimina evento")
+            await interaction.response.send_message(embed=embed, view=EliminaEventoView(event_id), ephemeral=True)
+        event_selector.callback = event_selector_callback
+        view.add_item(event_selector)
+        embed = discord.Embed(
+            title="Elimina evento",
+            description="Questa è una lista degli eventi del tuo server.\nScegli l'evento da eliminare.",
+            color=discord.Colour.red()
+        )
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+    
     @app_commands.command(name="info_team", description="Controlla informazioni su un team")
     async def info_team(self, interaction: discord.Interaction):
         if not await self.check_admin_role(interaction):
@@ -533,6 +581,10 @@ class Events(commands.Cog):
             description="Questa è una lista degli eventi attivi.\nScegli l'evento a cui ti sei iscritto durante il ticket."
         )
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
+    @app_commands.command(name="controlla_risultati", description="Controlla i risultati dei team")
+    async def controlla_risultati(self, interaction: discord.Interaction):
+        ...
 
 
 async def setup(bot: commands.Bot):

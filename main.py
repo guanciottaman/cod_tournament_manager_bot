@@ -106,18 +106,39 @@ class Bot(commands.Bot):
 
             FOREIGN KEY (team_id) REFERENCES teams(team_id) ON DELETE CASCADE
         )""")
-        await execute("""CREATE TABLE IF NOT EXISTS team_scores(
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            event_id INTEGER,
-            team_id INTEGER,
-            kills INTEGER,
-            placement INTEGER,
-            match_number INTEGER,
+        await execute("""
+            CREATE TABLE IF NOT EXISTS team_scores(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER,
+                team_id INTEGER,
+                placement INTEGER,
+                match_number INTEGER,
+                created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+                status TEXT DEFAULT 'pending',
 
-            FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE,
-            FOREIGN KEY (team_id) REFERENCES teams(team_id) ON DELETE CASCADE,
-            
-            UNIQUE(event_id, team_id, match_number)
+                FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE,
+                FOREIGN KEY (team_id) REFERENCES teams(team_id) ON DELETE CASCADE,
+
+                UNIQUE(event_id, team_id, match_number)
+        )""")
+        await execute("""
+            CREATE TABLE IF NOT EXISTS player_scores(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                team_score_id INTEGER,
+                player_name TEXT,
+                kills INTEGER,
+
+                FOREIGN KEY (team_score_id) REFERENCES team_scores(id) ON DELETE CASCADE
+        )""")
+        await execute("""
+            CREATE TABLE IF NOT EXISTS score_screenshots(
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            team_score_id INTEGER,
+            image_url TEXT,
+
+            FOREIGN KEY (team_score_id) REFERENCES team_scores(id) ON DELETE CASCADE,
+                      
+            UNIQUE(team_score_id, image_url)
         )""")
         print("Tabella(e) create/controllate")
 
