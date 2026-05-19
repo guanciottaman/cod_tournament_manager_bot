@@ -1,39 +1,77 @@
 import random
 
 from models.lobby import Lobby
+from models.team import Team
 from services.team_service import get_teams
 from db.db import *
 
 
-async def create_lobbies(event_id: int, kd_mode: bool, lobbies_number: int) -> list[Lobby]:
+MIN_PER_LOBBY = 2
+MAX_PER_LOBBY = 15
+
+async def create_lobbies(
+    event_id: int,
+    mode: str,
+    lobbies_number: int | None = None
+) -> list[Lobby]:
+
     teams = await get_teams(event_id)
     if not teams:
-        return None
-    
-    if lobbies_number * 2 > len(teams):
-        return None 
+        return []
 
-    if kd_mode:
+    if mode == "random":
+        random.shuffle(teams)
+    elif mode in ("kd", "kd_balanced"):
         teams.sort(key=lambda t: t.kd, reverse=True)
     else:
-        random.shuffle(teams)
+        raise ValueError("INVALID_MODE")
 
-    chunk_size = len(teams) // lobbies_number
-    remainder = len(teams) % lobbies_number
 
-    lobbies = []
-    start = 0
+    if mode == "kd_balanced":
+        if not lobbies_number:
+            raise ValueError("lobbies_number required")
 
-    for i in range(lobbies_number):
-        extra = 1 if i < remainder else 0
-        end = start + chunk_size + extra
+        lobbies: list[list[Team]] = [[] for _ in range(lobbies_number)]
+        kd_sum = [0.0] * lobbies_number
 
-        lobby_teams = teams[start:end]
-        lobbies.append(Lobby(i+1, lobby_teams))
+        for t in teams:
+            i = kd_sum.index(min(kd_sum))
+            lobbies[i].append(t)
+            kd_sum[i] += t.kd
 
-        start = end
+    elif mode == "kd":
+        lobbies = []
+        current: list[Team] = []
 
-    return lobbies
+        for t in teams:
+            current.append(t)
+
+            if len(current) == MAX_PER_LOBBY:
+                lobbies.append(current)
+                current = []
+
+        if current:
+            lobbies.append(current)
+
+    else:
+        if not lobbies_number:
+            raise ValueError("lobbies_number required")
+
+        lobbies = [[] for _ in range(lobbies_number)]
+
+        for i, t in enumerate(teams):
+            lobbies[i % lobbies_number].append(t)
+
+    for l in lobbies:
+        if len(l) > MAX_PER_LOBBY:
+            return []
+        if len(l) < MIN_PER_LOBBY:
+            return []
+
+    return [
+        Lobby(i + 1, lobby)
+        for i, lobby in enumerate(lobbies)
+    ]
 
 
 async def create_lobbies_db(event_id: int, names: list[str]):
@@ -79,3 +117,16 @@ async def get_lobbies_names(event_id: int):
         (event_id,)
     )
     return [row[0] for row in rows]
+
+async def get_lobbies(event_id: int) -> list[Lobby]:
+    rows = await fetch_all("""
+        SELECT lobby_id, name
+        FROM lobbies
+        WHERE event_id = ?
+        ORDER BY lobby_id ASC
+    """, (event_id,))
+
+    return [
+        Lobby(index=i + 1, name=row[1], teams=[])
+        for i, row in enumerate(rows)
+    ]

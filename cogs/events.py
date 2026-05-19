@@ -2,9 +2,12 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 
-from cogs.lobbies import ConfigLobbiesView, build_config_lobbies_embed
+from typing import Literal
+
+from cogs.lobbies import LobbyConfigView, build_config_lobbies_embed
 from services.event_service import *
 from services.server_service import *
+from services.team_service import *
 
 DEFAULT_PLACEMENT_POINTS = {
     "1": 15,
@@ -38,13 +41,18 @@ def build_event_embed(
         title=embed_title,
         color=discord.Color.blurple()
     )
+    lobby_modes = {
+        "random": "casuale",
+        "kd": "KD",
+        "kd_balanced": "KD bilanciato"
+    }
 
     embed.description = (
         f"# {event.name}\n"
         f"**Stato:** {event.status}\n"
         f"**Match:** {event.matches_number}\n"
         f"**Giocatori per team:** {event.players_per_team}\n"
-        f"**KD Mode:** {'ON' if event.kd_mode else 'OFF'}\n"
+        f"**Lobby Mode:** {lobby_modes[event.lobby_mode]}\n"
         f"**Scarta partita peggiore:** {'ON' if event.drop_worst_match else 'OFF'}\n\n"
         f"**Punti piazzamento:**\n"
     )
@@ -69,8 +77,8 @@ def build_event_embed(
 class SetupView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
-        self.ranking_channel: discord.TextChannel = None
-        self.admin_role: discord.Role = None
+        self.ranking_channel: discord.TextChannel | None = None
+        self.admin_role: discord.Role | None = None
 
     @discord.ui.select(
         cls=discord.ui.ChannelSelect,
@@ -220,24 +228,30 @@ class CreaEventoView(discord.ui.View):
         await interaction.response.edit_message(embed=embed, view=self)
     
     @discord.ui.select(
-        placeholder="KD Mode",
+        placeholder="Lobby Mode",
         options=[
             discord.SelectOption(
-                label="OFF",
+                label="Casuale",
                 description="Le lobby saranno create casualmente",
-                value="0",
+                value="random",
                 emoji="❌"
             ),
             discord.SelectOption(
-                label="ON",
-                description="Le lobby verranno create in base al rapporto K/D",
-                value="1",
+                label="KD",
+                description="Le lobby verranno create in base al rapporto K/D, ma non saranno bilanciate",
+                value="kd",
                 emoji="✅"    
             ),
+            discord.SelectOption(
+                label="KD Bilanciato",
+                description="Le lobby verranno create in base al rapporto K/D, ma saranno bilanciate",
+                value="kd_balanced",
+                emoji="✅"    
+            )
         ]
     )
     async def set_kd_mode_select(self, interaction: discord.Interaction, select: discord.ui.Select):
-        await set_kd_mode(self.event_id, int(select.values[0]))
+        await set_lobby_mode(self.event_id, select.values[0])
         event = await get_event_info(self.event_id, interaction.guild_id)
         placement_points = await get_placement_points(self.event_id)
         teams = await get_teams_by_event(self.event_id)
@@ -322,6 +336,11 @@ class EliminaEventoView(discord.ui.View):
         await delete_event(interaction.guild_id, self.event_id)
         await interaction.response.send_message("Evento eliminato con successo!", ephemeral=True)
 
+
+class ControllaRisultatiView(discord.ui.View):
+    def __init__(self, event_id: int):
+        super().__init__(timeout=None)
+        self.event_id = event_id
     
 class Events(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -383,8 +402,8 @@ class Events(commands.Cog):
             return
         async def event_selector_callback(interaction: discord.Interaction):
             event_id = int(interaction.data["values"][0])
-            row = await get_event_settings(event_id)
-            if not row:
+            event = await get_event_info(event_id, interaction.guild_id)
+            if event is None:
                 await interaction.response.send_message(
                     "Evento non valido",
                     ephemeral=True
@@ -396,16 +415,17 @@ class Events(commands.Cog):
                 await interaction.response.send_message("Non ci sono abbastanza team per iniziare un evento!", ephemeral=True)
                 return
 
-            kd_mode, lobbies_number = row
+            lobby_mode = event.lobby_mode
+            lobbies_number = event.lobbies_number
 
             embed = await build_config_lobbies_embed(
                 event_id,
-                kd_mode,
+                lobby_mode,
                 lobbies_number
             )
             await interaction.response.send_message(
                 embed=embed,
-                view=ConfigLobbiesView(event_id, teams_count),
+                view=LobbyConfigView(event_id, teams_count, lobby_mode, lobbies_number),
                 ephemeral=True
             )
 
@@ -578,14 +598,39 @@ class Events(commands.Cog):
         embed = discord.Embed(
             title="Iscrizione team",
             color=discord.Colour.red(),
-            description="Questa è una lista degli eventi attivi.\nScegli l'evento a cui ti sei iscritto durante il ticket."
+            description="Questa è una lista degli eventi attivi.\nScegli l'evento di cui vuoi eliminare un team."
         )
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
     @app_commands.command(name="controlla_risultati", description="Controlla i risultati dei team")
-    async def controlla_risultati(self, interaction: discord.Interaction):
-        ...
-
+    async def controlla_risultati(
+        self,
+        interaction: discord.Interaction,
+        status: Literal["pending", "accepted", "rejected", "edited"]
+    ):
+        if not await self.check_admin_role(interaction):
+            await interaction.response.send_message("Non hai il ruolo necessario per eliminare un team!", ephemeral=True)
+            return
+        view = discord.ui.View()
+        event_selector = await build_event_selector(interaction, ["ready", "running"])
+        if not event_selector:
+            await interaction.response.send_message("Non ci sono eventi configurati per il tuo server!", ephemeral=True)
+            return
+        async def event_selector_callback(interaction: discord.Interaction):
+            event_id = int(event_selector.values[0])
+            event_info = await get_event_info(event_id, interaction.guild_id)
+            event_results = await get_event_results(event_id, status)
+            embed = discord.Embed(
+                title=f"Controlla risultati {event_info.name}",
+            )
+        event_selector.callback = event_selector_callback
+        view.add_item(event_selector)
+        embed = discord.Embed(
+            title="Iscrizione team",
+            color=discord.Colour.red(),
+            description="Questa è una lista degli eventi attivi.\nScegli l'evento di cui vuoi controllare i risultati."
+        )
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Events(bot))

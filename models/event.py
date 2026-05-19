@@ -13,5 +13,5 @@ class Event:
     players_per_team: int
     drop_worst_match: bool
     matches_number: int
-    kd_mode: bool
+    lobby_mode: str
     lobbies_number: int

@@ -51,11 +51,11 @@ class RegistraRisultatiModal(discord.ui.Modal, title="Registra i risultati"):
             if not value.isnumeric():
                 await interaction.response.send_message("Tutti gli input devono essere numerici!", ephemeral=True)
                 return
-            players_kills[self.players_names[i]] = value
+            players_kills[self.players_names[i]] = int(value)
         await insert_results(
             self.event_id,
             self.team_id,
-            placement,
+            int(placement),
             self.match_selected,
             players_kills,
             self.prove

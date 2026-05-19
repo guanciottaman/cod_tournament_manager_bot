@@ -67,7 +67,7 @@ class Bot(commands.Bot):
             players_per_team INTEGER,
             drop_worst_match BOOLEAN DEFAULT 0,
             matches_number INTEGER DEFAULT 5,
-            kd_mode BOOLEAN DEFAULT 0,
+            lobby_mode TEXT DEFAULT 'random',
             lobbies_number INTEGER,
             
             FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE
@@ -94,6 +94,7 @@ class Bot(commands.Bot):
             lobby_id INTEGER,
             leader_discord_id INTEGER,
             penalty_points INTEGER DEFAULT 0,
+            kd INTEGER,
             
             FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE,
             FOREIGN KEY (lobby_id) REFERENCES lobbies(lobby_id) ON DELETE SET NULL,

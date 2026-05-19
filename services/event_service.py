@@ -20,7 +20,7 @@ async def get_event_info(event_id: int, guild_id: int) -> Event | None:
 
     row_settings = await fetch_one("""
         SELECT kill_points, players_per_team, drop_worst_match,
-               matches_number, kd_mode, lobbies_number
+               matches_number, lobby_mode, lobbies_number
         FROM events_settings
         WHERE event_id = ?
     """, (event_id,))
@@ -39,14 +39,14 @@ async def get_event_info(event_id: int, guild_id: int) -> Event | None:
         players_per_team=row_settings[1],
         drop_worst_match=bool(row_settings[2]),
         matches_number=row_settings[3],
-        kd_mode=bool(row_settings[4]),
+        lobby_mode=row_settings[4],
         lobbies_number=row_settings[5]
     )
     return event
 
 async def get_event_settings(event_id: int):
     row = await fetch_one("""
-        SELECT kd_mode, lobbies_number
+        SELECT lobby_mode, lobbies_number
         FROM events_settings
         WHERE event_id = ?
     """, (event_id,))
@@ -109,10 +109,10 @@ async def get_players_per_team(event_id: int):
     return row[0] if row else None
 
 
-async def set_kd_mode(event_id: int, value: int):
+async def set_lobby_mode(event_id: int, value: str):
     await execute("""
         UPDATE events_settings
-        SET kd_mode = ?
+        SET lobby_mode = ?
         WHERE event_id = ?
     """, (value, event_id))
 
@@ -145,6 +145,8 @@ async def create_event(guild_id: int, name: str) -> int:
         "SELECT event_id FROM events WHERE guild_id = ? AND name = ? ORDER BY event_id DESC LIMIT 1",
         (guild_id, name)
     )
+    if not row:
+        return None
 
     event_id = row[0]
 
