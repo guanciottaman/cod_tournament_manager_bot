@@ -3,8 +3,12 @@ import sqlite3
 from db.db import *
 
 async def check_server_registered(guild_id: int) -> bool:
-    exists = await fetch_one("SELECT 1 FROM server_configs WHERE guild_id = ?", (guild_id,))
-    return True if exists else False
+    exists = await fetch_one(
+        "SELECT 1 FROM server_configs WHERE guild_id = ?",
+        (guild_id,)
+    )
+
+    return exists is not None
 
 async def create_server_config(guild_id: int, ranking_channel_id: int, admin_role_id: int) -> bool:
 

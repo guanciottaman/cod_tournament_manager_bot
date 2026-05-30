@@ -20,7 +20,8 @@ TOKEN = os.environ["TOKEN"]
 extensions = [
     "cogs.events",
     "cogs.teams",
-    "cogs.lobbies"
+    "cogs.lobbies",
+    "cogs.debug"
 ]
 
 intents = discord.Intents.default()
@@ -94,7 +95,7 @@ class Bot(commands.Bot):
             lobby_id INTEGER,
             leader_discord_id INTEGER,
             penalty_points INTEGER DEFAULT 0,
-            kd INTEGER,
+            kd REAL DEFAULT 0,
             
             FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE,
             FOREIGN KEY (lobby_id) REFERENCES lobbies(lobby_id) ON DELETE SET NULL,

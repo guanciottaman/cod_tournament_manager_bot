@@ -14,4 +14,4 @@ class Event:
     drop_worst_match: bool
     matches_number: int
     lobby_mode: str
-    lobbies_number: int
+    lobbies_number: int | None

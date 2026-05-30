@@ -3,11 +3,13 @@ from discord.ext import commands
 from discord import app_commands
 
 from typing import Literal
+import math
 
 from cogs.lobbies import LobbyConfigView, build_config_lobbies_embed
 from services.event_service import *
 from services.server_service import *
 from services.team_service import *
+from services.lobby_service import create_lobbies_db
 
 DEFAULT_PLACEMENT_POINTS = {
     "1": 15,
@@ -17,7 +19,7 @@ DEFAULT_PLACEMENT_POINTS = {
     "5": 6
 }
 
-def build_event_selector(events: list[tuple[int, str]]) -> discord.ui.Select | None:
+def build_event_selector(events: list[Event]) -> discord.ui.Select | None:
     if not events:
         return None
 
@@ -26,8 +28,8 @@ def build_event_selector(events: list[tuple[int, str]]) -> discord.ui.Select | N
         min_values=1,
         max_values=1,
         options=[
-            discord.SelectOption(label=name, value=str(event_id))
-            for event_id, name in events
+            discord.SelectOption(label=event.name, value=str(event.event_id))
+            for event in events
         ]
     )
 
@@ -192,6 +194,28 @@ class PlacementModal(discord.ui.Modal, title="Punti piazzamento"):
         await interaction.response.edit_message(embed=embed, view=self.view)
 
 
+class KillPointsModal(discord.ui.Modal, title="Punti per kill"):
+    kill_points = discord.ui.TextInput(
+        label="Punti per kill",
+        placeholder="es. 1, 2, 3...",
+        max_length=2
+    )
+
+    def __init__(self, event_id: int, view: discord.ui.View):
+        super().__init__()
+        self.event_id = event_id
+        self.view = view
+
+    async def on_submit(self, interaction: discord.Interaction):
+        await set_kill_points_db(self.event_id, int(self.kill_points.value))
+        placement_view = discord.ui.View()
+        btn = discord.ui.Button(style=discord.ButtonStyle.secondary, label="Modifica punti piazzamento")
+        async def btn_callback(ak_interaction: discord.Interaction):
+            await ak_interaction.response.send_modal(PlacementModal(self.event_id, self.view))
+        btn.callback = btn_callback
+        placement_view.add_item(btn)
+        await interaction.response.send_message("Hai impostato i punti per le kill, ora clicca il bottone per impostare i punti di piazzamento!", view=placement_view, ephemeral=True)
+
 class CreaEventoView(discord.ui.View):
     def __init__(self, event_id: int):
         super().__init__(timeout=None)
@@ -282,13 +306,13 @@ class CreaEventoView(discord.ui.View):
         teams = await get_teams_by_event(self.event_id)
         embed = build_event_embed(event, placement_points, teams)
         await interaction.response.edit_message(embed=embed, view=self)
-        
+
     @discord.ui.button(
-        label="Modifica punti piazzamento",
+        label="Modifica punti",
         style=discord.ButtonStyle.secondary
     )
     async def edit_placement_points(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.send_modal(PlacementModal(self.event_id, self))
+        await interaction.response.send_modal(KillPointsModal(self.event_id, self))
     
 
     @discord.ui.button(
@@ -305,10 +329,14 @@ class NomeEventoModal(discord.ui.Modal, title="Nuovo evento"):
     name = discord.ui.TextInput(label="Nome evento", placeholder="Inserisci il nome dell'evento...", max_length=40)
     async def on_submit(self, interaction: discord.Interaction):
         event_id = await create_event(interaction.guild_id, self.name.value)
+        await set_players_per_team(event_id, 3)
+        await set_kill_points_db(event_id, 1)
+        await insert_placement_points(event_id, list(DEFAULT_PLACEMENT_POINTS.values()))
         event = await get_event_info(event_id, interaction.guild_id)
         placement_points = await get_placement_points(event_id)
         teams = await get_teams_by_event(event_id)
         embed = build_event_embed(event, placement_points, teams)
+        
         await interaction.response.send_message(
             embed=embed,
             view=CreaEventoView(event_id),
@@ -336,6 +364,82 @@ class EliminaEventoView(discord.ui.View):
         await delete_event(interaction.guild_id, self.event_id)
         await interaction.response.send_message("Evento eliminato con successo!", ephemeral=True)
 
+class TeamsSelectorView(discord.ui.View):
+    def __init__(self, teams: list[Team], event_id: int, page: int = 0):
+        super().__init__(timeout=180)
+        self.teams = teams
+        self.event_id = event_id
+        self.page = page
+        self.add_item(self.build_select())
+
+    def build_select(self):
+        start = self.page * 25
+        end = start + 25
+        page_teams = self.teams[start:end]
+
+        select = discord.ui.Select(
+            placeholder=f"Seleziona team (pagina {self.page + 1})",
+            options=[
+                discord.SelectOption(
+                    label=t.name,
+                    value=str(t.team_id),
+                    description=f"Capoteam: {t.leader_discord_id}"
+                )
+                for t in page_teams
+            ],
+            min_values=1,
+            max_values=1
+        )
+
+        async def callback(interaction: discord.Interaction):
+            team_id = int(select.values[0])
+
+            team = await get_team_info(team_id)
+            team_members = await get_team_members(team_id)
+            event = await get_event_info(self.event_id, interaction.guild_id)
+
+            capoteam = await interaction.guild.fetch_member(team.leader_discord_id)
+
+            embed = discord.Embed(
+                title=team.name,
+                description=f"**Evento:** {event.name}\n**Leader:** {capoteam.mention}\n\n**Membri:**\n",
+                color=discord.Color.red()
+            )
+
+            if team_members:
+                for i, m in enumerate(team_members):
+                    embed.description += f"{i+1}. {m[0]}\n"
+            else:
+                embed.description += "*Nessun membro*"
+
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+
+        select.callback = callback
+        return select
+
+    @discord.ui.button(label="⬅️", style=discord.ButtonStyle.secondary)
+    async def prev_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if self.page > 0:
+            self.page -= 1
+
+        self.clear_items()
+        self.add_item(self.build_select())
+        self.add_item(self.prev_page)
+        self.add_item(self.next_page)
+
+        await interaction.response.edit_message(view=self)
+
+    @discord.ui.button(label="➡️", style=discord.ButtonStyle.secondary)
+    async def next_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if (self.page + 1) * 25 < len(self.teams):
+            self.page += 1
+
+        self.clear_items()
+        self.add_item(self.build_select())
+        self.add_item(self.prev_page)
+        self.add_item(self.next_page)
+
+        await interaction.response.edit_message(view=self)
 
 class ControllaRisultatiView(discord.ui.View):
     def __init__(self, event_id: int):
@@ -367,10 +471,18 @@ class Events(commands.Cog):
     @app_commands.checks.has_permissions(ban_members=True)
     async def setup_server(self, interaction: discord.Interaction):
         exists = await check_server_registered(interaction.guild_id)
+
         if exists:
-            await interaction.response.send_message("Il tuo server è già registrato!", ephemeral=True)
+            await interaction.response.send_message(
+                "Il tuo server è già registrato!",
+                ephemeral=True
+            )
             return
-        await interaction.response.send_message(view=SetupView(), ephemeral=True)
+
+        await interaction.response.send_message(
+            view=SetupView(),
+            ephemeral=True
+        )
 
     @app_commands.command(name="elimina_config_server", description="Elimina la configurazione di questo server")
     @app_commands.checks.has_permissions(ban_members=True)
@@ -416,16 +528,22 @@ class Events(commands.Cog):
                 return
 
             lobby_mode = event.lobby_mode
-            lobbies_number = event.lobbies_number
-
+            if lobby_mode == "kd":
+                lobbies_number = min(5, max(1, math.ceil(teams_count / 15)))
+            else:
+                lobbies_number = event.lobbies_number
+                if lobbies_number is None:
+                    lobbies_number = 1
+            default_names = ["Easy", "Medium", "Hard"]
+            lobby_ids: list[int] = await create_lobbies_db(event_id, default_names[:lobbies_number])
             embed = await build_config_lobbies_embed(
                 event_id,
-                lobby_mode,
-                lobbies_number
+                lobbies_number,
+                teams_count
             )
             await interaction.response.send_message(
                 embed=embed,
-                view=LobbyConfigView(event_id, teams_count, lobby_mode, lobbies_number),
+                view=LobbyConfigView(event_id, teams_count, lobby_mode, lobby_ids, lobbies_number),
                 ephemeral=True
             )
 
@@ -508,35 +626,7 @@ class Events(commands.Cog):
             if not teams:
                 await interaction.response.send_message("Non sono presenti team iscritti a questo evento", ephemeral=True)
                 return
-            view = discord.ui.View()
-            teams_selector = discord.ui.Select(
-                placeholder="Seleziona il team su cui vuoi informazioni",
-                options=[
-                    discord.SelectOption(
-                        label=team.name, value=str(team.team_id), description=f"Capoteam: {interaction.guild.get_member(team.leader_discord_id)}"
-                    ) for team in teams
-                ],
-                min_values=1,
-                max_values=1
-            )
-            async def teams_selector_callback(interaction_team: discord.Interaction):
-                team_id = teams_selector.values[0]
-                team = await get_team_info(team_id)
-                team_members = await get_team_members(team_id)
-                capoteam = await interaction.guild.fetch_member(team.leader_discord_id)
-                event = await get_event_info(event_id, interaction.guild_id)
-                team_embed = discord.Embed(
-                    title=team.name,
-                    description=f"**Evento:** {event.name}\n**Leader:** {capoteam.mention}\n\n**Membri:**\n"
-                )
-                if team_members:
-                    for i, member in enumerate(team_members):
-                        team_embed.description += f"{i+1}. {member[0]}\n"
-                else:
-                    team_embed.description += "*Nessun membro*"
-                await interaction_team.response.send_message(embed=team_embed, ephemeral=True)
-            teams_selector.callback = teams_selector_callback
-            view.add_item(teams_selector)
+            view = TeamsSelectorView(teams, event_id)
             embed = discord.Embed(
                 title="Info team",
                 color=discord.Colour.red(),

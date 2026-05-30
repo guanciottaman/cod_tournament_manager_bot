@@ -15,16 +15,16 @@ class EventResult:
     screenshots: list[str]
 
 async def get_teams(event_id: int) -> list[Team]:
-    teams = await fetch_all("SELECT team_id, name, leader_discord_id FROM teams WHERE event_id = ?", (event_id,))
+    teams = await fetch_all("SELECT team_id, name, leader_discord_id, kd FROM teams WHERE event_id = ?", (event_id,))
 
     if not teams:
         return []
     teams_list: list[Team] = []
     for team in teams:
-        teams_list.append(Team(team[0], team[1], team[2]))
+        teams_list.append(Team(team[0], team[1], team[2], team[3]))
     return teams_list
 
-async def check_team_exists(event_id: int, leader_discord_id: int):
+async def get_team_id(event_id: int, leader_discord_id: int):
     row = await fetch_one(
         "SELECT team_id FROM teams WHERE event_id = ? AND leader_discord_id = ?",
         (event_id, leader_discord_id)
@@ -40,12 +40,19 @@ async def insert_teams(event_id: int, name: str, leader_discord_id: int, players
 
     if existing:
         raise ValueError("USER_ALREADY_HAS_TEAM")
-    team_id = await execute("INSERT INTO teams (event_id, name, leader_discord_id) VALUES (?, ?, ?)", (event_id, name, leader_discord_id))
-    for player_name in players_names:
-        await execute(
-            "INSERT INTO team_members (team_id, member_name) VALUES (?, ?)",
-            (team_id, player_name)
-        )
+    team_id = await execute(
+        "INSERT INTO teams (event_id, name, leader_discord_id) VALUES (?, ?, ?)",
+        (event_id, name, leader_discord_id))
+    try:
+        for player_name in players_names:
+            await execute(
+                "INSERT INTO team_members (team_id, member_name) VALUES (?, ?)",
+                (team_id, player_name)
+            )
+    except Exception as e:
+        await execute("DELETE FROM teams WHERE team_id = ?", (team_id,))
+        print(f"Error: {e}")
+    return team_id
 
 async def edit_teams(event_id: int, name: str, leader_discord_id: int, players_names: list[str]):
     team_id = await fetch_one("SELECT team_id FROM teams WHERE event_id = ? AND leader_discord_id = ?",
@@ -81,6 +88,7 @@ async def update_team_kd(team_id: int, players_kd: list[float]):
         "UPDATE teams SET kd = ? WHERE team_id = ?",
         (kd, team_id)
     )
+    return kd
 
 async def insert_results(
     event_id: int,
@@ -162,3 +170,10 @@ async def get_event_results(event_id: int, status: str) -> list[EventResult]:
         ))
 
     return results
+
+async def get_inserted_matches(event_id: int, team_id: int) -> set[int]:
+    rows = await fetch_all(
+        "SELECT match_number FROM team_scores WHERE event_id = ? AND team_id = ?",
+        (event_id, team_id)
+    )
+    return {r[0] for r in rows}

@@ -63,16 +63,55 @@ async def get_placement_points(event_id: int) -> list[tuple[int, int]]:
 
 
 
-async def get_events_for_guild(guild_id: int, statuses: list[str] | None = None):
-    query = "SELECT event_id, name FROM events WHERE guild_id = ?"
-    params = [guild_id]
+async def get_events_for_guild(
+    guild_id: int,
+    statuses: list[str] | None = None
+) -> list[Event]:
+
+    query = """
+        SELECT
+            e.event_id,
+            e.guild_id,
+            e.name,
+            e.created_at,
+            e.status,
+
+            s.kill_points,
+            s.players_per_team,
+            s.drop_worst_match,
+            s.matches_number,
+            s.lobby_mode,
+            s.lobbies_number
+
+        FROM events e
+        LEFT JOIN events_settings s ON s.event_id = e.event_id
+        WHERE e.guild_id = ?
+    """
+    params: list = [guild_id]
 
     if statuses:
-        placeholders = ",".join(["?"] * len(statuses))
-        query += f" AND status IN ({placeholders})"
+        placeholders = ",".join("?" for _ in statuses)
+        query += f" AND e.status IN ({placeholders})"
         params.extend(statuses)
 
-    return await fetch_all(query, tuple(params))
+    query += " ORDER BY e.event_id DESC"
+    rows = await fetch_all(query, tuple(params))
+    return [
+        Event(
+            event_id=row[0],
+            guild_id=row[1],
+            name=row[2],
+            created_at=row[3],
+            status=row[4],
+            kill_points=row[5],
+            players_per_team=row[6],
+            drop_worst_match=row[7],
+            matches_number=row[8],
+            lobby_mode=row[9],
+            lobbies_number=row[10]
+        )
+        for row in rows
+    ]
 
 async def insert_placement_points(event_id: int, values: list[str]):
     await execute("DELETE FROM placement_points WHERE event_id = ?", (event_id,))
@@ -195,3 +234,10 @@ async def get_team_members(team_id: int):
 
 async def delete_team(team_id: int):
     await execute("DELETE FROM teams WHERE team_id = ?", (team_id,))
+
+
+async def set_kill_points_db(event_id: int, kill_points: int):
+    await execute(
+        "UPDATE events_settings SET kill_points = ? WHERE event_id = ?",
+        (kill_points, event_id)
+    )
