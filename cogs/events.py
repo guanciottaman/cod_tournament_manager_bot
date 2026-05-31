@@ -76,6 +76,38 @@ def build_event_embed(
 
     return embed
 
+def build_results_embed(
+    page: int,
+    pages_number: int,
+    team_name: str,
+    team_score: TeamScore
+) -> list[discord.Embed] | None:
+    print(team_score)
+    embed = discord.Embed(
+        title=f"Risultati evento team {team_name}"
+    )
+    emb_description = f"**Match** n.{team_score.match_number}\n**Piazzamento:** {team_score.placement}\n**Stato:** {team_score.status}\n\nRisultati giocatori:\n"
+    if team_score.status == "pending":
+        embed.color = discord.Color.yellow()
+    elif team_score.status == "accepted":
+        embed.color = discord.Color.green()
+    elif team_score.status == "rejected":
+        embed.color = discord.Color.red()
+    else:
+        return None
+    player_scores = team_score.player_scores
+    for score in player_scores:
+        emb_description += f"**{score.player_name}:** {score.kills} kill\n"
+    print(f"{emb_description = }")
+    embed.description = emb_description
+    embed.set_image(url=team_score.screenshots[0])
+    embed2 = discord.Embed(color=embed.color)
+    embed2.set_image(url=team_score.screenshots[1])
+    embed2.set_footer(text=f"Pagina: {page+1}/{pages_number}")
+
+    embeds = [embed, embed2]
+    return embeds
+
 class SetupView(discord.ui.View):
     def __init__(self):
         super().__init__(timeout=None)
@@ -448,9 +480,80 @@ class TeamsSelectorView(discord.ui.View):
         await interaction.response.edit_message(view=self)
 
 class ControllaRisultatiView(discord.ui.View):
-    def __init__(self, event_id: int):
+    def __init__(
+            self,
+            event_id: int, 
+            team_scores: list[TeamScore],
+        ):
         super().__init__(timeout=None)
         self.event_id = event_id
+        self.team_scores = team_scores
+        self.page = 0
+    
+    async def _prev_page(self, interaction: discord.Interaction):
+        if self.page == 0:
+            await interaction.response.defer()
+            return
+        self.page -= 1
+        embeds = build_results_embed(
+            self.page,
+            len(self.team_scores),
+            self.team_scores[self.page].team_name,
+            self.team_scores[self.page]
+        )
+        await interaction.response.edit_message(embeds=embeds, view=self)
+
+    async def _next_page(self, interaction: discord.Interaction):
+        if self.page >= len(self.team_scores) - 1:
+            await interaction.response.defer()
+            return
+
+        self.page += 1
+
+        embed = build_results_embed(
+            self.page,
+            len(self.team_scores),
+            self.team_scores[self.page].team_name,
+            self.team_scores[self.page]
+        )
+
+        await interaction.response.edit_message(embeds=embed, view=self)
+    
+    @discord.ui.button(
+        style=discord.ButtonStyle.green,
+        label="Accetta",
+        emoji="✅",
+        row=0
+    )
+    async def accept_result(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await set_result_status(self.team_scores[self.page].team_score_id, "accepted")
+        await self._next_page(interaction)
+    
+    @discord.ui.button(
+        style=discord.ButtonStyle.red,
+        label="Rifiuta",
+        emoji="❌",
+        row=0
+    )
+    async def reject_result(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await set_result_status(self.team_scores[self.page].team_score_id, "rejected")
+        await self._next_page(interaction)
+    
+    @discord.ui.button(
+        label="⬅️",
+        style=discord.ButtonStyle.secondary,
+        row=1
+    )
+    async def prev_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self._prev_page(interaction)
+
+    @discord.ui.button(
+        label="➡️", 
+        style=discord.ButtonStyle.secondary,
+        row=1
+    )
+    async def next_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await self._next_page(interaction)
     
 class Events(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -740,23 +843,32 @@ class Events(commands.Cog):
             await interaction.response.send_message("Non hai il ruolo necessario per eliminare un team!", ephemeral=True)
             return
         view = discord.ui.View()
-        event_selector = await build_event_selector(interaction, ["ready", "running"])
-        if not event_selector:
+        events: list[Event] = await get_events_for_guild(interaction.guild_id, ["running"])
+        if not events:
             await interaction.response.send_message("Non ci sono eventi configurati per il tuo server!", ephemeral=True)
             return
+        event_selector = build_event_selector(events)
         async def event_selector_callback(interaction: discord.Interaction):
             event_id = int(event_selector.values[0])
-            event_info = await get_event_info(event_id, interaction.guild_id)
-            event_results = await get_event_results(event_id, status)
-            embed = discord.Embed(
-                title=f"Controlla risultati {event_info.name}",
+            team_scores = await get_event_results(event_id, status)
+            embed = build_results_embed(0, len(team_scores), team_scores[0].team_name, team_scores[0])
+            if embed is None:
+                await interaction.response.send_message(
+                    "C'è stato un errore con il controllo dei risultati dell'embed",
+                    ephemeral=True
+                )
+                return
+            await interaction.response.send_message(
+                embeds=embed,
+                view=ControllaRisultatiView(event_id, team_scores),
+                ephemeral=True
             )
         event_selector.callback = event_selector_callback
         view.add_item(event_selector)
         embed = discord.Embed(
-            title="Iscrizione team",
+            title="Controlla risultati",
             color=discord.Colour.red(),
-            description="Questa è una lista degli eventi attivi.\nScegli l'evento di cui vuoi controllare i risultati."
+            description="Questa è una lista degli eventi in corso.\nScegli l'evento di cui vuoi controllare i risultati."
         )
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 

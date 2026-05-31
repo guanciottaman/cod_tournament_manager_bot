@@ -3,7 +3,7 @@ from models.team import Team
 from dataclasses import dataclass
 
 @dataclass
-class EventResult:
+class TeamScore:
     team_score_id: int
     event_id: int
     team_id: int
@@ -12,7 +12,15 @@ class EventResult:
     placement: int
     status: str
     created_at: str
+    player_scores: list[PlayerScore]
     screenshots: list[str]
+
+@dataclass
+class PlayerScore:
+    player_score_id: int
+    team_score_id: int
+    player_name: str
+    kills: int
 
 async def get_teams(event_id: int) -> list[Team]:
     teams = await fetch_all("SELECT team_id, name, leader_discord_id, kd FROM teams WHERE event_id = ?", (event_id,))
@@ -118,8 +126,8 @@ async def insert_results(
         """, (team_score_id, url))
 
 
-async def get_event_results(event_id: int, status: str) -> list[EventResult]:
-    team_scores = await fetch_all("""
+async def get_event_results(event_id: int, status: str) -> list[TeamScore]:
+    team_rows = await fetch_all("""
         SELECT
             ts.id,
             ts.event_id,
@@ -136,28 +144,63 @@ async def get_event_results(event_id: int, status: str) -> list[EventResult]:
         ORDER BY ts.created_at ASC
     """, (status, event_id))
 
-    if not team_scores:
+    if not team_rows:
         return []
 
-    ids: tuple[int] = tuple([r[0] for r in team_scores])
+    team_score_ids = [r[0] for r in team_rows]
 
-    placeholders = ",".join(["?"] * len(ids))
+    if not team_score_ids:
+        return []
+
+    placeholders = ",".join(["?"] * len(team_score_ids))
+
+    # 🔥 player scores: TUTTI insieme, poi li mappiamo bene
+    player_rows = await fetch_all(f"""
+        SELECT
+            id,
+            team_score_id,
+            player_name,
+            kills
+        FROM player_scores
+        WHERE team_score_id IN ({placeholders})
+    """, tuple(team_score_ids))
+
+    players_map: dict[int, list[PlayerScore]] = {}
+    for r in player_rows:
+        ps = PlayerScore(
+            player_score_id=r[0],
+            team_score_id=r[1],
+            player_name=r[2],
+            kills=r[3]
+        )
+        players_map.setdefault(r[1], []).append(ps)
 
     screenshots_rows = await fetch_all(f"""
         SELECT team_score_id, image_url
         FROM score_screenshots
         WHERE team_score_id IN ({placeholders})
-    """, ids)
+    """, tuple(team_score_ids))
 
     screenshots_map: dict[int, list[str]] = {}
     for ts_id, url in screenshots_rows:
         screenshots_map.setdefault(ts_id, []).append(url)
 
-    results: list[EventResult] = []
+    results: list[TeamScore] = []
 
-    for r in team_scores:
+    for r in team_rows:
         ts_id = r[0]
-        results.append(EventResult(
+        print("\n==========")
+        print("TS_ID:", ts_id)
+        player_scores = players_map.get(ts_id, [])
+        print("RAW PLAYER COUNT:", len(player_scores))
+        print("RAW PLAYER SAMPLE:", [(p.team_score_id, p.player_name) for p in player_scores[:10]])
+
+        filtered = [p for p in player_scores if p.team_score_id == ts_id]
+
+        print("FILTERED COUNT:", len(filtered))
+        print("FILTERED:", [p.player_name for p in filtered])
+
+        results.append(TeamScore(
             team_score_id=ts_id,
             event_id=r[1],
             team_id=r[2],
@@ -166,14 +209,29 @@ async def get_event_results(event_id: int, status: str) -> list[EventResult]:
             placement=r[5],
             status=r[6],
             created_at=r[7],
+            player_scores=players_map.get(ts_id, []),
             screenshots=screenshots_map.get(ts_id, [])
         ))
 
     return results
 
+async def set_result_status(result_id: int, status: str):
+    await execute(
+        "UPDATE team_scores SET status = ? WHERE id = ?",
+        (status, result_id)
+    )
+
 async def get_inserted_matches(event_id: int, team_id: int) -> set[int]:
     rows = await fetch_all(
         "SELECT match_number FROM team_scores WHERE event_id = ? AND team_id = ?",
         (event_id, team_id)
+    )
+    return {r[0] for r in rows}
+
+
+async def get_inserted_match_numbers(event_id: int) -> set[int]:
+    rows = await fetch_all(
+        "SELECT DISTINCT match_number FROM team_scores WHERE event_id = ?",
+        (event_id,)
     )
     return {r[0] for r in rows}

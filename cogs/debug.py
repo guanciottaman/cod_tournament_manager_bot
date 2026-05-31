@@ -4,8 +4,10 @@ from discord import app_commands
 from discord.ext import commands
 
 from db.db import *
-from services.team_service import insert_teams, update_team_kd
+from services.team_service import (insert_teams, update_team_kd, get_teams,
+    insert_results, get_inserted_match_numbers, get_players_names)
 from services.event_service import get_events_for_guild, get_event_info
+from models.team import Team
 
 
 TEAM_NAMES = [
@@ -21,6 +23,11 @@ FIRST_NAMES = [
 LAST_NAMES = [
     "Storm", "Blade", "Fox", "Wolf", "Night", "Zero",
     "Prime", "Nova", "Ghost", "X"
+]
+
+IMAGE_POOL = [
+    "https://cdn.discordapp.com/attachments/1043231104011866213/1510610504572211301/Trova_Cestini_Volantino.png?ex=6a1d712a&is=6a1c1faa&hm=ca5b81bee5145e5aa0a0dd82c5f6163fb78ae6f9f5faa342a9643c53d3e224f6&",
+    "https://cdn.discordapp.com/attachments/1043231104011866213/1510610504832520262/OIP-4061103901.jpg?ex=6a1d712a&is=6a1c1faa&hm=41b9041690fb3beec74cc2c88efbf2699e112067d1b25eebb23c3cfd9cebc7c8&"
 ]
 
 
@@ -55,6 +62,45 @@ def generate_kd():
 
     return round(base, 2)
 
+async def generate_match_results(teams: list[Team], players_per_team: int = 4) -> list[dict[str, int]]:
+    match = []
+
+    shuffled = teams[:]
+    random.shuffle(shuffled)
+
+    # 👇 preload O(1 query per team, NON dentro loop principale)
+    players_map: dict[int, list[str]] = {}
+
+    for t in shuffled:
+        players_map[t.team_id] = await get_players_names(t.team_id)
+
+    temp = []
+
+    for t in shuffled:
+        players_names: list[str] = players_map.get(t.team_id, [])
+
+        players_kills = {}
+        total_kills = 0
+
+        for player_name in players_names:
+            k = max(0, int(random.gauss(3, 2)))
+            players_kills[player_name] = k
+
+            total_kills += k
+
+        temp.append((t, total_kills, players_kills))
+
+    temp.sort(key=lambda x: x[1], reverse=True)
+
+    for placement, (team, _, players_kills) in enumerate(temp, start=1):
+        match.append({
+            "team_id": team.team_id,
+            "team_name": team.name,
+            "placement": placement,
+            "players_kills": players_kills
+        })
+
+    return match
 
 class DebugCommands(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -103,6 +149,68 @@ class DebugCommands(commands.Cog):
         )
 
         await interaction.followup.send(embed=embed, ephemeral=True)
+    
+    @app_commands.command(
+        name="gen_risultati",
+        description="Genera risultati fittizi per un evento"
+    )
+    async def gen_risultati(
+        self,
+        interaction: discord.Interaction,
+        event_id: int
+    ):
+        await interaction.response.defer(ephemeral=True)
+
+        # 1. evento
+        event = await get_event_info(event_id, interaction.guild_id)
+        if not event:
+            await interaction.followup.send("Evento non valido", ephemeral=True)
+            return
+
+        # 2. teams
+        teams = await get_teams(event_id)
+        if not teams:
+            await interaction.followup.send("Nessun team trovato", ephemeral=True)
+            return
+
+        # 3. match già esistenti
+        existing_matches = await get_inserted_match_numbers(event_id)
+
+        # 4. decide numero match (puoi cambiarlo da event config se vuoi)
+        matches_number = getattr(event, "matches_number", None)
+        if not matches_number:
+            matches_number = max(1, len(teams) // 10)
+        inserted = 0
+
+        # 5. genera solo quelli mancanti
+        for match_number in range(1, matches_number + 1):
+
+            if match_number in existing_matches:
+                continue
+
+            match_results: list[dict[str, int]] = await generate_match_results(
+                teams,
+                event.players_per_team
+            )
+            print(match_results)
+
+            for r in match_results:
+                await insert_results(
+                    event_id=event_id,
+                    team_id=r["team_id"],
+                    placement=r["placement"],
+                    match=match_number,
+                    players_kills=r["players_kills"],
+                    prove=IMAGE_POOL
+                )
+
+            inserted += 1
+
+        await interaction.followup.send(
+            f"Generati {inserted} match per evento {event_id}",
+            ephemeral=True
+        )
+
 
     @app_commands.command(
     name="get_event_ids",
