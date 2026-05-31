@@ -201,7 +201,7 @@ async def delete_event(guild_id: int, event_id: int):
 
 async def get_teams_by_event(event_id: int):
     rows = await fetch_all(
-        "SELECT team_id, name, leader_discord_id FROM teams WHERE event_id = ?",
+        "SELECT team_id, name, leader_discord_id, kd FROM teams WHERE event_id = ?",
         (event_id,)
     )
 
@@ -209,7 +209,8 @@ async def get_teams_by_event(event_id: int):
         Team(
             team_id=row[0],
             name=row[1],
-            leader_discord_id=row[2]
+            leader_discord_id=row[2],
+            kd=row[3]
         )
         for row in rows
     ]

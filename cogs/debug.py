@@ -94,7 +94,7 @@ class DebugCommands(commands.Cog):
             kd = await update_team_kd(team_id, kds)
 
             created_teams.append(
-                f"{team_name} | KD: {kd} | {len(players)} players"
+                f"{team_name} | KD: {kd:.2f} | {len(players)} players"
             )
         embed = discord.Embed(
             title="Team generati",

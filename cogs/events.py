@@ -9,7 +9,7 @@ from cogs.lobbies import LobbyConfigView, build_config_lobbies_embed
 from services.event_service import *
 from services.server_service import *
 from services.team_service import *
-from services.lobby_service import create_lobbies_db
+from services.lobby_service import create_lobbies_db, get_lobbies
 
 DEFAULT_PLACEMENT_POINTS = {
     "1": 15,
@@ -395,14 +395,20 @@ class TeamsSelectorView(discord.ui.View):
             team_id = int(select.values[0])
 
             team = await get_team_info(team_id)
+            if team is None:
+                await interaction.response.send_message("Il team non esiste!", ephemeral=True)
+                return
             team_members = await get_team_members(team_id)
             event = await get_event_info(self.event_id, interaction.guild_id)
+            if event is None:
+                await interaction.response.send_message("L'evento non esiste!", ephemeral=True)
+                return
 
             capoteam = await interaction.guild.fetch_member(team.leader_discord_id)
 
             embed = discord.Embed(
                 title=team.name,
-                description=f"**Evento:** {event.name}\n**Leader:** {capoteam.mention}\n\n**Membri:**\n",
+                description=f"**Evento:** {event.name}\n**Leader:** {capoteam.mention}\nK/D{team.kd:.2f}\n\n**Membri:**\n",
                 color=discord.Color.red()
             )
 
@@ -579,6 +585,38 @@ class Events(commands.Cog):
         embed = discord.Embed(
             title="Info eventi",
             description="Seleziona l'evento di cui vuoi controllare le informazioni"
+        )
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+    
+    @app_commands.command(name="info_lobby", description="Ricevi informazioni sulle lobby di un certo evento")
+    async def info_lobby(self, interaction: discord.Interaction):
+        if not await self.check_admin_role(interaction):
+            await interaction.response.send_message("Non hai il ruolo necessario a ricevere informazioni sulle lobby di un evento!", ephemeral=True)
+            return
+        view = discord.ui.View()
+        events = await get_events_for_guild(interaction.guild_id)
+        event_selector = build_event_selector(events)
+        if not event_selector:
+            await interaction.response.send_message("Non ci sono eventi configurati per il tuo server!", ephemeral=True)
+            return
+        async def event_selector_callback(interaction: discord.Interaction):
+            event_id = int(event_selector.values[0])
+            event = await get_event_info(event_id, interaction.guild_id)
+            lobbies = await get_lobbies(event_id)
+            embed = discord.Embed(
+                title=f"Lobby {event.name}",
+                color=discord.Color.red(),
+                description=f"Numero lobby: {len(lobbies)}\n\nLobby:\n\n"
+            )
+            for i, lobby in enumerate(lobbies):
+                embed.description += f"**{i+1}. {lobby.name} ({len(lobby.teams)} team)**\n*Team:*\n- {'\n- '.join(f"{team.name} (K/D {team.kd:.2f})" for team in lobby.teams)}\n\n"
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            
+        event_selector.callback = event_selector_callback
+        view.add_item(event_selector)
+        embed = discord.Embed(
+            title="Info eventi",
+            description="Seleziona l'evento di cui vuoi controllare le lobby"
         )
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
     

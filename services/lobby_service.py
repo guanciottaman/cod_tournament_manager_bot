@@ -26,7 +26,7 @@ def generate_lobbies(
         random.shuffle(teams)
 
     elif mode in ("kd", "kd_balanced"):
-        teams.sort(key=lambda t: t.kd or 0, reverse=True)
+        teams.sort(key=lambda t: t.kd or 0)
 
     else:
         raise ValueError("INVALID_MODE")
@@ -35,14 +35,21 @@ def generate_lobbies(
     if mode == "kd_balanced":
         if not lobbies_number:
             raise ValueError("lobbies_number required")
-
         lobbies: list[list[Team]] = [[] for _ in range(lobbies_number)]
-        kd_sum = [0.0] * lobbies_number
+        direction = 1
+        i = 0
 
         for t in teams:
-            i = min(range(lobbies_number), key=lambda x: kd_sum[x])
             lobbies[i].append(t)
-            kd_sum[i] += t.kd or 0.0
+
+            i += direction
+
+            if i == lobbies_number:
+                i = lobbies_number - 1
+                direction = -1
+            elif i < 0:
+                i = 0
+                direction = 1
         return lobbies
     # KD SEQUENTIAL
     elif mode == "kd":
@@ -73,9 +80,7 @@ def generate_lobbies(
             lobbies[i % lobbies_number].append(t)
 
     # FIX IMPORTANTE: evita lobbies vuote "false positive"
-    lobbies = [l for l in lobbies if l]
     if any(not l for l in lobbies):
-        print(lobbies)
         raise ValueError("EMPTY_LOBBY_ERROR")
 
     return lobbies
@@ -171,16 +176,17 @@ async def get_lobbies(event_id: int) -> list[Lobby]:
             l.name,
             t.team_id,
             t.name,
-            t.leader_discord_id
+            t.leader_discord_id,
+            t.kd
         FROM lobbies l
         LEFT JOIN teams t ON t.lobby_id = l.lobby_id
         WHERE l.event_id = ?
-        ORDER BY l.lobby_id ASC
+        ORDER BY l.lobby_id ASC, t.kd DESC
     """, (event_id,))
 
     lobbies_map: dict[int, Lobby] = {}
 
-    for lobby_id, lobby_name, team_id, team_name, team_leader_discord_id in rows:
+    for lobby_id, lobby_name, team_id, team_name, team_leader_discord_id, team_kd in rows:
 
         if lobby_id not in lobbies_map:
             lobbies_map[lobby_id] = Lobby(
@@ -191,7 +197,7 @@ async def get_lobbies(event_id: int) -> list[Lobby]:
 
         if team_id is not None:
             lobbies_map[lobby_id].teams.append(
-                Team(team_id, team_name, team_leader_discord_id)
+                Team(team_id, team_name, team_leader_discord_id, team_kd)
             )
 
     return list(lobbies_map.values())

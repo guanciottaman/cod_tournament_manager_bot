@@ -213,7 +213,8 @@ class LobbyConfigView(discord.ui.View):
             event.lobby_mode,
             self.lobbies_number
         )
-        print(lobbies_structure)
+        for lobby in lobbies_structure:
+            lobby.sort(key=lambda t: t.kd or 0, reverse=True)
         if not lobbies_structure:
             await interaction.response.send_message(
                 "Errore creazione lobby",
