@@ -20,7 +20,6 @@ TOKEN = os.environ["TOKEN"]
 extensions = [
     "cogs.events",
     "cogs.teams",
-    "cogs.lobbies",
     "cogs.debug"
 ]
 
@@ -127,10 +126,14 @@ class Bot(commands.Bot):
             CREATE TABLE IF NOT EXISTS player_scores(
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 team_score_id INTEGER,
-                player_name TEXT,
+                member_id INTEGER,
+                member_name TEXT,
                 kills INTEGER,
 
-                FOREIGN KEY (team_score_id) REFERENCES team_scores(id) ON DELETE CASCADE
+                FOREIGN KEY (team_score_id) REFERENCES team_scores(id) ON DELETE CASCADE,
+                FOREIGN KEY (member_id) REFERENCES team_members(member_id),
+                      
+                UNIQUE(team_score_id, member_id)
         )""")
         await execute("""
             CREATE TABLE IF NOT EXISTS score_screenshots(

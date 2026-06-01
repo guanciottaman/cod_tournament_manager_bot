@@ -2,7 +2,6 @@ import random
 
 from models.lobby import Lobby
 from models.team import Team
-from services.team_service import get_teams
 from services.event_service import get_event_info
 from db.db import *
 

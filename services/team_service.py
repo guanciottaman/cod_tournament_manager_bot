@@ -1,26 +1,6 @@
 from db.db import *
-from models.team import Team
-from dataclasses import dataclass
+from models.team import Team, TeamScore, PlayerScore
 
-@dataclass
-class TeamScore:
-    team_score_id: int
-    event_id: int
-    team_id: int
-    team_name: str
-    match_number: int
-    placement: int
-    status: str
-    created_at: str
-    player_scores: list[PlayerScore]
-    screenshots: list[str]
-
-@dataclass
-class PlayerScore:
-    player_score_id: int
-    team_score_id: int
-    player_name: str
-    kills: int
 
 async def get_teams(event_id: int) -> list[Team]:
     teams = await fetch_all("SELECT team_id, name, leader_discord_id, kd FROM teams WHERE event_id = ?", (event_id,))
@@ -40,7 +20,12 @@ async def get_team_id(event_id: int, leader_discord_id: int):
     return row[0] if row else None
 
 
-async def insert_teams(event_id: int, name: str, leader_discord_id: int, players_names: list[str]):
+async def insert_teams(
+    event_id: int,
+    name: str,
+    leader_discord_id: int,
+    players_names: list[str]
+) -> tuple[int, list[int]] | None:
     existing = await fetch_one(
         "SELECT team_id FROM teams WHERE event_id = ? AND leader_discord_id = ?",
         (event_id, leader_discord_id)
@@ -52,15 +37,18 @@ async def insert_teams(event_id: int, name: str, leader_discord_id: int, players
         "INSERT INTO teams (event_id, name, leader_discord_id) VALUES (?, ?, ?)",
         (event_id, name, leader_discord_id))
     try:
+        player_ids: list[int] = []
         for player_name in players_names:
-            await execute(
+            player_id = await execute(
                 "INSERT INTO team_members (team_id, member_name) VALUES (?, ?)",
                 (team_id, player_name)
             )
+            player_ids.append(player_id)
     except Exception as e:
         await execute("DELETE FROM teams WHERE team_id = ?", (team_id,))
         print(f"Error: {e}")
-    return team_id
+        return None
+    return (team_id, player_ids)
 
 async def edit_teams(event_id: int, name: str, leader_discord_id: int, players_names: list[str]):
     team_id = await fetch_one("SELECT team_id FROM teams WHERE event_id = ? AND leader_discord_id = ?",
@@ -98,12 +86,21 @@ async def update_team_kd(team_id: int, players_kd: list[float]):
     )
     return kd
 
+async def get_team_player_ids(
+    team_id: int
+) -> list[int]:
+    rows = await fetch_all(
+        "SELECT member_id FROM team_members WHERE team_id = ?",
+        (team_id,)
+    )
+    return [r[0] for r in rows]
+
 async def insert_results(
     event_id: int,
     team_id: int,
     placement: int,
     match: int,
-    players_kills: dict[str, int],
+    players: list[tuple[int, str, int]],
     prove: list[str]
 ):
     team_score_id = await execute("""
@@ -112,12 +109,13 @@ async def insert_results(
         )
         VALUES (?, ?, ?, ?, datetime('now'))
     """, (event_id, team_id, placement, match))
-
-    for player_name, kills in players_kills.items():
+    for player_id, player_name, kills in players:
         await execute("""
-            INSERT INTO player_scores (team_score_id, player_name, kills)
-            VALUES (?, ?, ?)
-        """, (team_score_id, player_name, kills))
+            INSERT INTO player_scores (
+                team_score_id, member_id, member_name, kills
+            )
+            VALUES (?, ?, ?, ?)
+        """, (team_score_id, player_id, player_name, kills))
 
     for url in prove:
         await execute("""
@@ -125,6 +123,24 @@ async def insert_results(
             VALUES (?, ?)
         """, (team_score_id, url))
 
+async def edit_results(
+    event_id: int,
+    team_id: int,
+    team_score_id: int,
+    placement: int,
+    players_kills: list[tuple[int, str, int]],
+):
+    await execute("""
+        UPDATE team_scores SET 
+            placement = ?,
+            status = 'edited'
+        WHERE event_id = ? AND team_id = ? AND id = ?
+    """, (placement, event_id, team_id, team_score_id))
+    for player_id, _, kills in players_kills:
+        await execute("""
+            UPDATE player_scores SET kills = ?
+            WHERE team_score_id = ? AND member_id = ?
+        """, (kills, team_score_id, player_id))
 
 async def get_event_results(event_id: int, status: str) -> list[TeamScore]:
     team_rows = await fetch_all("""
@@ -154,12 +170,12 @@ async def get_event_results(event_id: int, status: str) -> list[TeamScore]:
 
     placeholders = ",".join(["?"] * len(team_score_ids))
 
-    # 🔥 player scores: TUTTI insieme, poi li mappiamo bene
     player_rows = await fetch_all(f"""
         SELECT
             id,
             team_score_id,
-            player_name,
+            member_id,
+            member_name,
             kills
         FROM player_scores
         WHERE team_score_id IN ({placeholders})
@@ -170,8 +186,9 @@ async def get_event_results(event_id: int, status: str) -> list[TeamScore]:
         ps = PlayerScore(
             player_score_id=r[0],
             team_score_id=r[1],
-            player_name=r[2],
-            kills=r[3]
+            member_id=r[2],
+            member_name=r[3],
+            kills=r[4]
         )
         players_map.setdefault(r[1], []).append(ps)
 
@@ -193,12 +210,7 @@ async def get_event_results(event_id: int, status: str) -> list[TeamScore]:
         print("TS_ID:", ts_id)
         player_scores = players_map.get(ts_id, [])
         print("RAW PLAYER COUNT:", len(player_scores))
-        print("RAW PLAYER SAMPLE:", [(p.team_score_id, p.player_name) for p in player_scores[:10]])
-
-        filtered = [p for p in player_scores if p.team_score_id == ts_id]
-
-        print("FILTERED COUNT:", len(filtered))
-        print("FILTERED:", [p.player_name for p in filtered])
+        print("RAW PLAYER SAMPLE:", [(p.team_score_id, p.member_name) for p in player_scores[:10]])
 
         results.append(TeamScore(
             team_score_id=ts_id,

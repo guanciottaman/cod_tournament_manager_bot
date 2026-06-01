@@ -1,0 +1,129 @@
+import discord
+
+from services.team_service import *
+
+class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
+    nome_team = discord.ui.TextInput(
+        label="Nome team",
+        placeholder="Inserisci il nome del tuo team...",
+        min_length=3,
+        max_length=40
+    )
+    capoteam = discord.ui.TextInput(
+        label="Nome capoteam",
+        placeholder="Inserisci il tuo username di CoD (compreso il numero)...",
+        min_length=3,
+        max_length=40
+    )
+    def __init__(
+            self,
+            event_id: int,
+            members_number: int,
+            is_kd_mode: bool,
+            edit_mode: bool = False,
+            team_id: int | None=None
+        ):
+        super().__init__()
+        self.event_id = event_id
+        self.members_number = members_number
+        self.is_kd_mode = is_kd_mode
+        self.edit_mode: bool = edit_mode
+        if edit_mode and team_id is not None:
+            self.team_id = team_id
+
+        self.inputs: list[discord.ui.TextInput] = []
+        for i in range(self.members_number-1):
+
+            inp = discord.ui.TextInput(
+                label=f"Giocatore {i+2}",
+                placeholder=f"Inserisci l'username di CoD del giocatore {i+2} (compreso il numero)...",
+                min_length=3,
+                max_length=40
+            )
+
+            self.inputs.append(inp)
+            self.add_item(inp)
+    
+    async def on_submit(self, interaction: discord.Interaction):
+        names = [self.capoteam.value]
+        for inp in self.inputs:
+            names.append(inp.value)
+
+        if self.is_kd_mode:
+            view = discord.ui.View()
+            btn = discord.ui.Button(style=discord.ButtonStyle.secondary, label="Modifica punti kd")
+            async def btn_callback(interaction: discord.Interaction):
+                if self.edit_mode:
+                    await interaction.response.send_modal(
+                        TeamKDModal(self.event_id, self.nome_team.value, names, self.edit_mode)
+                    )
+                else:
+                    await interaction.response.send_modal(
+                        TeamKDModal(self.event_id, self.nome_team.value, names, False)
+                    )
+            btn.callback = btn_callback
+            view.add_item(btn)
+            await interaction.response.send_message("Hai inserito le info del team, l'evento richiede i rapporti K/D dei tuoi membri. Clicca il bottone qui sotto", view=view, ephemeral=True)
+        else:
+            if self.edit_mode:
+                await edit_teams(self.event_id, self.nome_team.value, interaction.user.id, names)
+                await interaction.response.send_message("Hai modificato il tuo team con successo!", ephemeral=True)
+                return
+            try:
+                await insert_teams(self.event_id, self.nome_team.value, interaction.user.id, names)
+            except ValueError:
+                await interaction.response.send_message("Hai già iscritto un team a questo evento!", ephemeral=True)
+                return
+            await interaction.response.send_message("Hai registrato il tuo team correttamente!", ephemeral=True)
+
+
+class TeamKDModal(discord.ui.Modal, title="Inserisci KD team"):
+    def __init__(
+            self,
+            event_id: int,
+            team_name: str,
+            players_list: list[str],
+            edit_mode: bool,
+            team_id: int | None=None
+        ):
+        super().__init__()
+        self.event_id = event_id
+        self.team_name = team_name
+        self.players = players_list
+        self.edit_mode = edit_mode
+        if self.edit_mode:
+            self.team_id = team_id
+        self.inputs: list[discord.ui.TextInput] = []
+
+        for p in self.players:
+            inp = discord.ui.TextInput(
+                label=f"KD {p}",
+                placeholder="Inserisci KD",
+                min_length=1,
+                max_length=5
+            )
+            self.inputs.append(inp)
+            self.add_item(inp)
+
+    async def on_submit(self, interaction: discord.Interaction):
+        try:
+            kd_values = [float(inp.value) for inp in self.inputs]
+        except ValueError:
+            await interaction.response.send_message("KD non valido", ephemeral=True)
+            return
+        if self.edit_mode:
+            await edit_teams(self.event_id, self.team_name, interaction.user.id, self.players)
+            await update_team_kd(self.team_id, kd_values)
+
+            await interaction.response.send_message(
+                "Hai modificato il tuo team con successo.",
+                ephemeral=True
+            )
+        else:
+            team_id, _ = await insert_teams(self.event_id, self.team_name, interaction.user.id, self.players)
+            await update_team_kd(team_id, kd_values)
+
+            await interaction.response.send_message(
+                "Hai iscritto il tuo team all'evento con successo.",
+                ephemeral=True
+            )

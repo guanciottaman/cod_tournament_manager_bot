@@ -62,42 +62,61 @@ def generate_kd():
 
     return round(base, 2)
 
-async def generate_match_results(teams: list[Team], players_per_team: int = 4) -> list[dict[str, int]]:
+async def generate_match_results(
+    teams: list[Team],
+) -> list[dict]:
     match = []
 
     shuffled = teams[:]
     random.shuffle(shuffled)
 
-    # 👇 preload O(1 query per team, NON dentro loop principale)
-    players_map: dict[int, list[str]] = {}
+    # 1 sola query per tutti i team
+    team_ids = tuple(t.team_id for t in shuffled)
 
-    for t in shuffled:
-        players_map[t.team_id] = await get_players_names(t.team_id)
+    if not team_ids:
+        return []
+
+    placeholders = ",".join(["?"] * len(team_ids))
+
+    rows = await fetch_all(f"""
+        SELECT team_id, member_id, member_name
+        FROM team_members
+        WHERE team_id IN ({placeholders})
+    """, team_ids)
+
+    # mapping: team_id -> [(player_id, name)]
+    players_map: dict[int, list[tuple[int, str]]] = {}
+
+    for team_id, member_id, member_name in rows:
+        players_map.setdefault(team_id, []).append((member_id, member_name))
 
     temp = []
 
     for t in shuffled:
-        players_names: list[str] = players_map.get(t.team_id, [])
+        players = players_map.get(t.team_id, [])
 
-        players_kills = {}
+        if not players:
+            continue
+
+        players_kills: list[tuple[int, str, int]] = []
         total_kills = 0
 
-        for player_name in players_names:
+        for player_id, player_name in players:
             k = max(0, int(random.gauss(3, 2)))
-            players_kills[player_name] = k
 
+            players_kills.append((player_id, player_name, k))
             total_kills += k
 
         temp.append((t, total_kills, players_kills))
 
     temp.sort(key=lambda x: x[1], reverse=True)
 
-    for placement, (team, _, players_kills) in enumerate(temp, start=1):
+    for placement, (team, _, players) in enumerate(temp, start=1):
         match.append({
             "team_id": team.team_id,
             "team_name": team.name,
             "placement": placement,
-            "players_kills": players_kills
+            "players": players
         })
 
     return match
@@ -127,6 +146,7 @@ class DebugCommands(commands.Cog):
         event = await get_event_info(event_id, interaction.guild_id)
         if event is None:
             await interaction.response.send_message(f"L'evento con id {event_id} non esiste!", ephemeral=True)
+            return
         team_count = event.players_per_team
         await interaction.response.defer(thinking=True, ephemeral=True)
         created_teams: list[str] = []
@@ -136,7 +156,7 @@ class DebugCommands(commands.Cog):
             leader_id: int = 10_000_000 + i
             kds = [generate_kd() for _ in range(team_count)]
 
-            team_id = await insert_teams(event_id, team_name, leader_id, players)
+            team_id, _ = await insert_teams(event_id, team_name, leader_id, players)
             kd = await update_team_kd(team_id, kds)
 
             created_teams.append(
@@ -176,23 +196,22 @@ class DebugCommands(commands.Cog):
         # 3. match già esistenti
         existing_matches = await get_inserted_match_numbers(event_id)
 
-        # 4. decide numero match (puoi cambiarlo da event config se vuoi)
+        # 4. numero match
         matches_number = getattr(event, "matches_number", None)
         if not matches_number:
             matches_number = max(1, len(teams) // 10)
+
         inserted = 0
 
-        # 5. genera solo quelli mancanti
+        # 5. genera match mancanti
         for match_number in range(1, matches_number + 1):
 
             if match_number in existing_matches:
                 continue
 
-            match_results: list[dict[str, int]] = await generate_match_results(
-                teams,
-                event.players_per_team
+            match_results = await generate_match_results(
+                teams
             )
-            print(match_results)
 
             for r in match_results:
                 await insert_results(
@@ -200,7 +219,7 @@ class DebugCommands(commands.Cog):
                     team_id=r["team_id"],
                     placement=r["placement"],
                     match=match_number,
-                    players_kills=r["players_kills"],
+                    players=r["players"],
                     prove=IMAGE_POOL
                 )
 
