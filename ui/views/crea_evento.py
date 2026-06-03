@@ -46,19 +46,25 @@ class CreaEventoView(discord.ui.View):
                 label="Casuale",
                 description="Le lobby saranno create casualmente",
                 value="random",
-                emoji="❌"
+                emoji="🎲"
             ),
             discord.SelectOption(
-                label="KD",
-                description="Le lobby verranno create in base al rapporto K/D, ma non saranno bilanciate",
+                label="Casuale (15 Team/lobby)",
+                description="Le lobby saranno create casualmente",
+                value="random_max",
+                emoji="🎯"
+            ),
+            discord.SelectOption(
+                label="KD (15 Team/lobby)",
+                description="Le lobby verranno create in base al rapporto K/D, ma si limiteranno a 15 team",
                 value="kd",
-                emoji="✅"    
+                emoji="📊"    
             ),
             discord.SelectOption(
                 label="KD Bilanciato",
                 description="Le lobby verranno create in base al rapporto K/D, ma saranno bilanciate",
                 value="kd_balanced",
-                emoji="✅"    
+                emoji="⚖️"    
             )
         ]
     )

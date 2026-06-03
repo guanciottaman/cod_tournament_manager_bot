@@ -137,9 +137,7 @@ class Teams(commands.Cog):
             )
             async def match_selector_callback(interaction: discord.Interaction):
                 match_selected = int(match_selector.values[0])
-                print(match_selected)
                 players_names = await get_players_names(team_id)
-                print(players_names)
                 await interaction.response.send_modal(
                     RegistraRisultatiModal(event_id, team_id, players_names, match_selected, [prova1.url, prova2.url])
                 )

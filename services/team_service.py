@@ -3,13 +3,13 @@ from models.team import Team, TeamScore, PlayerScore
 
 
 async def get_teams(event_id: int) -> list[Team]:
-    teams = await fetch_all("SELECT team_id, name, leader_discord_id, kd FROM teams WHERE event_id = ?", (event_id,))
+    teams = await fetch_all("SELECT team_id, name, leader_discord_id, kd, lobby_id FROM teams WHERE event_id = ?", (event_id,))
 
     if not teams:
         return []
     teams_list: list[Team] = []
     for team in teams:
-        teams_list.append(Team(team[0], team[1], team[2], team[3]))
+        teams_list.append(Team(team[0], team[1], team[2], team[3], team[4]))
     return teams_list
 
 async def get_team_id(event_id: int, leader_discord_id: int):
@@ -206,11 +206,6 @@ async def get_event_results(event_id: int, status: str) -> list[TeamScore]:
 
     for r in team_rows:
         ts_id = r[0]
-        print("\n==========")
-        print("TS_ID:", ts_id)
-        player_scores = players_map.get(ts_id, [])
-        print("RAW PLAYER COUNT:", len(player_scores))
-        print("RAW PLAYER SAMPLE:", [(p.team_score_id, p.member_name) for p in player_scores[:10]])
 
         results.append(TeamScore(
             team_score_id=ts_id,
@@ -247,3 +242,13 @@ async def get_inserted_match_numbers(event_id: int) -> set[int]:
         (event_id,)
     )
     return {r[0] for r in rows}
+
+async def get_leader_discord_id(team_id: int) -> int | None:
+    row = await fetch_one(
+        "SELECT leader_discord_id FROM teams WHERE team_id = ?",
+        (team_id,)
+    )
+    if row is None:
+        return None
+    else:
+        return row[0]

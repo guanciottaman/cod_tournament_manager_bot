@@ -3,18 +3,19 @@ import discord
 from ui.embeds.event_builders import build_results_embed
 from ui.modals.registra_risultati import RegistraRisultatiModal
 from models.team import TeamScore
-from services.team_service import set_result_status, get_players_names
+from services.team_service import set_result_status, get_players_names, get_leader_discord_id
 
 class ControllaRisultatiView(discord.ui.View):
     def __init__(
             self,
             event_id: int, 
             team_scores: list[TeamScore],
+            page: int = 0
         ):
         super().__init__(timeout=None)
         self.event_id = event_id
         self.team_scores = team_scores
-        self.page = 0
+        self.page = page
         self.sync_buttons()
     
     def sync_buttons(self):
@@ -118,6 +119,20 @@ class ControllaRisultatiView(discord.ui.View):
     )
     async def reject_result(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
+        leader_id = await get_leader_discord_id(self.team_scores[self.page].team_id)
+        if leader_id is None:
+            await interaction.followup.send(
+                "Non è stato possibile mandare il DM perché non è stato trovato l'id dell'utente",
+                ephemeral=True
+            )
+        leader = interaction.guild.get_member(leader_id) if leader_id > 10e16 else None
+        if leader is not None:
+            embed = discord.Embed(
+                title="Risultato modificato",
+                color=discord.Color.red(),
+                description=f"Il risultato del match {self.team_scores[self.page].match_number} è stato rifiutato.\nReinseriscilo o contatta gli amministratori per ricevere spiegazioni."
+            )
+            await leader.send(embed=embed)
         await self._handle(interaction, "rejected")
             
     @discord.ui.button(

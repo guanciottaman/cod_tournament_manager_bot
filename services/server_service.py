@@ -41,3 +41,13 @@ async def get_admin_role_id(guild_id: int) -> int | None:
         return row[0]
     else:
         return None
+
+async def get_ranking_channel_id(guild_id: int) -> int | None:
+    row = await fetch_one(
+        "SELECT ranking_channel_id FROM server_configs WHERE guild_id = ?",
+        (guild_id,)
+    )
+    if row:
+        return row[0]
+    else:
+        return None

@@ -1,5 +1,5 @@
 import discord
-from services.team_service import insert_results, edit_results, get_team_player_ids
+from services.team_service import insert_results, edit_results, get_team_player_ids, get_leader_discord_id
 
 class RegistraRisultatiModal(discord.ui.Modal, title="Registra i risultati"):
     placement_input = discord.ui.TextInput(
@@ -96,3 +96,22 @@ class RegistraRisultatiModal(discord.ui.Modal, title="Registra i risultati"):
                 f"Il risultato del match {self.match_selected} è stato modificato!",
                 ephemeral=True
             )
+            leader_id = await get_leader_discord_id(self.team_id)
+            if leader_id is None:
+                await interaction.followup.send(
+                    "Non è stato possibile mandare il DM perché non è stato trovato l'id dell'utente",
+                    ephemeral=True
+                )
+            leader = interaction.guild.get_member(leader_id) if leader_id > 10e16 else None
+            if leader is not None:
+                embed = discord.Embed(
+                    title="Risultato modificato",
+                    color=discord.Color.red()
+                )
+                emb_description = f"Il risultato del match {self.match_selected} è stato modificato come seguente.\nPiazzamento: **{placement}** posto\n"
+                for _, player_name, kills in players_kills:
+                    emb_description += f"- {player_name} {players_kills} kill\n"
+                embed.description = emb_description
+                await leader.send(
+                    embed=embed
+                )

@@ -23,7 +23,8 @@ def build_event_embed(
         color=discord.Color.blurple()
     )
     lobby_modes = {
-        "random": "casuale",
+        "random": "Casuale",
+        "random_max": "Casuale (massimo 15 team/lobby)",
         "kd": "KD",
         "kd_balanced": "KD bilanciato"
     }
@@ -61,7 +62,6 @@ def build_results_embed(
     team_name: str,
     team_score: TeamScore
 ) -> list[discord.Embed] | None:
-    print(team_score)
     embed = discord.Embed(
         title=f"Risultati evento team {team_name}"
     )

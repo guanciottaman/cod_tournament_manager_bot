@@ -2,10 +2,10 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 
-from typing import Literal
+from typing import Literal, Optional
 import math
 
-from ui.embeds.lobby_builders import build_config_lobbies_embed
+from ui.embeds.lobby_builders import build_config_lobbies_embed, build_event_start_summary
 from ui.embeds.event_builders import *
 from ui.selects.event_select import build_event_selector
 from ui.modals.nome_evento import NomeEventoModal
@@ -18,6 +18,8 @@ from services.event_service import *
 from services.server_service import *
 from services.team_service import *
 from services.lobby_service import create_lobbies_db, get_lobbies
+from services.ranking_service import *
+from services.image_service import *
 
     
 class Events(commands.Cog):
@@ -69,17 +71,20 @@ class Events(commands.Cog):
             return
         await interaction.response.send_modal(NomeEventoModal())
     
-    @app_commands.command(name="avvia_evento", description="Configura le lobby di un evento programmato e avvialo")
-    async def avvia_evento(self, interaction: discord.Interaction):
+    @app_commands.command(name="config_lobby", description="Configura le lobby di un evento programmato")
+    async def config_lobby(self, interaction: discord.Interaction):
         if not await self.check_admin_role(interaction):
-            await interaction.response.send_message("Non hai il ruolo necessario ad avviare un evento!", ephemeral=True)
+            await interaction.response.send_message("Non hai il ruolo necessario per configurare le lobby di un evento!", ephemeral=True)
             return
         
         view = discord.ui.View()
         events = await get_events_for_guild(interaction.guild_id, ["ready"])
+        if not events:
+            await interaction.response.send_message("Non ci sono eventi configurati per il tuo server!", ephemeral=True)
+            return
         event_selector = build_event_selector(events)
         if not event_selector:
-            await interaction.response.send_message("Non ci sono eventi configurati per il tuo server!", ephemeral=True)
+            await interaction.response.send_message("C'è stato un errore!", ephemeral=True)
             return
         async def event_selector_callback(interaction: discord.Interaction):
             event_id = int(interaction.data["values"][0])
@@ -97,7 +102,7 @@ class Events(commands.Cog):
                 return
 
             lobby_mode = event.lobby_mode
-            if lobby_mode == "kd":
+            if lobby_mode in ("kd", "random_max"):
                 lobbies_number = min(5, max(1, math.ceil(teams_count / 15)))
             else:
                 lobbies_number = event.lobbies_number
@@ -118,11 +123,90 @@ class Events(commands.Cog):
         event_selector.callback = event_selector_callback
         view.add_item(event_selector)
         embed = discord.Embed(
-            title="Avvia evento",
+            title="Configura lobby",
             description="Hai già configurato i seguenti eventi.\nAssicurati che tutti i capoteam abbiano iscritto la propria squadra!"
         )
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
     
+    @app_commands.command(name="sposta_team", description="Sposta un team in un'altra lobby")
+    async def sposta_team(self, interaction: discord.Interaction):
+        if not await self.check_admin_role(interaction):
+            await interaction.response.send_message(
+                "Non hai il ruolo necessario per spostare un team in un'altra lobby in un evento!",
+                ephemeral=True
+            )
+            return
+        view = discord.ui.View()
+        events = await get_events_for_guild(interaction.guild_id, ["setup"])
+        event_selector = build_event_selector(events)
+        if not event_selector:
+            await interaction.response.send_message("Non ci sono eventi configurati per il tuo server!", ephemeral=True)
+            return
+        async def event_selector_callback(interaction: discord.Interaction):
+            event_id = int(interaction.data["values"][0])
+            event = await get_event_info(event_id, interaction.guild_id)
+            if event is None:
+                await interaction.response.send_message(
+                    "Evento non valido",
+                    ephemeral=True
+                )
+                return
+            teams = await get_teams(event_id)
+            await interaction.response.send_message(
+                embed=embed,
+                view=TeamsSelectorView(teams, event_id, switch_teams=True),
+                ephemeral=True
+            )
+        event_selector.callback = event_selector_callback
+        view.add_item(event_selector)
+        embed = discord.Embed(
+            title="Avvia evento",
+            description="Hai già configurato le lobby dei seguenti eventi.\nScegli l'evento in cui vuoi spostare un team!"
+        )
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
+    @app_commands.command(name="avvia_evento", description="Avvia un evento configurato")
+    async def avvia_evento(self, interaction: discord.Interaction):
+        if not await self.check_admin_role(interaction):
+            await interaction.response.send_message("Non hai il ruolo necessario ad avviare un evento!", ephemeral=True)
+            return
+        view = discord.ui.View()
+        events = await get_events_for_guild(interaction.guild_id, ["setup"])
+        event_selector = build_event_selector(events)
+        if not event_selector:
+            await interaction.response.send_message("Non ci sono eventi configurati per il tuo server!", ephemeral=True)
+            return
+        async def event_selector_callback(interaction: discord.Interaction):
+            event_id = int(interaction.data["values"][0])
+            event = await get_event_info(event_id, interaction.guild_id)
+            if event is None:
+                await interaction.response.send_message(
+                    "Evento non valido",
+                    ephemeral=True
+                )
+                return
+            lobbies = await get_lobbies(event_id)
+            embed = await build_event_start_summary(lobbies)
+            embed.title = "Avvia evento"
+            view = discord.ui.View()
+            start_event_btn = discord.ui.Button(
+                label="Avvia evento",
+                style=discord.ButtonStyle.green
+            )
+            async def start_event_callback(interaction: discord.Interaction):
+                await set_event_status(event_id, "running")
+                await interaction.response.send_message("L'evento è stato avviato con successo!", ephemeral=True)
+            start_event_btn.callback = start_event_callback
+            view.add_item(start_event_btn)
+            await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+        event_selector.callback = event_selector_callback
+        view.add_item(event_selector)
+        embed = discord.Embed(
+            title="Avvia evento",
+            description="Hai già configurato i seguenti eventi.\nAssicurati di aver configurato correttamente le lobby!"
+        )
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
     @app_commands.command(name="info_evento", description="Ricevi informazioni su un certo evento")
     async def info_evento(self, interaction: discord.Interaction):
         if not await self.check_admin_role(interaction):
@@ -156,7 +240,7 @@ class Events(commands.Cog):
             await interaction.response.send_message("Non hai il ruolo necessario a ricevere informazioni sulle lobby di un evento!", ephemeral=True)
             return
         view = discord.ui.View()
-        events = await get_events_for_guild(interaction.guild_id)
+        events = await get_events_for_guild(interaction.guild_id, ["setup", "running"])
         event_selector = build_event_selector(events)
         if not event_selector:
             await interaction.response.send_message("Non ci sono eventi configurati per il tuo server!", ephemeral=True)
@@ -253,7 +337,8 @@ class Events(commands.Cog):
             await interaction.response.send_message("Non hai il ruolo necessario per eliminare un team!", ephemeral=True)
             return
         view = discord.ui.View()
-        event_selector = await build_event_selector(interaction, ["ready", "running"])
+        events: list[Event] = await get_events_for_guild(interaction.guild_id, ["ready", "running"])
+        event_selector = await build_event_selector(events)
         if not event_selector:
             await interaction.response.send_message("Non ci sono eventi configurati per il tuo server!", ephemeral=True)
             return
@@ -297,10 +382,12 @@ class Events(commands.Cog):
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
     @app_commands.command(name="controlla_risultati", description="Controlla i risultati dei team")
+    @app_commands.describe(status="Lo stato dei risultati che vuoi controllare", page="La pagina di risultati da cui partire")
     async def controlla_risultati(
         self,
         interaction: discord.Interaction,
-        status: Literal["pending", "accepted", "rejected", "edited"]
+        status: Literal["pending", "accepted", "rejected", "edited"],
+        page: Optional[int]=1
     ):
         if not await self.check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario per eliminare un team!", ephemeral=True)
@@ -314,7 +401,18 @@ class Events(commands.Cog):
         async def event_selector_callback(interaction: discord.Interaction):
             event_id = int(event_selector.values[0])
             team_scores = await get_event_results(event_id, status)
-            embed = build_results_embed(0, len(team_scores), team_scores[0].team_name, team_scores[0])
+            if not team_scores:
+                await interaction.response.send_message(f"Non ci sono risultati con status {status}.", ephemeral=True)
+                return
+            if page is not None and not (0 < page < len(team_scores)):
+                await interaction.response.send_message("Pagina non valida!", ephemeral=True)
+                return
+            embed = build_results_embed(
+                page-1 if page is not None else 0,
+                len(team_scores),
+                team_scores[0].team_name,
+                team_scores[0]
+            )
             if embed is None:
                 await interaction.response.send_message(
                     "C'è stato un errore con il controllo dei risultati dell'embed",
@@ -323,7 +421,7 @@ class Events(commands.Cog):
                 return
             await interaction.response.send_message(
                 embeds=embed,
-                view=ControllaRisultatiView(event_id, team_scores),
+                view=ControllaRisultatiView(event_id, team_scores, page-1 if page is not None else 0),
                 ephemeral=True
             )
         event_selector.callback = event_selector_callback
@@ -332,6 +430,112 @@ class Events(commands.Cog):
             title="Controlla risultati",
             color=discord.Colour.red(),
             description="Questa è una lista degli eventi in corso.\nScegli l'evento di cui vuoi controllare i risultati."
+        )
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+    
+    @app_commands.command(name="termina_evento", description="Termina un evento")
+    async def termina_evento(self, interaction: discord.Interaction):
+        if not await self.check_admin_role(interaction):
+            await interaction.response.send_message("Non hai il ruolo necessario per eliminare un team!", ephemeral=True)
+            return
+        ranking_channel_id = await get_ranking_channel_id(interaction.guild_id)
+        if ranking_channel_id is None:
+            await interaction.response.send_message(
+                "Non è stato impostato un canale per le classifiche!",
+                ephemeral=True
+            )
+            return
+        ranking_channel = interaction.guild.get_channel(ranking_channel_id)
+        if ranking_channel is None:
+            await interaction.response.send_message(
+                f"Il canale con id {ranking_channel_id} non esiste o è stato eliminato!",
+                ephemeral=True
+            )
+            return
+        view = discord.ui.View()
+        events: list[Event] = await get_events_for_guild(interaction.guild_id, ["running"])
+        event_selector = build_event_selector(events)
+        if not event_selector:
+            await interaction.response.send_message("Non ci sono eventi configurati per il tuo server!", ephemeral=True)
+            return
+        async def event_selector_callback(interaction: discord.Interaction):
+            await interaction.response.defer(thinking=True, ephemeral=True)
+            event_id = int(event_selector.values[0])
+            event = await get_event_info(event_id, interaction.guild_id)
+            if event is None:
+                await interaction.followup.send("Questo evento non esiste!")
+                return
+            teams_ranking_global = await compute_team_ranking(event_id, "global")
+            if not teams_ranking_global:
+                await interaction.followup.send("Nessun risultato è stato accettato!", ephemeral=True)
+                return
+            lobbies = await get_lobbies(event_id)
+            files: list[discord.File] = []
+            mvp_ranking_global = await compute_mvp_ranking(event_id)
+            files.append(
+                discord.File(
+                    await build_leaderboard_image(teams_ranking_global), filename="teams_ranking_global.png"
+                )
+            )
+            files.append(
+                discord.File(
+                    build_mvp_image(mvp_ranking_global), filename="mvp_ranking_global.png"
+                )
+            )
+            embed = discord.Embed(
+                title="Evento terminato",
+                color=discord.Color.blurple(),
+            )
+            emb_description = f"Hai terminato l'evento **{event.name}**.\nEcco le classifiche finali globali:\n\n**Claassifica team:**\n"
+            for i, r in enumerate(teams_ranking_global):
+                team_name = r["name"]
+                team_score = r["score"]
+                emb_description += f"{i+1}. {team_name} | {team_score} punti\n"
+            emb_description += "\n**MVPs:**\n"
+            for i, p in enumerate(mvp_ranking_global):
+                player_name = clean_player_name(p.get("player", "Unknown"))
+                player_kills = p.get("kills")
+                emb_description += f"{i+1}. {player_name} | {player_kills} kill\n"
+            emb_description += "\n**Classifiche Lobby**\n"
+            for i, lobby in enumerate(lobbies):
+                emb_description += f"\n**Lobby {lobby.name}**\n*Classifica team:*\n"
+                lobby_ranking = await compute_team_ranking(event_id, "lobby", lobby_id=lobby.lobby_id)
+                lobby_image = await build_leaderboard_image(lobby_ranking, lobby_name=lobby.name)
+                files.append(
+                    discord.File(
+                        lobby_image, filename=f"lobby{i+1}.png"
+                    )
+                )
+                for j, r in enumerate(lobby_ranking):
+                    team_name = r["name"]
+                    team_score = r["score"]
+                    emb_description += f"{j+1}. {team_name} | {team_score} punti\n"
+                mvp_lobby_ranking = await compute_mvp_ranking(event_id, "lobby", lobby_id=lobby.lobby_id)
+                mvp_lobby_image = build_mvp_image(mvp_lobby_ranking, lobby_name=lobby.name)
+                files.append(
+                    discord.File(
+                        mvp_lobby_image, filename=f"lobby_mvp{i+1}.png"
+                    )
+                )
+                emb_description += "\n*MVP:*\n"
+                for j, r in enumerate(mvp_lobby_ranking):
+                    player_name = r["player"]
+                    player_kills = r["kills"]
+                    emb_description += f"{j+1}. {player_name} | {player_kills} kill\n"
+            embed.description = emb_description
+            
+            await ranking_channel.send(
+                embed=embed,
+                files=files
+            )
+            await interaction.followup.send(f"La classifica è stata mandata su {ranking_channel.mention}")
+            #await delete_event(interaction.guild_id, event_id)
+        event_selector.callback = event_selector_callback
+        view.add_item(event_selector)
+        embed = discord.Embed(
+            title="Termina evento",
+            color=discord.Colour.blurple(),
+            description="Questa è una lista degli eventi in corso.\nScegli l'evento che vuoi terminare e ottenere i risultati finali."
         )
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 

@@ -42,7 +42,7 @@ async def build_config_lobbies_embed(event_id: int, lobbies_number: int, teams_c
 
 async def build_event_start_summary(lobbies: list[Lobby]) -> discord.Embed:
     embed = discord.Embed(
-        title="Evento avviato",
+        title="Evento configurato",
         color=discord.Color.green()
     )
 

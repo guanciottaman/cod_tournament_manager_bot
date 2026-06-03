@@ -20,7 +20,7 @@ class LobbyConfigView(discord.ui.View):
         self._build_select()
 
     def _build_select(self):
-        if self.lobby_mode == "kd":
+        if self.lobby_mode in ("kd", "random_max"):
             return
 
         max_lobbies = self.teams_count // 2
@@ -77,7 +77,7 @@ class LobbyConfigView(discord.ui.View):
             LobbiesNamesModal(
                 event_id=self.event_id,
                 lobby_mode=self.lobby_mode,
-                lobbies_number=self.lobbies_number,
+                lobbies_number=self.lobbiess_number,
                 lobby_ids=self.lobby_ids,
                 view=self,
                 teams_count=self.teams_count,
@@ -86,7 +86,7 @@ class LobbyConfigView(discord.ui.View):
         )
     
     @discord.ui.button(
-        label="Avvia evento",
+        label="Conferma",
         style=discord.ButtonStyle.green,
         row=2
     )
@@ -106,7 +106,6 @@ class LobbyConfigView(discord.ui.View):
             return
 
         teams = await get_teams(self.event_id)
-        print(teams)
         lobbies_structure = generate_lobbies(
             teams,
             event.lobby_mode,
@@ -124,7 +123,7 @@ class LobbyConfigView(discord.ui.View):
         await apply_lobbies(self.lobby_ids, lobbies_structure)
         lobbies = await get_lobbies(self.event_id)
 
-        await set_event_status(self.event_id, "running")
+        await set_event_status(self.event_id, "setup")
 
         embed = await build_event_start_summary(lobbies)
 

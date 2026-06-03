@@ -201,7 +201,7 @@ async def delete_event(guild_id: int, event_id: int):
 
 async def get_teams_by_event(event_id: int):
     rows = await fetch_all(
-        "SELECT team_id, name, leader_discord_id, kd FROM teams WHERE event_id = ?",
+        "SELECT team_id, name, leader_discord_id, kd, lobby_id FROM teams WHERE event_id = ?",
         (event_id,)
     )
 
@@ -210,19 +210,22 @@ async def get_teams_by_event(event_id: int):
             team_id=row[0],
             name=row[1],
             leader_discord_id=row[2],
-            kd=row[3]
+            kd=row[3],
+            lobby=row[4]
         )
         for row in rows
     ]
 
 async def get_team_info(team_id: int):
-    row = await fetch_one("SELECT name, leader_discord_id FROM teams WHERE team_id = ?", (team_id,))
+    row = await fetch_one("SELECT name, leader_discord_id, kd, lobby_id FROM teams WHERE team_id = ?", (team_id,))
     if not row:
         return None
     return Team(
         team_id=team_id,
         name=row[0],
-        leader_discord_id=row[1]
+        leader_discord_id=row[1],
+        kd=row[2],
+        lobby=row[3]
     )
 
 async def get_team_members(team_id: int):

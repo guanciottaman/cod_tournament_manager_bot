@@ -1,10 +1,10 @@
 import random
+import math
 
 from models.lobby import Lobby
 from models.team import Team
-from services.event_service import get_event_info
 from db.db import *
-
+from services.event_service import get_event_info
 
 MIN_PER_LOBBY = 2
 MAX_PER_LOBBY = 15
@@ -19,9 +19,9 @@ def generate_lobbies(
     if not teams:
         return []
 
-    teams = teams[:]  # SEMPRE safe copy
+    teams = teams[:]
 
-    if mode == "random":
+    if mode in ("random", "random_max"):
         random.shuffle(teams)
 
     elif mode in ("kd", "kd_balanced"):
@@ -34,27 +34,22 @@ def generate_lobbies(
     if mode == "kd_balanced":
         if not lobbies_number:
             raise ValueError("lobbies_number required")
-        lobbies: list[list[Team]] = [[] for _ in range(lobbies_number)]
-        direction = 1
-        i = 0
-
+        lobbies: list[list[Team]] = []
+        current: list[Team] = []
+        max_per_lobby_balanced = math.ceil(len(teams) / lobbies_number)
         for t in teams:
-            lobbies[i].append(t)
+            current.append(t)
 
-            i += direction
+            if len(current) == max_per_lobby_balanced:
+                lobbies.append(current)
+                current = []
 
-            if i == lobbies_number:
-                i = lobbies_number - 1
-                direction = -1
-            elif i < 0:
-                i = 0
-                direction = 1
+        if current:
+            lobbies.append(current)
         return lobbies
-    # KD SEQUENTIAL
-    elif mode == "kd":
-        if not lobbies_number:
-            raise ValueError("lobbies_number required")
 
+    # KD
+    elif mode == "kd":
         lobbies = []
         current = []
 
@@ -67,8 +62,13 @@ def generate_lobbies(
 
         if current:
             lobbies.append(current)
-
-    # RANDOM / DEFAULT
+    # RANDOM MAX 15
+    elif mode == "random_max":
+        return [
+            teams[i:i + 15]
+            for i in range(0, len(teams), 15)
+        ]
+    # RANDOM
     else:
         if not lobbies_number:
             raise ValueError("lobbies_number required")
@@ -78,7 +78,6 @@ def generate_lobbies(
         for i, t in enumerate(teams):
             lobbies[i % lobbies_number].append(t)
 
-    # FIX IMPORTANTE: evita lobbies vuote "false positive"
     if any(not l for l in lobbies):
         raise ValueError("EMPTY_LOBBY_ERROR")
 
@@ -176,7 +175,8 @@ async def get_lobbies(event_id: int) -> list[Lobby]:
             t.team_id,
             t.name,
             t.leader_discord_id,
-            t.kd
+            t.kd,
+            t.lobby_id
         FROM lobbies l
         LEFT JOIN teams t ON t.lobby_id = l.lobby_id
         WHERE l.event_id = ?
@@ -185,10 +185,11 @@ async def get_lobbies(event_id: int) -> list[Lobby]:
 
     lobbies_map: dict[int, Lobby] = {}
 
-    for lobby_id, lobby_name, team_id, team_name, team_leader_discord_id, team_kd in rows:
+    for lobby_id, lobby_name, team_id, team_name, team_leader_discord_id, team_kd, team_lobby_id in rows:
 
         if lobby_id not in lobbies_map:
             lobbies_map[lobby_id] = Lobby(
+                lobby_id=lobby_id,
                 index=len(lobbies_map)+1,
                 name=lobby_name,
                 teams=[]
@@ -196,7 +197,7 @@ async def get_lobbies(event_id: int) -> list[Lobby]:
 
         if team_id is not None:
             lobbies_map[lobby_id].teams.append(
-                Team(team_id, team_name, team_leader_discord_id, team_kd)
+                Team(team_id, team_name, team_leader_discord_id, team_kd, team_lobby_id)
             )
 
     return list(lobbies_map.values())
@@ -227,3 +228,9 @@ async def update_lobbies_config(event_id: int, guild_id: int, new_number: int, m
 
     await execute("DELETE FROM lobbies WHERE event_id = ?", (event_id,))
     await create_lobbies_db(event_id, names)
+
+async def switch_team_lobby(team_id: int, lobby_id: int):
+    await execute(
+        "UPDATE teams SET lobby_id = ? WHERE team_id = ?",
+        (lobby_id, team_id)
+    )

@@ -5,7 +5,7 @@ from discord.ext import commands
 
 from db.db import *
 from services.team_service import (insert_teams, update_team_kd, get_teams,
-    insert_results, get_inserted_match_numbers, get_players_names)
+    insert_results, get_inserted_match_numbers, set_result_status)
 from services.event_service import get_events_for_guild, get_event_info
 from models.team import Team
 
@@ -26,17 +26,17 @@ LAST_NAMES = [
 ]
 
 IMAGE_POOL = [
-    "https://cdn.discordapp.com/attachments/1043231104011866213/1510610504572211301/Trova_Cestini_Volantino.png?ex=6a1d712a&is=6a1c1faa&hm=ca5b81bee5145e5aa0a0dd82c5f6163fb78ae6f9f5faa342a9643c53d3e224f6&",
-    "https://cdn.discordapp.com/attachments/1043231104011866213/1510610504832520262/OIP-4061103901.jpg?ex=6a1d712a&is=6a1c1faa&hm=41b9041690fb3beec74cc2c88efbf2699e112067d1b25eebb23c3cfd9cebc7c8&"
+    "https://cdn.discordapp.com/attachments/1496915639170891847/1511440911282864259/1776018259429.png?ex=6a20768a&is=6a1f250a&hm=d9fce02d1ad92a70e33d078ee323da062e211c808433865dc33643b54a7993c8&",
+    "https://cdn.discordapp.com/attachments/1496915639170891847/1511440911807156304/appunti.png?ex=6a20768a&is=6a1f250a&hm=a756c98e8c2869ca302212ad5f5186e172c8b14b5c64f27964c927c77b499a6a&"
 ]
 
 
 def generate_team_name():
-    return f"{random.choice(TEAM_NAMES)}-{random.randint(100, 999)}"
+    return f"{random.choice(TEAM_NAMES)}#{random.randint(1000, 9999)}"
 
 
 def generate_player_name():
-    return f"{random.choice(FIRST_NAMES)}{random.choice(LAST_NAMES)}"
+    return f"{random.choice(FIRST_NAMES)}{random.choice(LAST_NAMES)}#{random.randint(1000, 9999)}"
 
 
 def generate_players(amount: int):
@@ -70,7 +70,6 @@ async def generate_match_results(
     shuffled = teams[:]
     random.shuffle(shuffled)
 
-    # 1 sola query per tutti i team
     team_ids = tuple(t.team_id for t in shuffled)
 
     if not team_ids:
@@ -84,7 +83,7 @@ async def generate_match_results(
         WHERE team_id IN ({placeholders})
     """, team_ids)
 
-    # mapping: team_id -> [(player_id, name)]
+    # dizionario da team_id -> (player_id, name)
     players_map: dict[int, list[tuple[int, str]]] = {}
 
     for team_id, member_id, member_name in rows:
@@ -174,6 +173,7 @@ class DebugCommands(commands.Cog):
         name="gen_risultati",
         description="Genera risultati fittizi per un evento"
     )
+    @app_commands.describe(event_id="Evento per cui generare i risultati")
     async def gen_risultati(
         self,
         interaction: discord.Interaction,
@@ -181,29 +181,24 @@ class DebugCommands(commands.Cog):
     ):
         await interaction.response.defer(ephemeral=True)
 
-        # 1. evento
         event = await get_event_info(event_id, interaction.guild_id)
         if not event:
             await interaction.followup.send("Evento non valido", ephemeral=True)
             return
 
-        # 2. teams
         teams = await get_teams(event_id)
         if not teams:
             await interaction.followup.send("Nessun team trovato", ephemeral=True)
             return
 
-        # 3. match già esistenti
         existing_matches = await get_inserted_match_numbers(event_id)
 
-        # 4. numero match
         matches_number = getattr(event, "matches_number", None)
         if not matches_number:
             matches_number = max(1, len(teams) // 10)
 
         inserted = 0
 
-        # 5. genera match mancanti
         for match_number in range(1, matches_number + 1):
 
             if match_number in existing_matches:
@@ -230,6 +225,36 @@ class DebugCommands(commands.Cog):
             ephemeral=True
         )
 
+    @app_commands.command(
+        name="accept_all_results",
+        description="Accetta automaticamente tutti i risultati in attesa"
+    )
+    @app_commands.describe(event_id="Evento per cui accettare i risultati")
+    @app_commands.checks.has_permissions(ban_members=True)
+    async def accept_all_results(
+        self,
+        interaction: discord.Interaction,
+        event_id: int
+    ):
+        await interaction.response.defer(ephemeral=True)
+
+        results = await fetch_all("""
+            SELECT id
+            FROM team_scores
+            WHERE event_id = ?
+            AND status = 'pending'
+        """, (event_id,))
+
+        if not results:
+            await interaction.followup.send("Nessun risultato da accettare.")
+            return
+
+        for (team_score_id,) in results:
+            await set_result_status(team_score_id, "accepted")
+
+        await interaction.followup.send(
+            f"Accettati {len(results)} risultati per l'evento {event_id}."
+        )
 
     @app_commands.command(
     name="get_event_ids",
