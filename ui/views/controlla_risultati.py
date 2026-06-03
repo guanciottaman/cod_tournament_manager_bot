@@ -26,8 +26,12 @@ class ControllaRisultatiView(discord.ui.View):
 
         accept = reject = edit = True
 
-        if current.status in ("accepted", "rejected"):
+        if current.status == "accepted":
             accept = False
+            reject = True
+            edit = True
+        elif current.status == "rejected":
+            accept = True
             reject = False
             edit = True
 
