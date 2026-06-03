@@ -108,7 +108,7 @@ class Events(commands.Cog):
                 lobbies_number = event.lobbies_number
                 if lobbies_number is None:
                     lobbies_number = 1
-            lobby_ids: list[int] = await create_lobbies_db(event_id, [f"Lobby {i+1}" for i in range(lobbies_number)])
+            lobby_ids: list[int] = await create_lobbies_db(event_id, [f"{i+1}" for i in range(lobbies_number)])
             embed = await build_config_lobbies_embed(
                 event_id,
                 lobbies_number,

@@ -27,10 +27,10 @@ class LobbiesNamesModal(discord.ui.Modal, title="Configura Lobby"):
 
 
         for i in range(lobbies_number):
-            default = f"Lobby {i+1}"
+            default = f"{i+1}"
 
             name_input = discord.ui.TextInput(
-                label=f"Lobby {i+1}",
+                label=f"{i+1}",
                 default=default,
                 max_length=20
             )

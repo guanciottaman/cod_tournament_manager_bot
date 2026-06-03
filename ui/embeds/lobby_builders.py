@@ -18,7 +18,7 @@ async def build_config_lobbies_embed(event_id: int, lobbies_number: int, teams_c
         names_list = names
     else:
         names_list = [
-            f"Lobby {i+1}"
+            f"{i+1}"
             for i in range(lobbies_number)
         ]
 

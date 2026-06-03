@@ -111,10 +111,9 @@ async def rebuild_lobbies(event_id: int, lobbies_number: int):
     names = await get_lobbies_names(event_id)
 
     if not names or len(names) != lobbies_number:
-        defaults = ["Easy", "Medium", "Hard"]
 
         names = [
-            (defaults[i] if i < 3 else f"Lobby {i+1}")
+            (f"{i+1}")
             for i in range(lobbies_number)
         ]
 
@@ -214,16 +213,12 @@ async def update_lobbies_config(event_id: int, guild_id: int, new_number: int, m
         raise ValueError("Cannot modify running event")
 
     names = await get_lobbies_names(event_id)
-    defaults = ["Easy", "Medium", "Hard"]
 
     if not names:
-        if mode in ("kd", "kd_balanced"):
-            names = defaults[:new_number]
-        else:
-            names = [f"Lobby {i+1}" for i in range(new_number)]
+        names = [f"{i+1}" for i in range(new_number)]
     else:
         names = names[:new_number] + [
-            f"Lobby {i+1}" for i in range(len(names), new_number)
+            f"{i+1}" for i in range(len(names), new_number)
         ]
 
     await execute("DELETE FROM lobbies WHERE event_id = ?", (event_id,))
