@@ -529,7 +529,7 @@ class Events(commands.Cog):
                 files=files
             )
             await interaction.followup.send(f"La classifica è stata mandata su {ranking_channel.mention}")
-            #await delete_event(interaction.guild_id, event_id)
+            await delete_event(interaction.guild_id, event_id)
         event_selector.callback = event_selector_callback
         view.add_item(event_selector)
         embed = discord.Embed(
