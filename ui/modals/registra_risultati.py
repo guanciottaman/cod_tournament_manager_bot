@@ -108,7 +108,7 @@ class RegistraRisultatiModal(discord.ui.Modal, title="Registra i risultati"):
                     title="Risultato modificato",
                     color=discord.Color.red()
                 )
-                emb_description = f"Il risultato del match {self.match_selected} è stato modificato come seguente.\nPiazzamento: **{placement}** posto\n"
+                emb_description = f"Il risultato del match {self.match_selected} è stato modificato come seguente.\nPiazzamento: **{placement}°** posto\n"
                 for _, player_name, kills in players_kills:
                     emb_description += f"- {player_name} {kills} kill\n"
                 embed.description = emb_description
