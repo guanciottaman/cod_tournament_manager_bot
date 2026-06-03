@@ -2,7 +2,7 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 
-from typing import Literal, Optional
+from typing import Literal
 import math
 
 from ui.embeds.lobby_builders import build_config_lobbies_embed, build_event_start_summary
@@ -331,6 +331,28 @@ class Events(commands.Cog):
         )
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
+    @app_commands.command(name="modifica_team", description="Modifica un team")
+    async def modifica_team(self, interaction: discord.Interaction):
+        if not await self.check_admin_role(interaction):
+            await interaction.response.send_message("Non hai il ruolo necessario per modificare un team!", ephemeral=True)
+            return
+        view = discord.ui.View()
+        events: list[Event] = await get_events_for_guild(interaction.guild_id, ["ready", "setup"])
+        event_selector = await build_event_selector(events)
+        if not event_selector:
+            await interaction.response.send_message("Non ci sono eventi configurati per il tuo server!", ephemeral=True)
+            return
+        async def event_selector_callback(interaction: discord.Interaction):
+            embed = discord.Embed(title="Modifica team", color=discord.Color.blue())
+        event_selector.callback = event_selector_callback
+        view.add_item(event_selector)
+        embed = discord.Embed(
+            title="Modifica team",
+            color=discord.Colour.red(),
+            description="Questa è una lista degli eventi attivi.\nScegli l'evento di cui vuoi eliminare un team."
+        )
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
     @app_commands.command(name="elimina_team", description="Elimina un team da un evento")
     async def elimina_team(self, interaction: discord.Interaction):
         if not await self.check_admin_role(interaction):
@@ -387,7 +409,7 @@ class Events(commands.Cog):
         self,
         interaction: discord.Interaction,
         status: Literal["pending", "accepted", "rejected", "edited"],
-        page: Optional[int]=1
+        page: int = 1
     ):
         if not await self.check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario per eliminare un team!", ephemeral=True)
@@ -404,11 +426,11 @@ class Events(commands.Cog):
             if not team_scores:
                 await interaction.response.send_message(f"Non ci sono risultati con status {status}.", ephemeral=True)
                 return
-            if page is not None and not (0 < page < len(team_scores)):
+            if page < 1 or page > len(team_scores):
                 await interaction.response.send_message("Pagina non valida!", ephemeral=True)
                 return
             embed = build_results_embed(
-                page-1 if page is not None else 0,
+                page-1,
                 len(team_scores),
                 team_scores[0].team_name,
                 team_scores[0]
