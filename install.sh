@@ -36,15 +36,14 @@ echo "[6/6] Configurazione Bot"
 
 TOKEN=${TOKEN:-}
 
+if [ -z "$TOKEN" ] && [ -t 0 ]; then
+    read -s -p "Inserisci il TOKEN del bot: " TOKEN
+    echo ""
+fi
+
 if [ -z "$TOKEN" ]; then
-    if [ -t 0 ]; then
-        # terminale interattivo
-        read -s -p "Inserisci il TOKEN del bot: " TOKEN
-        echo ""
-    else
-        echo "ERRORE: Input interagibile non disbonibile. Esegui con TOKEN=xxxx bash install.sh"
-        exit 1
-    fi
+    echo "ERRORE: TOKEN non valido o non fornito"
+    exit 1
 fi
 
 cat <<EOF > .env
