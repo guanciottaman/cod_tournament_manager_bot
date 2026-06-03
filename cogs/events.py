@@ -331,28 +331,6 @@ class Events(commands.Cog):
         )
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
 
-    @app_commands.command(name="modifica_team", description="Modifica un team")
-    async def modifica_team(self, interaction: discord.Interaction):
-        if not await self.check_admin_role(interaction):
-            await interaction.response.send_message("Non hai il ruolo necessario per modificare un team!", ephemeral=True)
-            return
-        view = discord.ui.View()
-        events: list[Event] = await get_events_for_guild(interaction.guild_id, ["ready", "setup"])
-        event_selector = await build_event_selector(events)
-        if not event_selector:
-            await interaction.response.send_message("Non ci sono eventi configurati per il tuo server!", ephemeral=True)
-            return
-        async def event_selector_callback(interaction: discord.Interaction):
-            embed = discord.Embed(title="Modifica team", color=discord.Color.blue())
-        event_selector.callback = event_selector_callback
-        view.add_item(event_selector)
-        embed = discord.Embed(
-            title="Modifica team",
-            color=discord.Colour.red(),
-            description="Questa è una lista degli eventi attivi.\nScegli l'evento di cui vuoi eliminare un team."
-        )
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
-
     @app_commands.command(name="elimina_team", description="Elimina un team da un evento")
     async def elimina_team(self, interaction: discord.Interaction):
         if not await self.check_admin_role(interaction):

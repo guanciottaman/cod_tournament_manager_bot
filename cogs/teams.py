@@ -44,7 +44,7 @@ class Teams(commands.Cog):
     @app_commands.command(name="modifica_team", description="Modifica il tuo team")
     async def modifica_team(self, interaction: discord.Interaction):
         view = discord.ui.View()
-        events = await get_events_for_guild(interaction.guild_id, ["ready"])
+        events = await get_events_for_guild(interaction.guild_id, ["ready", "setup"])
         event_selector = build_event_selector(events)
         if not event_selector:
             await interaction.response.send_message("Non ci sono eventi configurati per il tuo server!", ephemeral=True)
