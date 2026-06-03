@@ -34,12 +34,17 @@ pip install -r requirements.txt
 # TOKEN INPUT
 echo "[6/6] Configurazione Bot"
 
-read -s -p "Inserisci il TOKEN del bot: " TOKEN
-echo ""
+TOKEN=${TOKEN:-}
 
 if [ -z "$TOKEN" ]; then
-    echo "ERRORE: Il token non può essere vuoto"
-    exit 1
+    if [ -t 0 ]; then
+        # terminale interattivo
+        read -s -p "Inserisci il TOKEN del bot: " TOKEN
+        echo ""
+    else
+        echo "ERRORE: Input interagibile non disbonibile. Esegui con TOKEN=xxxx bash install.sh"
+        exit 1
+    fi
 fi
 
 cat <<EOF > .env
