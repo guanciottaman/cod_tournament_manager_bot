@@ -23,7 +23,7 @@ class LobbyConfigView(discord.ui.View):
         if self.lobby_mode in ("kd", "random_max"):
             return
 
-        max_lobbies = self.teams_count // 2
+        max_lobbies = self.teams_count // 16
         max_lobbies = max(1, max_lobbies)
         max_lobbies = min(5, max_lobbies)
 
