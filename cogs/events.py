@@ -303,7 +303,7 @@ class Events(commands.Cog):
             await interaction.response.send_message("Non hai il ruolo necessario per avere info su un team!", ephemeral=True)
             return
         view = discord.ui.View()
-        events = await get_events_for_guild(interaction.guild_id, ["ready", "running"])
+        events = await get_events_for_guild(interaction.guild_id, ["ready", "setup", "running"])
         event_selector = build_event_selector(events)
         if not event_selector:
             await interaction.response.send_message("Non ci sono eventi configurati per il tuo server!", ephemeral=True)
@@ -337,7 +337,7 @@ class Events(commands.Cog):
             await interaction.response.send_message("Non hai il ruolo necessario per eliminare un team!", ephemeral=True)
             return
         view = discord.ui.View()
-        events: list[Event] = await get_events_for_guild(interaction.guild_id, ["ready", "running"])
+        events: list[Event] = await get_events_for_guild(interaction.guild_id, ["ready", "setup", "running"])
         event_selector = await build_event_selector(events)
         if not event_selector:
             await interaction.response.send_message("Non ci sono eventi configurati per il tuo server!", ephemeral=True)
