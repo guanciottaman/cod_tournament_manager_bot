@@ -128,7 +128,7 @@ class ControllaRisultatiView(discord.ui.View):
         leader = interaction.guild.get_member(leader_id) if leader_id > 10e16 else None
         if leader is not None:
             embed = discord.Embed(
-                title="Risultato modificato",
+                title="Risultato rifiutato",
                 color=discord.Color.red(),
                 description=f"Il risultato del match {self.team_scores[self.page].match_number} è stato rifiutato.\nReinseriscilo o contatta gli amministratori per ricevere spiegazioni."
             )
