@@ -23,17 +23,23 @@ class LobbyConfigView(discord.ui.View):
         if self.lobby_mode in ("kd", "random_max"):
             return
 
-        max_lobbies = math.ceil(self.teams_count / 16)
-        max_lobbies = max(1, max_lobbies)
-        max_lobbies = min(5, max_lobbies)
+        possible_lobbies: list[int] = []
 
+        possible_lobbies.append(math.ceil(self.teams_count / 16))
+
+        # prova anche +1 e +2 per flessibilità
+        possible_lobbies.append(math.ceil(self.teams_count / 16) + 1)
+        possible_lobbies.append(math.ceil(self.teams_count / 16) + 2)
+
+        # limite superiore UI
+        possible_lobbies = [c for c in possible_lobbies if 1 <= c <= 5]
         options = [
             discord.SelectOption(
                 label=str(i),
                 value=str(i),
                 description=f"{i} lobby"
             )
-            for i in range(1, max_lobbies + 1)
+            for i in possible_lobbies
         ]
         select = discord.ui.Select(
             placeholder="Numero lobby",
