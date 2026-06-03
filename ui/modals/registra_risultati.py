@@ -1,5 +1,5 @@
 import discord
-from services.team_service import insert_results, edit_results, get_team_player_ids, get_leader_discord_id
+from services.team_service import insert_results, edit_results, get_team_player_ids, get_leader_discord_id, set_result_status
 
 class RegistraRisultatiModal(discord.ui.Modal, title="Registra i risultati"):
     placement_input = discord.ui.TextInput(
@@ -16,7 +16,7 @@ class RegistraRisultatiModal(discord.ui.Modal, title="Registra i risultati"):
             match_selected: int,
             prove: list[str],
             mode: str = "insert",
-            player_score_id: int = 0,
+            team_score_id: int = 0,
             parent_view: discord.ui.View | None = None,
             interaction: discord.Interaction | None = None
         ):
@@ -27,7 +27,7 @@ class RegistraRisultatiModal(discord.ui.Modal, title="Registra i risultati"):
         self.match_selected = match_selected
         self.prove = prove
         self.mode = mode
-        self.player_score_id = player_score_id
+        self.team_score_id = team_score_id
         if parent_view is not None:
             self.parent_view = parent_view
         if interaction is not None:
@@ -79,10 +79,11 @@ class RegistraRisultatiModal(discord.ui.Modal, title="Registra i risultati"):
             await edit_results(
                 self.event_id,
                 self.team_id,
-                self.player_score_id,
+                self.team_score_id,
                 placement,
                 players_kills
             )
+            await set_result_status(self.team_score_id, "edited")
             self.parent_view.team_scores.pop(self.parent_view.page)
             self.parent_view.page = min(
                 self.parent_view.page,
@@ -106,7 +107,7 @@ class RegistraRisultatiModal(discord.ui.Modal, title="Registra i risultati"):
             if leader is not None:
                 embed = discord.Embed(
                     title="Risultato modificato",
-                    color=discord.Color.red()
+                    color=discord.Color.dark_gold()
                 )
                 emb_description = f"Il risultato del match {self.match_selected} è stato modificato come seguente.\nPiazzamento: **{placement}°** posto\n"
                 for _, player_name, kills in players_kills:

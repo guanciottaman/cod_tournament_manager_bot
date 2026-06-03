@@ -152,7 +152,7 @@ class ControllaRisultatiView(discord.ui.View):
                 team_score.match_number,
                 team_score.screenshots,
                 mode="edit",
-                player_score_id=team_score.team_score_id,
+                team_score_id=team_score.team_score_id,
                 parent_view=self,
                 interaction=interaction
             )
