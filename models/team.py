@@ -10,6 +10,14 @@ class Team:
 
 
 @dataclass
+class PlayerScore:
+    player_score_id: int
+    team_score_id: int
+    member_id: int
+    member_name: str
+    kills: int
+
+@dataclass
 class TeamScore:
     team_score_id: int
     event_id: int
@@ -21,11 +29,3 @@ class TeamScore:
     created_at: str
     player_scores: list[PlayerScore]
     screenshots: list[str]
-
-@dataclass
-class PlayerScore:
-    player_score_id: int
-    team_score_id: int
-    member_id: int
-    member_name: str
-    kills: int
