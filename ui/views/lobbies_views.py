@@ -77,7 +77,7 @@ class LobbyConfigView(discord.ui.View):
             LobbiesNamesModal(
                 event_id=self.event_id,
                 lobby_mode=self.lobby_mode,
-                lobbies_number=self.lobbiess_number,
+                lobbies_number=self.lobbies_number,
                 lobby_ids=self.lobby_ids,
                 view=self,
                 teams_count=self.teams_count,
