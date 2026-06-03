@@ -83,7 +83,6 @@ class RegistraRisultatiModal(discord.ui.Modal, title="Registra i risultati"):
                 placement,
                 players_kills
             )
-            await set_result_status(self.team_score_id, "edited")
             self.parent_view.team_scores.pop(self.parent_view.page)
             self.parent_view.page = min(
                 self.parent_view.page,

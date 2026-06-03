@@ -130,7 +130,7 @@ class ControllaRisultatiView(discord.ui.View):
             embed = discord.Embed(
                 title="Risultato rifiutato",
                 color=discord.Color.red(),
-                description=f"Il risultato del match {self.team_scores[self.page].match_number} è stato rifiutato.\nReinseriscilo o contatta gli amministratori per ricevere spiegazioni."
+                description=f"Il risultato del match {self.team_scores[self.page].match_number} è stato rifiutato.\nContatta gli amministratori per ricevere spiegazioni."
             )
             await leader.send(embed=embed)
         await self._handle(interaction, "rejected")

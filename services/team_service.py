@@ -230,7 +230,7 @@ async def set_result_status(result_id: int, status: str):
 
 async def get_inserted_matches(event_id: int, team_id: int) -> set[int]:
     rows = await fetch_all(
-        "SELECT match_number FROM team_scores WHERE event_id = ? AND team_id = ? AND status NOT IN ('pending', 'accepted', 'edited')",
+        "SELECT match_number FROM team_scores WHERE event_id = ? AND team_id = ?",
         (event_id, team_id)
     )
     return {r[0] for r in rows}
