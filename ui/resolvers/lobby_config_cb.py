@@ -17,12 +17,7 @@ async def start_lobby_config(interaction: discord.Interaction, event: Event):
         return
 
     lobby_mode = event.lobby_mode
-    if lobby_mode in ("kd", "random_max"):
-        lobbies_number = min(5, max(1, math.ceil(teams_count / 16)))
-    else:
-        lobbies_number = event.lobbies_number
-        if lobbies_number is None:
-            lobbies_number = 1
+    lobbies_number = min(5, max(1, math.ceil(teams_count / 16)))
     lobby_ids: list[int] = await create_lobbies_db(event.event_id, [f"{i+1}" for i in range(lobbies_number)])
     embed = await build_config_lobbies_embed(
         event.event_id,
