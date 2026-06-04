@@ -123,9 +123,18 @@ async def generate_match_results(
 class DebugCommands(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+    
+    async def check_admin_role(self, interaction: discord.Interaction):
+        admin_role_id = await get_admin_role_id(interaction.guild_id)
+        if not admin_role_id:
+            return False
+
+        admin_role = interaction.guild.get_role(admin_role_id)
+        if admin_role is None:
+            return False
+        return admin_role in interaction.user.roles
 
     @app_commands.command(name="gen_teams", description="Genera team random per un evento")
-    @app_commands.checks.has_permissions(ban_members=True)
     @app_commands.describe(
         event_id="ID evento",
         amount="Numero team da generare"
@@ -136,6 +145,9 @@ class DebugCommands(commands.Cog):
         event_id: int,
         amount: int
     ):
+        if not await self.check_admin_role(interaction):
+            await interaction.response.send_message("Non hai il ruolo necessario per configurare le lobby di un evento!", ephemeral=True)
+            return
         if amount <= 0 or amount > 100:
             await interaction.response.send_message(
                 "Numero team non valido (1–100)",
@@ -182,6 +194,9 @@ class DebugCommands(commands.Cog):
         interaction: discord.Interaction,
         event_id: int
     ):
+        if not await self.check_admin_role(interaction):
+            await interaction.response.send_message("Non hai il ruolo necessario per configurare le lobby di un evento!", ephemeral=True)
+            return
         await interaction.response.defer(ephemeral=True)
 
         event = await get_event_info(event_id, interaction.guild_id)
@@ -233,12 +248,14 @@ class DebugCommands(commands.Cog):
         description="Accetta automaticamente tutti i risultati in attesa"
     )
     @app_commands.describe(event_id="Evento per cui accettare i risultati")
-    @app_commands.checks.has_permissions(ban_members=True)
     async def accept_all_results(
         self,
         interaction: discord.Interaction,
         event_id: int
     ):
+        if not await self.check_admin_role(interaction):
+            await interaction.response.send_message("Non hai il ruolo necessario per configurare le lobby di un evento!", ephemeral=True)
+            return
         await interaction.response.defer(ephemeral=True)
 
         results = await fetch_all("""
@@ -260,15 +277,16 @@ class DebugCommands(commands.Cog):
         )
 
     @app_commands.command(
-    name="get_event_ids",
-    description="Mostra gli ID degli eventi"
+        name="get_event_ids",
+        description="Mostra gli ID degli eventi"
     )
-    @app_commands.checks.has_permissions(ban_members=True)
     async def get_event_ids(
         self,
         interaction: discord.Interaction
     ):
-
+        if not await self.check_admin_role(interaction):
+            await interaction.response.send_message("Non hai il ruolo necessario per configurare le lobby di un evento!", ephemeral=True)
+            return
         try:
 
             if interaction.guild_id is None:
