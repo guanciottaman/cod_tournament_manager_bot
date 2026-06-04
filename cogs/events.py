@@ -242,7 +242,8 @@ class Events(commands.Cog):
             )
             await interaction.response.send_message(
                 embed=embed,
-                view=TeamsSelectorView(teams, event_id, "penalize")
+                view=TeamsSelectorView(teams, event_id, "penalize"),
+                ephemeral=True
             )
         
         await resolve_event(interaction, embed, events, event_selector_callback)
