@@ -33,6 +33,7 @@ class LobbyConfigView(discord.ui.View):
 
         # limite superiore UI
         possible_lobbies = [c for c in possible_lobbies if 1 <= c <= 5]
+        print(possible_lobbies)
         options = [
             discord.SelectOption(
                 label=str(i),
