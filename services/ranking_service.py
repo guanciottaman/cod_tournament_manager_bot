@@ -6,12 +6,11 @@ from collections import defaultdict
 def clean_player_name(name: str) -> str:
     return name.split("#")[0]
 
-async def compute_team_ranking(event_id: int, scope: str = "global", lobby_id: int | None = None, top_n: int = 15):
+async def compute_team_ranking(event_id: int, scope: str = "global", lobby_id: int | None = None, top_n: int = 16):
     query = """
         SELECT 
             ts.team_id,
             t.name,
-            t.lobby_id,
             ts.placement,
             ps.kills
         FROM team_scores ts
@@ -22,7 +21,7 @@ async def compute_team_ranking(event_id: int, scope: str = "global", lobby_id: i
 
     params = [event_id]
 
-    if scope == "lobby":
+    if scope == "lobby" and lobby_id is not None:
         query += " AND t.lobby_id = ?"
         params.append(lobby_id)
 
@@ -30,6 +29,16 @@ async def compute_team_ranking(event_id: int, scope: str = "global", lobby_id: i
     team_matches = defaultdict(list)
     team_names = {}
     team_kills = defaultdict(int)
+
+    penalties = await fetch_all("""
+        SELECT team_id, penalty_points
+        FROM teams
+        WHERE event_id = ?
+    """, (event_id,))
+    penalty_map = {
+        team_id: penalty or 0
+        for team_id, penalty in penalties
+    }
 
     settings = await fetch_one("""
         SELECT kill_points FROM events_settings WHERE event_id = ?
@@ -45,7 +54,7 @@ async def compute_team_ranking(event_id: int, scope: str = "global", lobby_id: i
 
     placement_dict = {p: pts for p, pts in placement_map}
 
-    for team_id, name, lobby_id_row, placement, kills in rows:
+    for team_id, name, placement, kills in rows:
         team_names[team_id] = clean_player_name(name)
 
         placement_pts = placement_dict.get(placement, 0)
@@ -61,6 +70,7 @@ async def compute_team_ranking(event_id: int, scope: str = "global", lobby_id: i
             continue
 
         score = sum(matches)
+        score -= penalty_map.get(team_id, 0)
 
         final.append({
             "team_id": team_id,

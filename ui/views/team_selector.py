@@ -4,13 +4,20 @@ from models.team import Team
 from services.team_service import *
 from services.event_service import *
 from services.lobby_service import get_lobbies, switch_team_lobby
+from ui.modals.penalize_team import PenalizzaTeam
 
 class TeamsSelectorView(discord.ui.View):
-    def __init__(self, teams: list[Team], event_id: int, switch_teams: bool = False, page: int = 0):
+    def __init__(
+            self,
+            teams: list[Team],
+            event_id: int,
+            mode: str = "info",
+            page: int = 0
+        ):
         super().__init__(timeout=180)
         self.teams = teams
         self.event_id = event_id
-        self.switch_teams = switch_teams
+        self.mode = mode
         self.page = page
         self.add_item(self.build_select())
 
@@ -63,9 +70,9 @@ class TeamsSelectorView(discord.ui.View):
             else:
                 emb_description += "*Nessun membro*"
             embed.description = emb_description
-            if not self.switch_teams:
+            if self.mode == "info":
                 await interaction.response.send_message(embed=embed, ephemeral=True)
-            else:
+            elif self.mode == "switch":
                 view = discord.ui.View()
                 sposta_team_btn = discord.ui.Button(label="Sposta team", style=discord.ButtonStyle.blurple)
                 async def switch_team_callback(interaction: discord.Interaction):
@@ -111,7 +118,11 @@ class TeamsSelectorView(discord.ui.View):
                 sposta_team_btn.callback = switch_team_callback
                 view.add_item(sposta_team_btn)
                 await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
-
+            elif self.mode == "penalize":
+                await interaction.response.send_modal(PenalizzaTeam(self.event_id, team.team_id))
+            elif self.mode == "delete":
+                await delete_team(team_id)
+                await interaction.response.send_message("Team eliminato con successo!", ephemeral=True)
         select.callback = callback
         return select
 

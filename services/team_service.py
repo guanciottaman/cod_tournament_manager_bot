@@ -252,3 +252,9 @@ async def get_leader_discord_id(team_id: int) -> int | None:
         return None
     else:
         return row[0]
+
+async def penalize_team(team_id: int, penalty_points: int):
+    await execute(
+        "UPDATE teams SET penalty_points = penalty_points + ? WHERE team_id = ?",
+        (penalty_points, team_id)
+    )

@@ -20,7 +20,7 @@ async def get_event_info(event_id: int, guild_id: int) -> Event | None:
 
     row_settings = await fetch_one("""
         SELECT kill_points, players_per_team, drop_worst_match,
-               matches_number, lobby_mode, lobbies_number
+            matches_number, lobby_mode, lobbies_number
         FROM events_settings
         WHERE event_id = ?
     """, (event_id,))

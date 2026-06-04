@@ -7,7 +7,7 @@ from db.db import *
 from services.event_service import get_event_info
 
 MIN_PER_LOBBY = 2
-MAX_PER_LOBBY = 15
+MAX_PER_LOBBY = 16
 
 
 def generate_lobbies(
@@ -62,11 +62,11 @@ def generate_lobbies(
 
         if current:
             lobbies.append(current)
-    # RANDOM MAX 15
+    # RANDOM MAX 16
     elif mode == "random_max":
         return [
-            teams[i:i + 15]
-            for i in range(0, len(teams), 15)
+            teams[i:i + 16]
+            for i in range(0, len(teams), 16)
         ]
     # RANDOM
     else:

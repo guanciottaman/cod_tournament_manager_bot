@@ -30,7 +30,7 @@ async def build_leaderboard_image(ranking: list[dict[str, Any]], lobby_name: str
 
     draw.text(
         (w // 2, 220),
-        "CLASSIFICA GENERALE TEAM" if lobby_name is None else f"Lobby {lobby_name}",
+        "CLASSIFICA GENERALE TEAM" if lobby_name is None else f"LOBBY {lobby_name.upper()}",
         fill=(10, 10, 10),
         font=title_font,
         anchor="ma"
@@ -39,7 +39,7 @@ async def build_leaderboard_image(ranking: list[dict[str, Any]], lobby_name: str
     header_bottom = 300
     bottom_margin = 10
 
-    max_rows = 15
+    max_rows = 16
 
     if not ranking:
         draw.text(
@@ -116,7 +116,7 @@ def build_mvp_image(
 
     draw.text(
         (width // 2, 350),
-        "TOP 5 MVP GENERALE" if lobby_name is None else f"TOP 5 MVP LOBBY {lobby_name}",
+        "TOP 5 MVP GENERALE" if lobby_name is None else f"TOP 5 MVP LOBBY {lobby_name.upper()}",
         fill=(10, 10, 10),
         anchor="mm",
         font=title_font

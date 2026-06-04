@@ -24,7 +24,7 @@ def build_event_embed(
     )
     lobby_modes = {
         "random": "Casuale",
-        "random_max": "Casuale (massimo 15 team/lobby)",
+        "random_max": "Casuale (massimo 16 team/lobby)",
         "kd": "KD",
         "kd_balanced": "KD bilanciato"
     }
