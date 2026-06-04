@@ -146,6 +146,9 @@ class DebugCommands(commands.Cog):
         if event is None:
             await interaction.response.send_message(f"L'evento con id {event_id} non esiste!", ephemeral=True)
             return
+        if event.status != "ready":
+            await interaction.response.send_message("Puoi generare team solo prima di configurare le lobby", ephemeral=True)
+            return
         team_count = event.players_per_team
         await interaction.response.defer(thinking=True, ephemeral=True)
         created_teams: list[str] = []
@@ -277,7 +280,7 @@ class DebugCommands(commands.Cog):
 
             events = await get_events_for_guild(
                 interaction.guild_id,
-                ["ready"]
+                ["ready", "setup", "running"]
             )
 
             if not events:
