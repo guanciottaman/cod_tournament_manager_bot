@@ -12,14 +12,22 @@ class TeamsSelectorView(discord.ui.View):
             teams: list[Team],
             event_id: int,
             mode: str = "info",
-            page: int = 0
+            page: int = 0,
+            interaction: discord.Interaction | None = None
         ):
         super().__init__(timeout=180)
         self.teams = teams
         self.event_id = event_id
         self.mode = mode
         self.page = page
+        self.interaction = interaction
         self.add_item(self.build_select())
+
+    def get_leader_name(self, interaction: discord.Interaction, leader_id: int) -> str:
+        member = interaction.guild.get_member(leader_id)
+        if member is None:
+            return "Unknown"
+        return member.display_name
 
     def build_select(self):
         start = self.page * 25
@@ -32,7 +40,7 @@ class TeamsSelectorView(discord.ui.View):
                 discord.SelectOption(
                     label=t.name,
                     value=str(t.team_id),
-                    description=f"Capoteam: {t.leader_discord_id}"
+                    description=f"Capoteam: {self.get_leader_name(self.interaction, t.leader_discord_id)}"
                 )
                 for t in page_teams
             ],
@@ -60,7 +68,7 @@ class TeamsSelectorView(discord.ui.View):
                 color=discord.Color.blue()
             )
             leader_discord_id = team.leader_discord_id
-            capoteam = await interaction.guild.fetch_member(leader_discord_id) if leader_discord_id > 10e16 else None
+            capoteam = interaction.guild.get_member(leader_discord_id) if leader_discord_id > 10e16 else None
 
             emb_description = f"**Evento:** {event.name}\n**Leader:** {capoteam.mention if capoteam is not None else leader_discord_id}\nK/D {team.kd:.2f}\n\n**Membri:**\n"
 

@@ -19,6 +19,6 @@ async def delete_team_callback(interaction: discord.Interaction, event: Event):
     )
     await interaction.response.send_message(
         embed=embed,
-        view=TeamsSelectorView(teams, event_id, "delete"),
+        view=TeamsSelectorView(teams, event_id, "delete", interaction=interaction),
         ephemeral=True
     )

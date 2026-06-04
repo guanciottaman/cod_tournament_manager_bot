@@ -101,7 +101,7 @@ class Events(commands.Cog):
             teams = await get_teams(event.event_id)
             await interaction.response.send_message(
                 embed=embed,
-                view=TeamsSelectorView(teams, event.event_id, "switch"),
+                view=TeamsSelectorView(teams, event.event_id, "switch", interaction=interaction),
                 ephemeral=True
             )
         await resolve_event(interaction, embed, events, event_selector_callback)
@@ -197,7 +197,7 @@ class Events(commands.Cog):
             if not teams:
                 await interaction.response.send_message("Non sono presenti team iscritti a questo evento", ephemeral=True)
                 return
-            view = TeamsSelectorView(teams, event_id, "info")
+            view = TeamsSelectorView(teams, event_id, "info", interaction=interaction)
             embed = discord.Embed(
                 title="Info team",
                 color=discord.Colour.red(),
@@ -242,7 +242,7 @@ class Events(commands.Cog):
             )
             await interaction.response.send_message(
                 embed=embed,
-                view=TeamsSelectorView(teams, event_id, "penalize"),
+                view=TeamsSelectorView(teams, event_id, "penalize", interaction=interaction),
                 ephemeral=True
             )
         
