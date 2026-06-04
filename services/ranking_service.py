@@ -16,7 +16,7 @@ async def compute_team_ranking(event_id: int, scope: str = "global", lobby_id: i
         FROM team_scores ts
         JOIN teams t ON t.team_id = ts.team_id
         JOIN player_scores ps ON ps.team_score_id = ts.id
-        WHERE ts.event_id = ? AND ts.status = 'accepted'
+        WHERE ts.event_id = ? AND ts.status IN ('accepted', 'edited')
     """
 
     params = [event_id]
@@ -41,10 +41,14 @@ async def compute_team_ranking(event_id: int, scope: str = "global", lobby_id: i
     }
 
     settings = await fetch_one("""
-        SELECT kill_points FROM events_settings WHERE event_id = ?
+        SELECT kill_points, drop_worst_match FROM events_settings WHERE event_id = ?
     """, (event_id,))
 
-    kill_points = settings[0] if settings else 1
+    if settings:
+        kill_points, drop_worst_match = settings
+    else:
+        kill_points = 1
+        drop_worst_match = False
 
     placement_map = await fetch_all("""
         SELECT position, points
@@ -68,6 +72,9 @@ async def compute_team_ranking(event_id: int, scope: str = "global", lobby_id: i
     for team_id, matches in team_matches.items():
         if not matches:
             continue
+
+        if drop_worst_match and len(matches) > 1:
+            matches = sorted(matches)[1:]
 
         score = sum(matches)
         score -= penalty_map.get(team_id, 0)

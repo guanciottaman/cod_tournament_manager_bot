@@ -114,7 +114,30 @@ class ControllaRisultatiView(discord.ui.View):
     async def accept_result(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
         await self._handle(interaction, "accepted")
-    
+
+    @discord.ui.button(
+        style=discord.ButtonStyle.blurple,
+        label="Modifica",
+        emoji="✏️",
+        row=0
+    )
+    async def edit_result(self, interaction: discord.Interaction, button: discord.ui.Button):
+        team_score = self.team_scores[self.page]
+        team_names = await get_players_names(team_score.team_id)
+        await interaction.response.send_modal(
+            RegistraRisultatiModal(
+                self.event_id,
+                team_score.team_id,
+                team_names,
+                team_score.match_number,
+                team_score.screenshots,
+                mode="edit",
+                team_score_id=team_score.team_score_id,
+                parent_view=self,
+                interaction=interaction
+            )
+        )
+
     @discord.ui.button(
         style=discord.ButtonStyle.red,
         label="Rifiuta",
@@ -139,28 +162,7 @@ class ControllaRisultatiView(discord.ui.View):
             await leader.send(embed=embed)
         await self._handle(interaction, "rejected")
             
-    @discord.ui.button(
-        style=discord.ButtonStyle.blurple,
-        label="Modifica",
-        emoji="✏️",
-        row=0
-    )
-    async def edit_result(self, interaction: discord.Interaction, button: discord.ui.Button):
-        team_score = self.team_scores[self.page]
-        team_names = await get_players_names(team_score.team_id)
-        await interaction.response.send_modal(
-            RegistraRisultatiModal(
-                self.event_id,
-                team_score.team_id,
-                team_names,
-                team_score.match_number,
-                team_score.screenshots,
-                mode="edit",
-                team_score_id=team_score.team_score_id,
-                parent_view=self,
-                interaction=interaction
-            )
-        )
+    
     
     @discord.ui.button(
         label="⬅️",
