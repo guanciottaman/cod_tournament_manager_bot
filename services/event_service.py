@@ -4,9 +4,6 @@ from models.event import Event
 from models.team import Team
 from db.db import *
 
-
-VALID_STATUSES = {"draft", "ready", "running", "finished"}
-
 async def get_event_info(event_id: int, guild_id: int) -> Event | None:
     row_events = await fetch_one("""
         SELECT name, status, created_at
