@@ -6,12 +6,13 @@ from collections import defaultdict
 def clean_player_name(name: str) -> str:
     return name.split("#")[0]
 
-async def compute_team_ranking(event_id: int, scope: str = "global", lobby_id: int | None = None, top_n: int = 16):
+async def get_team_match_data(event_id: int, scope: str = "global", lobby_id: int | None = None):
     query = """
         SELECT 
             ts.team_id,
             t.name,
             ts.placement,
+            ps.member_name,
             ps.kills
         FROM team_scores ts
         JOIN teams t ON t.team_id = ts.team_id
@@ -25,30 +26,17 @@ async def compute_team_ranking(event_id: int, scope: str = "global", lobby_id: i
         query += " AND t.lobby_id = ?"
         params.append(lobby_id)
 
-    rows = await fetch_all(query, tuple(params))
-    team_matches = defaultdict(list)
-    team_names = {}
-    team_kills = defaultdict(int)
+    return await fetch_all(query, tuple(params))
 
-    penalties = await fetch_all("""
-        SELECT team_id, penalty_points
-        FROM teams
-        WHERE event_id = ?
-    """, (event_id,))
-    penalty_map = {
-        team_id: penalty or 0
-        for team_id, penalty in penalties
-    }
+async def compute_team_ranking(event_id: int, scope: str = "global", lobby_id: int | None = None):
+    rows = await get_team_match_data(event_id, scope, lobby_id)
 
     settings = await fetch_one("""
-        SELECT kill_points, drop_worst_match FROM events_settings WHERE event_id = ?
+        SELECT kill_points, drop_worst_match 
+        FROM events_settings WHERE event_id = ?
     """, (event_id,))
 
-    if settings:
-        kill_points, drop_worst_match = settings
-    else:
-        kill_points = 1
-        drop_worst_match = False
+    kill_points, drop_worst_match = settings if settings else (1, False)
 
     placement_map = await fetch_all("""
         SELECT position, points
@@ -58,68 +46,68 @@ async def compute_team_ranking(event_id: int, scope: str = "global", lobby_id: i
 
     placement_dict = {p: pts for p, pts in placement_map}
 
-    for team_id, name, placement, kills in rows:
-        team_names[team_id] = clean_player_name(name)
+    team_matches = defaultdict(list)
+    team_kills = defaultdict(int)
+    team_names = {}
 
-        placement_pts = placement_dict.get(placement, 0)
-        match_score = (kills * kill_points) + placement_pts
+    for team_id, team_name, placement, _, kills in rows:
+        team_names[team_id] = clean_player_name(team_name)
+
+        match_score = (kills * kill_points) + placement_dict.get(placement, 0)
 
         team_matches[team_id].append(match_score)
         team_kills[team_id] += kills
-    
+
     final = []
 
     for team_id, matches in team_matches.items():
-        if not matches:
-            continue
-
         if drop_worst_match and len(matches) > 1:
-            matches = sorted(matches)[1:]
-
-        score = sum(matches)
-        score -= penalty_map.get(team_id, 0)
+            matches.remove(min(matches))
 
         final.append({
             "team_id": team_id,
             "name": team_names[team_id],
-            "score": score,
+            "score": sum(matches),
             "kills": team_kills[team_id]
         })
 
-    return sorted(final, key=lambda x: x["score"], reverse=True)[:top_n]
+    return sorted(final, key=lambda x: x["score"], reverse=True)
 
-async def compute_mvp_ranking(
-        event_id: int,
-        scope: str = "global",
-        lobby_id: int | None = None,
-        top_n: int = 5
-    ) -> list[dict[str, Any]]:
-    query = """
-        SELECT 
-            ps.member_name,
-            ps.kills
-        FROM player_scores ps
-        JOIN team_scores ts ON ts.id = ps.team_score_id
-        JOIN teams t ON t.team_id = ts.team_id
-        WHERE ts.event_id = ? AND ts.status = 'accepted'
-    """
+async def compute_mvp_ranking(event_id: int, scope: str = "global", lobby_id: int | None = None, top_n: int = 5):
+    rows = await get_team_match_data(event_id, scope, lobby_id)
 
-    params = [event_id]
+    settings = await fetch_one("""
+        SELECT kill_points, drop_worst_match 
+        FROM events_settings WHERE event_id = ?
+    """, (event_id,))
 
-    if scope == "lobby":
-        query += " AND t.lobby_id = ?"
-        params.append(lobby_id)
+    kill_points, drop_worst_match = settings if settings else (1, False)
 
-    rows = await fetch_all(query, tuple(params))
-    player_kills = defaultdict(int)
-    for name, kills in rows:
-        player_kills[name] += kills
-    final = [
-        {
-            "player": clean_player_name(name),
-            "kills": kills
-        }
-        for name, kills in player_kills.items()
-    ]
+    placement_map = await fetch_all("""
+        SELECT position, points
+        FROM placement_points
+        WHERE event_id = ?
+    """, (event_id,))
 
-    return sorted(final, key=lambda x: x["kills"], reverse=True)[:top_n]
+    placement_dict = {p: pts for p, pts in placement_map}
+
+    # struttura: player -> list of match contributions
+    player_matches = defaultdict(list)
+
+    for team_id, team_name, placement, player_name, kills in rows:
+        match_score = (kills * kill_points) + placement_dict.get(placement, 0)
+
+        player_matches[player_name].append(kills)
+
+    final_players = []
+
+    for player, matches in player_matches.items():
+        if drop_worst_match and len(matches) > 1:
+            matches.remove(min(matches))
+
+        final_players.append({
+            "player": clean_player_name(player),
+            "kills": sum(matches)
+        })
+
+    return sorted(final_players, key=lambda x: x["kills"], reverse=True)[:top_n]
