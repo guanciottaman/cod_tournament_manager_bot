@@ -285,24 +285,24 @@ class DebugCommands(commands.Cog):
         interaction: discord.Interaction
     ):
         if not await self.check_admin_role(interaction):
-            await interaction.response.send_message("Non hai il ruolo necessario per configurare le lobby di un evento!", ephemeral=True)
+            await interaction.response.send_message("Non hai il ruolo necessario per ottenere gli id di un evento!", ephemeral=True)
             return
+        await interaction.response.defer(ephemeral=True)
         try:
-
             if interaction.guild_id is None:
-                await interaction.response.send_message(
+                await interaction.followup.send(
                     "Usa questo comando in un server.",
                     ephemeral=True
                 )
                 return
-
+            
             events = await get_events_for_guild(
                 interaction.guild_id,
                 ["ready", "setup", "running"]
             )
 
             if not events:
-                await interaction.response.send_message(
+                await interaction.followup.send(
                     "Nessun evento trovato.",
                     ephemeral=True
                 )
@@ -319,7 +319,7 @@ class DebugCommands(commands.Cog):
                 color=discord.Color.blurple()
             )
 
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 embed=embed,
                 ephemeral=True
             )
@@ -327,7 +327,7 @@ class DebugCommands(commands.Cog):
         except Exception as e:
             print(e)
 
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 f"Errore: {e}",
                 ephemeral=True
             )
