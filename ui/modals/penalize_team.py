@@ -10,6 +10,7 @@ class PenalizzaTeam(discord.ui.Modal, title="Penalizza team"):
         max_length=4
     )
     def __init__(self, event_id: int, team_id: int):
+        super().__init__()
         self.event_id = event_id
         self.team_id = team_id
 
