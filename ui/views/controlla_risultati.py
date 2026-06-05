@@ -95,7 +95,7 @@ class ControllaRisultatiView(discord.ui.View):
         self.team_scores.pop(self.page)
 
         if not self.team_scores:
-            await interaction.response.edit_message(
+            await interaction.edit_original_response(
                 content="Nessun risultato rimasto",
                 view=None,
                 embeds=[]
@@ -122,6 +122,14 @@ class ControllaRisultatiView(discord.ui.View):
         row=0
     )
     async def edit_result(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not self.team_scores:
+            await interaction.response.send_message(
+                "Nessun risultato disponibile.",
+                ephemeral=True
+            )
+            return
+        if self.page >= len(self.team_scores):
+            self.page = max(0, len(self.team_scores) - 1)
         team_score = self.team_scores[self.page]
         team_names = await get_players_names(team_score.team_id)
         await interaction.response.send_modal(

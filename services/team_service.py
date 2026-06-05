@@ -50,13 +50,7 @@ async def insert_teams(
         return None
     return (team_id, player_ids)
 
-async def edit_teams(event_id: int, name: str, leader_discord_id: int, players_names: list[str]):
-    team_id = await fetch_one("SELECT team_id FROM teams WHERE event_id = ? AND leader_discord_id = ?",
-        (event_id, leader_discord_id))
-    if not team_id:
-        return
-    team_id = team_id[0]
-    await execute("UPDATE teams SET name = ? WHERE team_id = ?", (name, team_id))
+async def edit_teams(team_id: int, players_names: list[str]):
     await execute("DELETE FROM team_members WHERE team_id = ?", (team_id,))
     for player_name in players_names:
         await execute(

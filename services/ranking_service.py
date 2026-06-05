@@ -1,10 +1,10 @@
 from db.db import *
 
-from typing import Any
 from collections import defaultdict
 
 def clean_player_name(name: str) -> str:
     return name.split("#")[0]
+
 
 async def get_team_match_data(event_id: int, scope: str = "global", lobby_id: int | None = None):
     query = """
@@ -29,11 +29,32 @@ async def get_team_match_data(event_id: int, scope: str = "global", lobby_id: in
     return await fetch_all(query, tuple(params))
 
 async def compute_team_ranking(event_id: int, scope: str = "global", lobby_id: int | None = None):
-    rows = await get_team_match_data(event_id, scope, lobby_id)
+
+    # 1. match base data
+    query = """
+        SELECT 
+            ts.id,
+            ts.team_id,
+            t.name,
+            ts.placement
+        FROM team_scores ts
+        JOIN teams t ON t.team_id = ts.team_id
+        WHERE ts.event_id = ? 
+        AND ts.status IN ('accepted', 'edited')
+    """
+
+    params = [event_id]
+
+    if scope == "lobby" and lobby_id is not None:
+        query += " AND t.lobby_id = ?"
+        params.append(lobby_id)
+
+    rows = await fetch_all(query, tuple(params))
 
     settings = await fetch_one("""
         SELECT kill_points, drop_worst_match 
-        FROM events_settings WHERE event_id = ?
+        FROM events_settings 
+        WHERE event_id = ?
     """, (event_id,))
 
     kill_points, drop_worst_match = settings if settings else (1, False)
@@ -46,12 +67,28 @@ async def compute_team_ranking(event_id: int, scope: str = "global", lobby_id: i
 
     placement_dict = {p: pts for p, pts in placement_map}
 
+    match_kills = defaultdict(int)
+
+    player_rows = await fetch_all("""
+        SELECT team_score_id, kills
+        FROM player_scores
+        WHERE team_score_id IN (
+            SELECT id FROM team_scores WHERE event_id = ?
+        )
+    """, (event_id,))
+
+    for ts_id, kills in player_rows:
+        match_kills[ts_id] += kills
+
+    # 5. build per-team ranking
     team_matches = defaultdict(list)
     team_kills = defaultdict(int)
     team_names = {}
 
-    for team_id, team_name, placement, _, kills in rows:
+    for ts_id, team_id, team_name, placement in rows:
         team_names[team_id] = clean_player_name(team_name)
+
+        kills = match_kills.get(ts_id, 0)
 
         match_score = (kills * kill_points) + placement_dict.get(placement, 0)
 
@@ -61,12 +98,15 @@ async def compute_team_ranking(event_id: int, scope: str = "global", lobby_id: i
     final = []
 
     for team_id, matches in team_matches.items():
+        if not matches:
+            continue
+
         if drop_worst_match and len(matches) > 1:
-            matches.remove(min(matches))
+            matches = sorted(matches)[1:]
 
         final.append({
             "team_id": team_id,
-            "name": team_names[team_id],
+            "name": team_names.get(team_id, "Unknown"),
             "score": sum(matches),
             "kills": team_kills[team_id]
         })

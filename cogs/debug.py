@@ -5,7 +5,7 @@ from discord.ext import commands
 
 from db.db import *
 from services.team_service import (insert_teams, update_team_kd, get_teams,
-    insert_results, get_inserted_match_numbers, set_result_status)
+    insert_results, get_inserted_match_numbers, set_result_status, get_players_names)
 from services.event_service import get_events_for_guild, get_event_info
 from services.server_service import get_admin_role_id
 from models.team import Team
@@ -285,14 +285,11 @@ class DebugCommands(commands.Cog):
         self,
         interaction: discord.Interaction
     ):
-        print(".")
         if not await self.check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario per ottenere gli id di un evento!", ephemeral=True)
             return
-        print(".")
         await interaction.response.defer(ephemeral=True)
         try:
-            print(interaction.guild_id)
             if interaction.guild_id is None:
                 await interaction.followup.send(
                     "Usa questo comando in un server.",
@@ -304,7 +301,6 @@ class DebugCommands(commands.Cog):
                 interaction.guild_id,
                 ["ready", "setup", "running"]
             )
-            print(events)
 
             if not events:
                 await interaction.followup.send(

@@ -5,7 +5,6 @@ from discord import app_commands
 from typing import Literal
 
 from ui.embeds.event_builders import *
-from ui.selects.event_select import build_event_selector
 from ui.modals.nome_evento import NomeEventoModal
 from ui.views.elimina_evento import EliminaEventoView
 from ui.views.setup_view import SetupView, DeleteServerView

@@ -80,6 +80,8 @@ def build_results_embed(
     for score in player_scores:
         emb_description += f"**{score.member_name}:** {score.kills} kill\n"
     embed.description = emb_description
+    if len(team_score.screenshots) != 2:
+        return None
     embed.set_image(url=team_score.screenshots[0])
     embed2 = discord.Embed(color=embed.color)
     embed2.set_image(url=team_score.screenshots[1])

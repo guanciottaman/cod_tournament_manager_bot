@@ -9,6 +9,7 @@ from services.image_service import build_leaderboard_image, build_mvp_image
 async def termina_evento_callback(interaction: discord.Interaction, event: Event, ranking_channel: discord.TextChannel):
     await interaction.response.defer(thinking=True, ephemeral=True)
     event_id = event.event_id
+
     teams_ranking_global = await compute_team_ranking(event_id, "global")
     if not teams_ranking_global:
         await interaction.followup.send("Nessun risultato è stato accettato!", ephemeral=True)
