@@ -1,6 +1,9 @@
 import discord
 
 from services.team_service import *
+from ui.embeds.lobby_builders import build_info_lobby_embed
+from services.lobby_service import get_lobbies
+from services.event_service import get_event_info
 
 class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
     nome_team = discord.ui.TextInput(
@@ -78,7 +81,14 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
                     team_id = await assign_free_slot(self.event_id, self.nome_team.value, interaction.user.id, names)
                     if team_id is None:
                         await interaction.response.send_message("C'è stato un problema!", ephemeral=True)
+                        return
                     await update_team_kd(team_id, [0]*len(names))
+                    lobbies = await get_lobbies(self.event_id)
+                    event = await get_event_info(self.event_id, interaction.guild_id)
+                    if event is None:
+                        return
+                    embed = build_info_lobby_embed(event.name, lobbies)
+                    await interaction.user.send(embed=embed)
                 else:
                     await insert_teams(self.event_id, self.nome_team.value, interaction.user.id, names)
             except ValueError:
