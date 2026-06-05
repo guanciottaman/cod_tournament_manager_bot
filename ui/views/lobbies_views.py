@@ -2,9 +2,10 @@ import discord
 
 from ui.embeds.lobby_builders import *
 from ui.modals.lobbies_names import LobbiesNamesModal
+from ui.embeds.lobby_builders import build_info_lobby_embed
 from services.lobby_service import *
 from services.team_service import get_teams
-from services.event_service import set_event_status
+from services.event_service import set_event_status, get_leader_ids
 
 
 class LobbyConfigView(discord.ui.View):
@@ -101,11 +102,11 @@ class LobbyConfigView(discord.ui.View):
         event = await get_event_info(self.event_id, interaction.guild_id)
 
         if not event:
-            await interaction.response.send_message("Evento non valido", ephemeral=True)
+            await interaction.followup.send("Evento non valido", ephemeral=True)
             return
 
         if event.status != "ready":
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 "Le lobby sono già state create.",
                 ephemeral=True
             )
@@ -120,7 +121,7 @@ class LobbyConfigView(discord.ui.View):
         for lobby in lobbies_structure:
             lobby.sort(key=lambda t: t.kd or 0, reverse=True)
         if not lobbies_structure:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 "Errore creazione lobby",
                 ephemeral=True
             )
@@ -134,3 +135,32 @@ class LobbyConfigView(discord.ui.View):
         embed = await build_event_start_summary(lobbies)
 
         await interaction.edit_original_response(embed=embed, view=None)
+        leader_ids = await get_leader_ids(self.event_id)
+
+        if not leader_ids:
+            await interaction.followup.send("C'è stato un problema con i capoteam!", ephemeral=True)
+            return
+
+        embed = build_info_lobby_embed(event.name, lobbies)
+
+        guild = interaction.guild
+
+        failed = []
+
+        for user_id in leader_ids:
+            member = guild.get_member(user_id)
+
+            if member is None:
+                failed.append(user_id)
+                continue
+
+            try:
+                await member.send(embed=embed)
+            except discord.Forbidden:
+                failed.append(user_id)
+
+        if failed:
+            await interaction.followup.send(
+                f"Lobby inviate, ma {len(failed)} utenti non hanno ricevuto il DM",
+                ephemeral=True
+            )

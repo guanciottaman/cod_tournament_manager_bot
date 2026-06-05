@@ -2,9 +2,12 @@ from db.db import *
 from models.team import Team, TeamScore, PlayerScore
 
 
-async def get_teams(event_id: int) -> list[Team]:
-    teams = await fetch_all("SELECT team_id, name, leader_discord_id, kd, lobby_id FROM teams WHERE event_id = ?", (event_id,))
-
+async def get_teams(event_id: int, setup_mode: bool = False) -> list[Team]:
+    query = "SELECT team_id, name, leader_discord_id, kd, lobby_id FROM teams WHERE event_id = ?"
+    if setup_mode:
+        query += " AND lobby_id IS NOT NULL"
+    params = (event_id,)
+    teams = await fetch_all(query, params)
     if not teams:
         return []
     teams_list: list[Team] = []
@@ -49,6 +52,34 @@ async def insert_teams(
         print(f"Error: {e}")
         return None
     return (team_id, player_ids)
+
+async def assign_free_slot(
+    event_id: int,
+    team_name: str,
+    leader_discord_id: int,
+    players_names: list[str]
+) -> int | None:
+    print(".")
+    team_id = await fetch_one("SELECT team_id FROM teams WHERE lobby_id IS NULL AND event_id = ?", (event_id,))
+    if team_id is None:
+        return
+    team_id = team_id[0]
+    await execute("""
+        UPDATE teams SET 
+            lobby_id = previous_lobby_id,
+            name = ?,
+            leader_discord_id = ?,
+        WHERE team_id = ? AND event_id = ?
+        """,
+        (team_name, leader_discord_id, team_id, event_id)
+    )
+    await execute("DELETE FROM team_members WHERE team_id = ?", (team_id,))
+    for n in players_names:
+        await execute(
+            "INSERT INTO team_members (team_id, member_name) VALUES (?, ?)",
+            (team_id, n)
+        )
+    return team_id
 
 async def edit_teams(team_id: int, players_names: list[str]):
     await execute("DELETE FROM team_members WHERE team_id = ?", (team_id,))

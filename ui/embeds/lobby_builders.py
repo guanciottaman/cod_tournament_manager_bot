@@ -66,3 +66,14 @@ async def build_event_start_summary(lobbies: list[Lobby]) -> discord.Embed:
     )
 
     return embed
+
+def build_info_lobby_embed(event_name: str, lobbies: list[Lobby]) -> discord.Embed:
+    embed = discord.Embed(
+        title=f"Lobby {event_name}",
+        color=discord.Color.red()
+    )
+    emb_description = f"Numero lobby: {len(lobbies)}\n\nLobby:\n\n"
+    for i, lobby in enumerate(lobbies):
+        emb_description += f"**{i+1}. {lobby.name} ({len(lobby.teams)} team)**\n*Team:*\n- {'\n- '.join(f"{team.name} (K/D {team.kd:.2f})" for team in lobby.teams)}\n\n"
+    embed.description = emb_description
+    return embed

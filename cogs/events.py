@@ -14,11 +14,13 @@ from ui.resolvers.start_event_cb import start_event_callback
 from ui.resolvers.controlla_risultati_cb import controlla_risultati_callback
 from ui.resolvers.delete_team_cb import delete_team_callback
 from ui.resolvers.termina_evento_cb import termina_evento_callback
+from ui.resolvers.info_lobby_cb import info_lobbies_callback
+from ui.resolvers.send_lobby_codes_cb import send_lobby_codes_callback
 from services.event_service import *
 from services.event_flow import resolve_event
 from services.server_service import *
-from services.team_service import *
 from services.lobby_service import get_lobbies
+from services.team_service import *
 from services.ranking_service import *
 from services.image_service import *
 
@@ -97,7 +99,7 @@ class Events(commands.Cog):
             description="Hai già configurato le lobby dei seguenti eventi.\nScegli l'evento in cui vuoi spostare un team!"
         )
         async def event_selector_callback(interaction: discord.Interaction, event: Event):
-            teams = await get_teams(event.event_id)
+            teams = await get_teams(event.event_id, True)
             await interaction.response.send_message(
                 embed=embed,
                 view=TeamsSelectorView(teams, event.event_id, "switch", interaction=interaction),
@@ -116,6 +118,23 @@ class Events(commands.Cog):
             description="Hai già configurato i seguenti eventi.\nAssicurati di aver configurato correttamente le lobby!"
         )
         await resolve_event(interaction, embed, events, start_event_callback)
+
+    @app_commands.command(name="manda_codice_lobby", description="Manda il codice lobby ai capoteam di una certa lobby")
+    @app_commands.describe(code="Il codice da mandare")
+    async def manda_codice_lobby(self, interaction: discord.Interaction, code: int):
+        if not await self.check_admin_role(interaction):
+            await interaction.response.send_message("Non hai il ruolo necessario a mandare i codici lobby!", ephemeral=True)
+            return
+        events = await get_events_for_guild(interaction.guild_id, ["running"])
+        embed = discord.Embed(
+            title="Manda codici lobby",
+            color=discord.Color.blue(),
+            description="I seguenti eventi sono in corso. Scegli quello che ti interessa."
+        )
+        async def wrapper(interaction: discord.Interaction, event: Event):
+            lobbies = await get_lobbies(event.event_id)
+            await send_lobby_codes_callback(interaction, event, lobbies, code)
+        await resolve_event(interaction, embed, events, wrapper)
 
     @app_commands.command(name="info_evento", description="Ricevi informazioni su un certo evento")
     async def info_evento(self, interaction: discord.Interaction):
@@ -145,18 +164,7 @@ class Events(commands.Cog):
             title="Info eventi",
             description="Seleziona l'evento di cui vuoi controllare le lobby"
         )
-        async def event_selector_callback(interaction: discord.Interaction, event: Event):
-            lobbies = await get_lobbies(event.event_id)
-            embed = discord.Embed(
-                title=f"Lobby {event.name}",
-                color=discord.Color.red()
-            )
-            emb_description = f"Numero lobby: {len(lobbies)}\n\nLobby:\n\n"
-            for i, lobby in enumerate(lobbies):
-                emb_description += f"**{i+1}. {lobby.name} ({len(lobby.teams)} team)**\n*Team:*\n- {'\n- '.join(f"{team.name} (K/D {team.kd:.2f})" for team in lobby.teams)}\n\n"
-            embed.description = emb_description
-            await interaction.response.send_message(embed=embed, ephemeral=True)
-        await resolve_event(interaction, embed, events, event_selector_callback)
+        await resolve_event(interaction, embed, events, info_lobbies_callback)
         
     
     @app_commands.command(name="elimina_evento", description="Elimina un evento creato")
@@ -192,7 +200,10 @@ class Events(commands.Cog):
         )
         async def event_selector_callback(interaction: discord.Interaction, event: Event):
             event_id = event.event_id
-            teams = await get_teams_by_event(event_id)
+            if event.status == "setup":
+                teams = await get_teams(event_id, True)
+            else:
+                teams = await get_teams(event_id)
             if not teams:
                 await interaction.response.send_message("Non sono presenti team iscritti a questo evento", ephemeral=True)
                 return

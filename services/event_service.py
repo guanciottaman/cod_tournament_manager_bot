@@ -233,8 +233,16 @@ async def get_team_members(team_id: int):
     return team_members
 
 
-async def delete_team(team_id: int):
-    await execute("DELETE FROM teams WHERE team_id = ?", (team_id,))
+async def delete_team(team_id: int, status: str):
+    if status == "setup":
+        await execute("""
+            UPDATE teams
+            SET previous_lobby_id = lobby_id,
+                lobby_id = NULL
+            WHERE team_id = ?
+        """, (team_id,))
+    else:
+        await execute("DELETE FROM teams WHERE team_id = ?", (team_id,))
 
 
 async def set_kill_points_db(event_id: int, kill_points: int):
@@ -242,3 +250,23 @@ async def set_kill_points_db(event_id: int, kill_points: int):
         "UPDATE events_settings SET kill_points = ? WHERE event_id = ?",
         (kill_points, event_id)
     )
+
+async def get_leader_ids(event_id: int, lobby_id: int | None = None):
+    query = "SELECT leader_discord_id FROM teams WHERE event_id = ?"
+    params = [event_id]
+    if lobby_id is not None:
+        query += " AND lobby_id = ?"
+        params.append(lobby_id)
+    rows = await fetch_all(query, tuple(params))
+    return [r[0] for r in rows if r[0] is not None]
+
+async def has_free_slot(event_id: int) -> bool:
+    row = await fetch_one("""
+        SELECT 1
+        FROM teams
+        WHERE event_id = ?
+        AND lobby_id IS NULL
+        LIMIT 1
+    """, (event_id,))
+
+    return row is not None

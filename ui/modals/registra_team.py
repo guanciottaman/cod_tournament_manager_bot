@@ -20,13 +20,15 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
             event_id: int,
             members_number: int,
             is_kd_mode: bool,
+            status: str,
             edit_mode: bool = False,
-            team_id: int | None=None
+            team_id: int | None=None,
         ):
         super().__init__()
         self.event_id = event_id
         self.members_number = members_number
         self.is_kd_mode = is_kd_mode
+        self.status = status
         self.edit_mode: bool = edit_mode
         if edit_mode and team_id is not None:
             self.team_id = team_id
@@ -57,11 +59,11 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
             async def btn_callback(interaction: discord.Interaction):
                 if self.edit_mode:
                     await interaction.response.send_modal(
-                        TeamKDModal(self.event_id, names, edit_mode=self.edit_mode, team_id=self.team_id)
+                        TeamKDModal(self.event_id, names, self.status, edit_mode=self.edit_mode, team_id=self.team_id)
                     )
                 else:
                     await interaction.response.send_modal(
-                        TeamKDModal(self.event_id, names, self.nome_team.value, False)
+                        TeamKDModal(self.event_id, names, self.status, self.nome_team.value, False)
                     )
             btn.callback = btn_callback
             view.add_item(btn)
@@ -72,7 +74,13 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
                 await interaction.response.send_message("Hai modificato il tuo team con successo!", ephemeral=True)
                 return
             try:
-                await insert_teams(self.event_id, self.nome_team.value, interaction.user.id, names)
+                if self.status == "setup":
+                    team_id = await assign_free_slot(self.event_id, self.nome_team.value, interaction.user.id, names)
+                    if team_id is None:
+                        await interaction.response.send_message("C'è stato un problema!", ephemeral=True)
+                    await update_team_kd(team_id, [0]*len(names))
+                else:
+                    await insert_teams(self.event_id, self.nome_team.value, interaction.user.id, names)
             except ValueError:
                 await interaction.response.send_message("Hai già iscritto un team a questo evento!", ephemeral=True)
                 return
@@ -84,6 +92,7 @@ class TeamKDModal(discord.ui.Modal, title="Inserisci KD team"):
             self,
             event_id: int,
             players_list: list[str],
+            status: str,
             team_name: str | None = None,
             edit_mode: bool = False,
             team_id: int | None=None
@@ -92,6 +101,7 @@ class TeamKDModal(discord.ui.Modal, title="Inserisci KD team"):
         self.event_id = event_id
         self.team_name = team_name
         self.players = players_list
+        self.status = status
         self.edit_mode = edit_mode
         if self.edit_mode:
             self.team_id = team_id
@@ -123,7 +133,16 @@ class TeamKDModal(discord.ui.Modal, title="Inserisci KD team"):
                 ephemeral=True
             )
         else:
-            team_id, _ = await insert_teams(self.event_id, self.team_name, interaction.user.id, self.players)
+            if self.status == "setup":
+                team_id = await assign_free_slot(self.event_id, self.team_name, interaction.user.id, self.players)
+                if team_id is None:
+                    await interaction.response.send_message("Nessuno slot disponibile", ephemeral=True)
+                    return
+            else:
+                team_id, _ = await insert_teams(self.event_id, self.team_name, interaction.user.id, self.players)
+            if not team_id:
+                await interaction.response.send_message("Errore interno team_id", ephemeral=True)
+                return
             await update_team_kd(team_id, kd_values)
 
             await interaction.response.send_message(

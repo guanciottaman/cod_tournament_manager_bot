@@ -11,7 +11,10 @@ async def delete_team_callback(interaction: discord.Interaction, event: Event):
     if not row:
         await interaction.response.send_message("Non sono presenti team iscritti a questo evento", ephemeral=True)
         return
-    teams = await get_teams(event_id)
+    if event.status == "setup":
+        teams = await get_teams(event_id, True)
+    else:
+        teams = await get_teams(event_id)
     embed = discord.Embed(
         title="Elimina team",
         color=discord.Colour.red(),

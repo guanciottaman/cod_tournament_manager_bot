@@ -17,7 +17,7 @@ class Teams(commands.Cog):
     
     @app_commands.command(name="registra_team", description="Registra il tuo team a un evento")
     async def registra_team(self, interaction: discord.Interaction):
-        events = await get_events_for_guild(interaction.guild_id, ["ready"])
+        events = await get_events_for_guild(interaction.guild_id, ["ready", "setup"])
         embed = discord.Embed(
             title="Scegli l'evento a cui iscriverti",
             color=discord.Colour.red(),
@@ -26,8 +26,17 @@ class Teams(commands.Cog):
         async def event_selector_callback(interaction: discord.Interaction, event: Event):
             players_per_team = event.players_per_team
             is_kd_mode = True if event.lobby_mode in ("kd", "kd_balanced") else False
+            if event.status == "setup":
+                if not await has_free_slot(event.event_id):
+                    await interaction.response.send_message("Non ci sono slot liberi al momento!", ephemeral=True)
+                    return
             await interaction.response.send_modal(
-                RegistraTeamModal(event_id=event.event_id, members_number=players_per_team, is_kd_mode=is_kd_mode)
+                RegistraTeamModal(
+                    event_id=event.event_id,
+                    members_number=players_per_team,
+                    is_kd_mode=is_kd_mode,
+                    status=event.status
+                )
             )
         
         await resolve_event(interaction, embed, events, event_selector_callback)

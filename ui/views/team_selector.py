@@ -129,7 +129,7 @@ class TeamsSelectorView(discord.ui.View):
             elif self.mode == "penalize":
                 await interaction.response.send_modal(PenalizzaTeam(self.event_id, team.team_id))
             elif self.mode == "delete":
-                await delete_team(team_id)
+                await delete_team(team_id, event.status)
                 await interaction.response.send_message("Team eliminato con successo!", ephemeral=True)
         select.callback = callback
         return select
