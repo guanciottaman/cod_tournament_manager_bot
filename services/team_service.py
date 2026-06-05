@@ -68,7 +68,7 @@ async def assign_free_slot(
         UPDATE teams SET 
             lobby_id = previous_lobby_id,
             name = ?,
-            leader_discord_id = ?,
+            leader_discord_id = ?
         WHERE team_id = ? AND event_id = ?
         """,
         (team_name, leader_discord_id, team_id, event_id)
