@@ -141,7 +141,7 @@ class LobbyConfigView(discord.ui.View):
             await interaction.followup.send("C'è stato un problema con i capoteam!", ephemeral=True)
             return
 
-        embed = build_info_lobby_embed(event.name, lobbies)
+        embed = build_info_lobby_embed(event.name, lobbies, show_kd=False)
 
         guild = interaction.guild
 
