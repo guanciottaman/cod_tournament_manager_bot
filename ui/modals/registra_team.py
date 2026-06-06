@@ -87,7 +87,7 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
                     event = await get_event_info(self.event_id, interaction.guild_id)
                     if event is None:
                         return
-                    embed = build_info_lobby_embed(event.name, lobbies)
+                    embed = build_info_lobby_embed(event.name, lobbies, show_kd=False)
                     await interaction.user.send(embed=embed)
                 else:
                     await insert_teams(self.event_id, self.nome_team.value, interaction.user.id, names)
