@@ -28,7 +28,7 @@ async def build_config_lobbies_embed(event_id: int, lobbies_number: int, teams_c
     )
     emb_description = f"Configura le lobby prima di avviare.\nI giocatori verranno inseriti automaticamente secondo le impostazioni da te selezionate\nTeam attualmente iscritti: {teams_count}\n\n"
     lobby_text = "\n".join(
-        f"{i+1}. {name}" for i, name in enumerate(names_list)
+        f"{i+1}. LOBBY {name}" for i, name in enumerate(names_list)
     )
 
     emb_description += (
@@ -56,7 +56,7 @@ async def build_event_start_summary(lobbies: list[Lobby]) -> discord.Embed:
 
     for i, lobby in enumerate(lobbies, start=1):
         description_lines.append(
-            f"**{i}.{lobby.name}** → {len(lobby.teams)} team"
+            f"**{i}. LOBBY {lobby.name}** → {len(lobby.teams)} team"
         )
 
     embed.add_field(
@@ -74,11 +74,11 @@ def build_info_lobby_embed(event_name: str, lobbies: list[Lobby], show_kd: bool 
     )
     emb_description = f"Numero lobby: {len(lobbies)}\n\nLobby:\n\n"
     for lobby in lobbies:
-        emb_description += f"**Lobby {lobby.name} ({len(lobby.teams)} team)**\n\n*Team:*\n"
+        emb_description += f"**LOBBY {lobby.name} ({len(lobby.teams)} team)**\n\n*Team:*\n"
         for i, team in enumerate(lobby.teams):
             emb_description += f"{i}. {team.name}"
             if show_kd:
-                emb_description += f" (K/D {team.kd})"
+                emb_description += f" (K/D {team.kd:.2f})"
             emb_description += "\n"
         emb_description += "\n"
     embed.description = emb_description
