@@ -12,7 +12,7 @@ from ui.views.team_selector import TeamsSelectorView
 from ui.resolvers.lobby_config_cb import start_lobby_config
 from ui.resolvers.start_event_cb import start_event_callback
 from ui.resolvers.controlla_risultati_cb import controlla_risultati_callback
-from ui.resolvers.delete_team_cb import delete_team_callback
+from ui.resolvers.delete_team_cb import delete_team_callback, delete_team_callback_personal
 from ui.resolvers.termina_evento_cb import termina_evento_callback
 from ui.resolvers.info_lobby_cb import info_lobbies_callback
 from ui.resolvers.send_lobby_codes_cb import send_lobby_codes_callback
@@ -99,7 +99,7 @@ class Events(commands.Cog):
             description="Hai già configurato le lobby dei seguenti eventi.\nScegli l'evento in cui vuoi spostare un team!"
         )
         async def event_selector_callback(interaction: discord.Interaction, event: Event):
-            teams = await get_teams(event.event_id, True)
+            teams = await get_teams(event.event_id, setup_mode=True)
             await interaction.response.send_message(
                 embed=embed,
                 view=TeamsSelectorView(teams, event.event_id, "switch", interaction=interaction),
@@ -201,7 +201,7 @@ class Events(commands.Cog):
         async def event_selector_callback(interaction: discord.Interaction, event: Event):
             event_id = event.event_id
             if event.status == "setup":
-                teams = await get_teams(event_id, True)
+                teams = await get_teams(event_id, setup_mode=True)
             else:
                 teams = await get_teams(event_id)
             if not teams:
@@ -218,18 +218,17 @@ class Events(commands.Cog):
         await resolve_event(interaction, embed, events, event_selector_callback)
 
     @app_commands.command(name="elimina_team", description="Elimina un team da un evento")
-    async def elimina_team(self, interaction: discord.Interaction):
-        if not await self.check_admin_role(interaction):
-            await interaction.response.send_message("Non hai il ruolo necessario per eliminare un team!", ephemeral=True)
-            return
+    async def elimina_team(self, interaction: discord.Interaction)
         events: list[Event] = await get_events_for_guild(interaction.guild_id, ["ready", "setup", "running"])
         embed = discord.Embed(
-            title="Iscrizione team",
+            title="Elimina team",
             color=discord.Colour.red(),
             description="Questa è una lista degli eventi attivi.\nScegli l'evento di cui vuoi eliminare un team."
         )
-        
-        await resolve_event(interaction, embed, events, delete_team_callback)
+        if not await self.check_admin_role(interaction):
+            await resolve_event(interaction, embed, events, delete_team_callback_personal)
+        else:
+            await resolve_event(interaction, embed, events, delete_team_callback)
     
     @app_commands.command(name="penalizza_team", description="Penalizza un team")
     async def penalizza_team(self, interaction: discord.Interaction):

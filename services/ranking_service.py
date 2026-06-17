@@ -1,6 +1,11 @@
 from db.db import *
 
 from collections import defaultdict
+import re
+
+def extract_clan(team_name: str):
+    match = re.search(r"\(([^)]+)\)$", team_name)
+    return match.group(1) if match else None
 
 def clean_player_name(name: str) -> str:
     return name.split("#")[0]
@@ -116,37 +121,34 @@ async def compute_team_ranking(event_id: int, scope: str = "global", lobby_id: i
 async def compute_mvp_ranking(event_id: int, scope: str = "global", lobby_id: int | None = None, top_n: int = 5):
     rows = await get_team_match_data(event_id, scope, lobby_id)
 
-    settings = await fetch_one("""
-        SELECT kill_points, drop_worst_match 
+    row = await fetch_one("""
+        SELECT drop_worst_match 
         FROM events_settings WHERE event_id = ?
     """, (event_id,))
 
-    kill_points, drop_worst_match = settings if settings else (1, False)
-
-    placement_map = await fetch_all("""
-        SELECT position, points
-        FROM placement_points
-        WHERE event_id = ?
-    """, (event_id,))
-
-    placement_dict = {p: pts for p, pts in placement_map}
+    drop_worst_match = bool(row[0]) if row else False
 
     # struttura: player -> list of match contributions
     player_matches = defaultdict(list)
 
-    for team_id, team_name, placement, player_name, kills in rows:
-        match_score = (kills * kill_points) + placement_dict.get(placement, 0)
+    for _, team_name, _, player_name, kills in rows:
+        clan = extract_clan(team_name)
 
-        player_matches[player_name].append(kills)
+        formatted_player = (
+            f"{clean_player_name(player_name)} ({clan})"
+            if clan else clean_player_name(player_name)
+        )
+
+        player_matches[formatted_player].append(kills)
 
     final_players = []
 
     for player, matches in player_matches.items():
         if drop_worst_match and len(matches) > 1:
-            matches.remove(min(matches))
+            matches = sorted(matches)[1:]
 
         final_players.append({
-            "player": clean_player_name(player),
+            "player": player,
             "kills": sum(matches)
         })
 

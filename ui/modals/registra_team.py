@@ -1,5 +1,7 @@
 import discord
 
+import re
+
 from services.team_service import *
 from ui.embeds.lobby_builders import build_info_lobby_embed
 from services.lobby_service import get_lobbies
@@ -52,6 +54,12 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
             self.add_item(inp)
     
     async def on_submit(self, interaction: discord.Interaction):
+        if not re.match(r"^.+\s\([^)]+\)$", self.nome_team.value):
+            await interaction.response.send_message(
+                "Il nome del team deve essere nel formato: Nome Team (CLAN)",
+                ephemeral=True
+            )
+            return
         names = [self.capoteam.value]
         for inp in self.inputs:
             names.append(inp.value)

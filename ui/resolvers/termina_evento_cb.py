@@ -5,8 +5,9 @@ from services.lobby_service import get_lobbies
 from services.event_service import delete_event
 from services.ranking_service import *
 from services.image_service import build_leaderboard_image, build_mvp_image
+from services.live_ranking_service import stop_live
 
-async def termina_evento_callback(interaction: discord.Interaction, event: Event, ranking_channel: discord.TextChannel):
+async def termina_evento_callback(interaction: discord.Interaction, event: Event, ranking_channel: discord.TextChannel, delete_event_flag: bool = True):
     await interaction.response.defer(thinking=True, ephemeral=True)
     event_id = event.event_id
 
@@ -28,10 +29,13 @@ async def termina_evento_callback(interaction: discord.Interaction, event: Event
         )
     )
     embed = discord.Embed(
-        title="Evento terminato",
+        title="Evento terminato" if delete_event_flag else "Classifiche evento",
         color=discord.Color.blurple(),
     )
-    emb_description = f"Hai terminato l'evento **{event.name}**.\nEcco le classifiche finali globali:\n\n**Claassifica team:**\n"
+    if delete_event_flag:
+        emb_description = f"Hai terminato l'evento **{event.name}**.\nEcco le classifiche finali globali:\n\n**Claassifica team:**\n"
+    else:
+        emb_description = f"Ecco le classifiche dell'evento **{event.name}**:\n\n**Claassifica team:**\n"
     for i, r in enumerate(teams_ranking_global):
         team_name = r["name"]
         team_score = r["score"]
@@ -78,5 +82,8 @@ async def termina_evento_callback(interaction: discord.Interaction, event: Event
             "Il bot non ha i permessi per vedere o scrivere nel canale!"
         )
         return
+    
+    await stop_live(event_id)
     await interaction.followup.send(f"La classifica è stata mandata su {ranking_channel.mention}")
-    await delete_event(interaction.guild_id, event_id)
+    if delete_event_flag:
+        await delete_event(interaction.guild_id, event_id)

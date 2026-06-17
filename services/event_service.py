@@ -260,6 +260,21 @@ async def get_leader_ids(event_id: int, lobby_id: int | None = None):
     rows = await fetch_all(query, tuple(params))
     return [r[0] for r in rows if r[0] is not None]
 
+async def get_team_from_leader(event_id: int, leader_id: int):
+    row = await fetch_one(
+        "SELECT team_id, name, lobby_id, leader_discord_id, kd FROM teams WHERE event_id = ? AND leader_discord_id = ?",
+        (event_id, leader_id)
+    )
+    if row is None:
+        return None
+    return Team(
+        row[0],
+        row[1],
+        row[3],
+        row[4],
+        row[2]
+    )
+
 async def has_free_slot(event_id: int) -> bool:
     row = await fetch_one("""
         SELECT 1

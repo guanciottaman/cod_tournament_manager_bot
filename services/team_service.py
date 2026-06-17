@@ -2,12 +2,15 @@ from db.db import *
 from models.team import Team, TeamScore, PlayerScore
 
 
-async def get_teams(event_id: int, setup_mode: bool = False) -> list[Team]:
+async def get_teams(event_id: int, lobby_id: int | None = None, setup_mode: bool = False) -> list[Team]:
     query = "SELECT team_id, name, leader_discord_id, kd, lobby_id FROM teams WHERE event_id = ?"
+    params = [event_id]
     if setup_mode:
         query += " AND lobby_id IS NOT NULL"
-    params = (event_id,)
-    teams = await fetch_all(query, params)
+    elif lobby_id is not None:
+        query += " AND lobby_id = ?"
+        params.append(lobby_id)
+    teams = await fetch_all(query, tuple(params))
     if not teams:
         return []
     teams_list: list[Team] = []

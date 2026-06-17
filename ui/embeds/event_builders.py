@@ -1,5 +1,7 @@
 import discord
 
+from typing import Any
+
 from services.event_service import *
 from models.team import TeamScore
 
@@ -17,7 +19,7 @@ def build_event_embed(
     placement_points: list[tuple[int, int]],
     teams: list[Team],
     embed_title: str="Configurazione evento"
-):
+) -> discord.Embed:
     embed = discord.Embed(
         title=embed_title,
         color=discord.Color.blurple()
@@ -89,4 +91,18 @@ def build_results_embed(
 
     embeds = [embed, embed2]
     return embeds
-    
+
+def build_live_ranking_embed(event_name: str, lobby_name: str, team_ranking: list[dict[str, Any]]) -> discord.Embed:
+    embed = discord.Embed(
+        title="Classifiche evento",
+        color=discord.Color.blurple(),
+    )
+    emb_description = f"Ecco la classifiche dell'evento **{event_name}** per la tua lobby {lobby_name}:\n\n**Claassifica team:**\n"
+    for i, team in enumerate(team_ranking, start=1):
+        name = team["name"]
+        score = team["score"]
+        kills = team.get("kills", 0)
+
+        emb_description += f"**{i}. {name}** | {score} pts | {kills} kill\n"
+    embed.description = emb_description
+    return embed

@@ -5,6 +5,7 @@ from models.lobby import Lobby
 from models.team import Team
 from db.db import *
 from services.event_service import get_event_info
+from services.team_service import get_teams
 
 MIN_PER_LOBBY = 2
 MAX_PER_LOBBY = 16
@@ -201,6 +202,28 @@ async def get_lobbies(event_id: int) -> list[Lobby]:
 
     return list(lobbies_map.values())
 
+async def get_lobby(event_id: int, lobby_id: int) -> Lobby | None:
+    lobby_rows = await fetch_all("""
+        SELECT DISTINCT lobby_id
+        FROM teams
+        WHERE event_id = ?
+        ORDER BY lobby_id
+    """, (event_id,))
+
+    lobby_ids = [row[0] for row in lobby_rows]
+
+    if lobby_id not in lobby_ids:
+        return None
+
+    index = lobby_ids.index(lobby_id)
+
+    teams = await get_teams(event_id, lobby_id=lobby_id)
+
+    return Lobby(
+        lobby_id=lobby_id,
+        index=index,
+        teams=teams
+    )
 
 async def set_lobbies_number(event_id: int, new_number: int):
     await execute("UPDATE events_settings SET lobbies_number = ? WHERE event_id = ?",
