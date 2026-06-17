@@ -203,25 +203,21 @@ async def get_lobbies(event_id: int) -> list[Lobby]:
     return list(lobbies_map.values())
 
 async def get_lobby(event_id: int, lobby_id: int) -> Lobby | None:
-    lobby_rows = await fetch_all("""
-        SELECT DISTINCT lobby_id
-        FROM teams
-        WHERE event_id = ?
-        ORDER BY lobby_id
-    """, (event_id,))
+    lobby_row = await fetch_one(
+        "SELECT name FROM lobbies WHERE event_id = ? AND lobby_id = ?",
+        (event_id, lobby_id)
+    )
 
-    lobby_ids = [row[0] for row in lobby_rows]
-
-    if lobby_id not in lobby_ids:
+    if lobby_row is None:
         return None
 
-    index = lobby_ids.index(lobby_id)
+    name = lobby_row[0]
 
     teams = await get_teams(event_id, lobby_id=lobby_id)
 
     return Lobby(
         lobby_id=lobby_id,
-        index=index,
+        name=name,
         teams=teams
     )
 

@@ -56,7 +56,7 @@ async def start_live(event_id: int, guild: discord.Guild, leader_ids: list[int],
         return
     lobby = await get_lobby(event_id, lobby_id)
 
-    if not lobby:
+    if lobby is None or lobby.name is None or not lobby.teams:
         return
 
     # 2. ranking iniziale
