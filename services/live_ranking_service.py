@@ -31,7 +31,8 @@ async def live_loop(event_id: int, lobby_id: int):
             ranking = await compute_team_ranking(
                 event_id,
                 scope="lobby",
-                lobby_id=lobby_id
+                lobby_id=lobby_id,
+                include_pending=True
             )
         except Exception as e:
             print(e)
@@ -63,7 +64,8 @@ async def start_live(event_id: int, guild: discord.Guild, leader_ids: list[int],
     ranking = await compute_team_ranking(
         event_id,
         scope="lobby",
-        lobby_id=lobby_id
+        lobby_id=lobby_id,
+        include_pending=True
     )
 
     embed = build_live_ranking_embed(event.name, lobby.name, ranking)

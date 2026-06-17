@@ -159,7 +159,7 @@ def build_mvp_image(
             )
 
             draw.text(
-                (width-220, y),
+                (width-160, y),
                 f"{kills} Kill",
                 fill=(10, 10, 10),
                 anchor="ra",

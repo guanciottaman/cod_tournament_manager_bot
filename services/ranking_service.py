@@ -11,8 +11,18 @@ def clean_player_name(name: str) -> str:
     return name.split("#")[0]
 
 
-async def get_team_match_data(event_id: int, scope: str = "global", lobby_id: int | None = None):
-    query = """
+async def get_team_match_data(
+    event_id: int,
+    scope: str = "global",
+    lobby_id: int | None = None,
+    include_pending: bool = False
+):
+    statuses = ["accepted", "edited"]
+
+    if include_pending:
+        statuses.append("pending")
+    placeholders = ",".join(["?"] * len(statuses))
+    query = f"""
         SELECT 
             ts.team_id,
             t.name,
@@ -22,10 +32,10 @@ async def get_team_match_data(event_id: int, scope: str = "global", lobby_id: in
         FROM team_scores ts
         JOIN teams t ON t.team_id = ts.team_id
         JOIN player_scores ps ON ps.team_score_id = ts.id
-        WHERE ts.event_id = ? AND ts.status IN ('accepted', 'edited')
+        WHERE ts.event_id = ? AND ts.status IN ({placeholders})
     """
 
-    params = [event_id]
+    params = [event_id] + statuses
 
     if scope == "lobby" and lobby_id is not None:
         query += " AND t.lobby_id = ?"
@@ -33,10 +43,20 @@ async def get_team_match_data(event_id: int, scope: str = "global", lobby_id: in
 
     return await fetch_all(query, tuple(params))
 
-async def compute_team_ranking(event_id: int, scope: str = "global", lobby_id: int | None = None):
+async def compute_team_ranking(
+    event_id: int,
+    scope: str = "global", 
+    lobby_id: int | None = None,
+    include_pending: bool = False
+):
+    statuses = ["accepted", "edited"]
 
+    if include_pending:
+        statuses.append("pending")
     # 1. match base data
-    query = """
+    placeholders = ",".join(["?"] * len(statuses))
+
+    query = f"""
         SELECT 
             ts.id,
             ts.team_id,
@@ -44,11 +64,11 @@ async def compute_team_ranking(event_id: int, scope: str = "global", lobby_id: i
             ts.placement
         FROM team_scores ts
         JOIN teams t ON t.team_id = ts.team_id
-        WHERE ts.event_id = ? 
-        AND ts.status IN ('accepted', 'edited')
+        WHERE ts.event_id = ?
+        AND ts.status IN ({placeholders})
     """
 
-    params = [event_id]
+    params = [event_id] + statuses
 
     if scope == "lobby" and lobby_id is not None:
         query += " AND t.lobby_id = ?"
