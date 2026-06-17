@@ -218,7 +218,7 @@ class Events(commands.Cog):
         await resolve_event(interaction, embed, events, event_selector_callback)
 
     @app_commands.command(name="elimina_team", description="Elimina un team da un evento")
-    async def elimina_team(self, interaction: discord.Interaction)
+    async def elimina_team(self, interaction: discord.Interaction):
         events: list[Event] = await get_events_for_guild(interaction.guild_id, ["ready", "setup", "running"])
         embed = discord.Embed(
             title="Elimina team",
