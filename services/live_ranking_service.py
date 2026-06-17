@@ -37,7 +37,7 @@ async def live_loop(event_id: int, lobby_id: int):
             print(e)
             continue
 
-        embed = build_live_ranking_embed(event, lobby, ranking)
+        embed = build_live_ranking_embed(event.name, lobby.name, ranking)
 
         messages: dict[int, discord.Message] = lobby_state["messages"]
 
@@ -66,7 +66,7 @@ async def start_live(event_id: int, guild: discord.Guild, leader_ids: list[int],
         lobby_id=lobby_id
     )
 
-    embed = build_live_ranking_embed(event, lobby, ranking)
+    embed = build_live_ranking_embed(event.name, lobby.name, ranking)
 
     # 3. invio DM ai leader
     messages: dict[int, discord.Message] = {}

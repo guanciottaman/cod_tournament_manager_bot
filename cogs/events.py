@@ -64,7 +64,6 @@ class Events(commands.Cog):
         if not exists:
             await interaction.response.send_message("Il tuo server non è registrato!", ephemeral=True)
             return
-        print(exists)
         await interaction.response.send_message(view=DeleteServerView(), ephemeral=True)
 
     @app_commands.command(name="crea_evento", description="Crea un nuovo evento")
