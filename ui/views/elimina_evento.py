@@ -1,6 +1,7 @@
 import discord
 
 from services.event_service import delete_event
+from services.live_ranking_service import stop_live
 
 class EliminaEventoView(discord.ui.View):
     def __init__(self, event_id: int):
@@ -19,5 +20,6 @@ class EliminaEventoView(discord.ui.View):
             style=discord.ButtonStyle.danger
     )
     async def delete_event_confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await stop_live(self.event_id)
         await delete_event(interaction.guild_id, self.event_id)
         await interaction.response.send_message("Evento eliminato con successo!", ephemeral=True)
