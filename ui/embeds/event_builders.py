@@ -105,4 +105,5 @@ def build_live_ranking_embed(event_name: str, lobby_name: str, team_ranking: lis
 
         emb_description += f"**{i}. {name}** | {score} pts | {kills} kill\n"
     embed.description = emb_description
+    embed.set_footer(text="Le classifiche verranno aggiornate ogni 35 minuti")
     return embed

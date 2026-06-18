@@ -148,7 +148,7 @@ def build_mvp_image(
 
             medal = medals[i] if i < len(medals) else None
             if medal is not None:
-                img.paste(medal, (180, y-30), medal)
+                img.paste(medal, (150, y-30), medal)
 
             draw.text(
                 (width // 2, y+30),
@@ -159,7 +159,7 @@ def build_mvp_image(
             )
 
             draw.text(
-                (width-160, y),
+                (width-130, y),
                 f"{kills} Kill",
                 fill=(10, 10, 10),
                 anchor="ra",
