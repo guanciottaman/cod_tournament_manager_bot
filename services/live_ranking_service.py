@@ -83,6 +83,7 @@ async def start_live(event_id: int, guild: discord.Guild, leader_ids: list[int],
             messages[leader_id] = msg
         except:
             pass
+    
 
     # 4. crea task loop
     task = asyncio.create_task(live_loop(event_id, lobby_id))
@@ -94,7 +95,6 @@ async def start_live(event_id: int, guild: discord.Guild, leader_ids: list[int],
         "messages": messages,
         "task": task
     }
-
 
 
 async def stop_live(event_id: int, lobby_id: int | None = None):
