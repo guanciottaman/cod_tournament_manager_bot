@@ -6,6 +6,7 @@ from ui.embeds.lobby_builders import build_info_lobby_embed
 from services.lobby_service import *
 from services.team_service import get_teams
 from services.event_service import set_event_status, get_leader_ids
+from services.server_service import get_admin_role_id
 
 
 class LobbyConfigView(discord.ui.View):
@@ -145,22 +146,31 @@ class LobbyConfigView(discord.ui.View):
 
         guild = interaction.guild
 
-        failed = []
+        failed = 0
 
         for user_id in leader_ids:
             member = guild.get_member(user_id)
 
             if member is None:
-                failed.append(user_id)
+                failed += 1
                 continue
 
             try:
                 await member.send(embed=embed)
             except discord.Forbidden:
-                failed.append(user_id)
-
+                failed += 1
+        admin_role_id = await get_admin_role_id(interaction.guild_id)
+        admin_role = interaction.guild.get_role(admin_role_id)
+        if admin_role is None:
+            return
+        for admin in admin_role.members:
+            try:
+                await admin.send(embed=embed)
+            except discord.Forbidden:
+                failed += 1
+                continue
         if failed:
             await interaction.followup.send(
-                f"Lobby inviate, ma {len(failed)} utenti non hanno ricevuto il DM",
+                f"Lobby inviate, ma {failed} utenti non hanno ricevuto il DM",
                 ephemeral=True
             )
