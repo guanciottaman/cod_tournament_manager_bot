@@ -34,6 +34,9 @@ async def delete_team_callback_personal(interaction: discord.Interaction, event:
     if team is None:
         await interaction.response.send_message("Non hai nessun team iscritto a questo evento!", ephemeral=True)
         return
+    if event.status not in ("ready", "setup"):
+        await interaction.response.send_message("Non puoi eliminare il tuo team in questo momento!", ephemeral=True)
+        return
     view = discord.ui.View()
     delete_btn = discord.ui.Button(
         label="Conferma",
