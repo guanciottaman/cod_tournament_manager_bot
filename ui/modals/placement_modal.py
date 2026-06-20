@@ -52,9 +52,13 @@ class KillPointsModal(discord.ui.Modal, title="Punti per kill"):
     async def on_submit(self, interaction: discord.Interaction):
         await set_kill_points_db(self.event_id, int(self.kill_points.value))
         placement_view = discord.ui.View()
-        btn = discord.ui.Button(style=discord.ButtonStyle.secondary, label="Modifica punti piazzamento")
+        btn = discord.ui.Button(style=discord.ButtonStyle.green, label="Modifica punti piazzamento")
         async def btn_callback(ak_interaction: discord.Interaction):
             await ak_interaction.response.send_modal(PlacementModal(self.event_id, self.view))
         btn.callback = btn_callback
         placement_view.add_item(btn)
-        await interaction.response.send_message("Hai impostato i punti per le kill, ora clicca il bottone per impostare i punti di piazzamento!", view=placement_view, ephemeral=True)
+        await interaction.response.send_message(
+            "# ATTENZIONE\nHai impostato i punti per le kill, ora clicca il bottone per impostare i punti di piazzamento!",
+            view=placement_view,
+            ephemeral=True
+        )
