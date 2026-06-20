@@ -66,7 +66,7 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
 
         if self.is_kd_mode:
             view = discord.ui.View()
-            btn = discord.ui.Button(style=discord.ButtonStyle.green, label="Modifica punti kd")
+            btn = discord.ui.Button(style=discord.ButtonStyle.green, label="INSERISCI K/D")
             async def btn_callback(interaction: discord.Interaction):
                 if self.edit_mode:
                     await interaction.response.send_modal(
