@@ -40,22 +40,29 @@ async def send_lobby_codes_callback(
         )
         if interaction.guild is None:
             return
+
         guild = interaction.guild
 
         failed = 0
+        user_ids = set(leader_ids)
 
-        for user_id in leader_ids:
+        for user_id in user_ids:
+            if user_id == interaction.client.user.id:
+                continue
+
             member = guild.get_member(user_id)
 
             if member is None:
                 try:
                     member = await guild.fetch_member(user_id)
-                except discord.NotFound:
+                except (discord.NotFound, discord.Forbidden, discord.HTTPException):
                     failed += 1
                     continue
-            
-            if member.id == interaction.client.user.id:
-                continue
+
+            try:
+                await member.send(embed=embed)
+            except discord.Forbidden:
+                failed += 1
 
         if failed:
             await interaction.followup.send(
