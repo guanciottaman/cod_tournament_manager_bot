@@ -61,10 +61,11 @@ async def compute_team_ranking(
             ts.id,
             ts.team_id,
             t.name,
-            ts.placement
-        FROM team_scores ts
-        JOIN teams t ON t.team_id = ts.team_id
-        WHERE ts.event_id = ?
+            ts.placement,
+            COALESCE(t.penalty_points, 0)
+            FROM team_scores ts
+            JOIN teams t ON t.team_id = ts.team_id
+            WHERE ts.event_id = ?
         AND ts.status IN ({placeholders})
     """
 
@@ -110,12 +111,16 @@ async def compute_team_ranking(
     team_kills = defaultdict(int)
     team_names = {}
 
-    for ts_id, team_id, team_name, placement in rows:
+    for ts_id, team_id, team_name, placement, penalty in rows:
         team_names[team_id] = clean_player_name(team_name)
 
         kills = match_kills.get(ts_id, 0)
 
-        match_score = (kills * kill_points) + placement_dict.get(placement, 0)
+        match_score = (
+            (kills * kill_points)
+            + placement_dict.get(placement, 0)
+            - penalty
+        )
 
         team_matches[team_id].append(match_score)
         team_kills[team_id] += kills
