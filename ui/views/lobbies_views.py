@@ -148,7 +148,18 @@ class LobbyConfigView(discord.ui.View):
 
         failed = 0
 
-        for user_id in leader_ids:
+        admin_role_id = await get_admin_role_id(interaction.guild_id)
+        admin_role = interaction.guild.get_role(admin_role_id)
+
+        if admin_role is None:
+            admins = set()
+        else:
+            admins = {m.id for m in admin_role.members}
+
+        leaders = set(leader_ids)
+
+        all_user_ids = leaders | admins
+        for user_id in all_user_ids:
             member = guild.get_member(user_id)
 
             if member is None:
@@ -159,16 +170,6 @@ class LobbyConfigView(discord.ui.View):
                 await member.send(embed=embed)
             except discord.Forbidden:
                 failed += 1
-        admin_role_id = await get_admin_role_id(interaction.guild_id)
-        admin_role = interaction.guild.get_role(admin_role_id)
-        if admin_role is None:
-            return
-        for admin in admin_role.members:
-            try:
-                await admin.send(embed=embed)
-            except discord.Forbidden:
-                failed += 1
-                continue
         if failed:
             await interaction.followup.send(
                 f"Lobby inviate, ma {failed} utenti non hanno ricevuto il DM",

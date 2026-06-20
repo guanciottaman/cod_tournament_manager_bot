@@ -66,7 +66,7 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
 
         if self.is_kd_mode:
             view = discord.ui.View()
-            btn = discord.ui.Button(style=discord.ButtonStyle.secondary, label="Modifica punti kd")
+            btn = discord.ui.Button(style=discord.ButtonStyle.green, label="Modifica punti kd")
             async def btn_callback(interaction: discord.Interaction):
                 if self.edit_mode:
                     await interaction.response.send_modal(
@@ -78,7 +78,7 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
                     )
             btn.callback = btn_callback
             view.add_item(btn)
-            await interaction.response.send_message("Hai inserito le info del team, l'evento richiede i rapporti K/D dei tuoi membri. Clicca il bottone qui sotto", view=view, ephemeral=True)
+            await interaction.response.send_message("# ATTENZIONE:\nIl tuo team non è stato ancora registrato.\n Hai inserito le info del team, l'evento richiede i rapporti K/D dei tuoi membri. Clicca il bottone qui sotto", view=view, ephemeral=True)
         else:
             if self.edit_mode:
                 await edit_teams(self.team_id, names)
