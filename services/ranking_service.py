@@ -138,8 +138,14 @@ async def compute_team_ranking(
 
     return sorted(final, key=lambda x: x["score"], reverse=True)
 
-async def compute_mvp_ranking(event_id: int, scope: str = "global", lobby_id: int | None = None, top_n: int = 5):
-    rows = await get_team_match_data(event_id, scope, lobby_id)
+async def compute_mvp_ranking(
+    event_id: int,
+    scope: str = "global",
+    lobby_id: int | None = None, 
+    top_n: int = 5,
+    include_pending: bool = False
+):
+    rows = await get_team_match_data(event_id, scope, lobby_id, include_pending)
 
     row = await fetch_one("""
         SELECT drop_worst_match 
