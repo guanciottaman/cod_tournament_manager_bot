@@ -3,7 +3,7 @@ from models.team import Team, TeamScore, PlayerScore
 
 
 async def get_teams(event_id: int, lobby_id: int | None = None, setup_mode: bool = False) -> list[Team]:
-    query = "SELECT team_id, name, leader_discord_id, kd, lobby_id FROM teams WHERE event_id = ?"
+    query = "SELECT team_id, name, leader_discord_id, kd, lobby_id FROM teams WHERE event_id = ? ORDER BY team_id"
     params = [event_id]
     if setup_mode:
         query += " AND lobby_id IS NOT NULL"
@@ -62,7 +62,6 @@ async def assign_free_slot(
     leader_discord_id: int,
     players_names: list[str]
 ) -> int | None:
-    print(".")
     team_id = await fetch_one("SELECT team_id FROM teams WHERE lobby_id IS NULL AND event_id = ?", (event_id,))
     if team_id is None:
         return
