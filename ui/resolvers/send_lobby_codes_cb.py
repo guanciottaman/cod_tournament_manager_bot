@@ -38,26 +38,28 @@ async def send_lobby_codes_callback(
             color=discord.Color.blue(),
             description=f"Usa il seguente codice per entrare in partita:\nCodice: **{code}**"
         )
-
+        if interaction.guild is None:
+            return
         guild = interaction.guild
 
-        failed = []
+        failed = 0
 
         for user_id in leader_ids:
             member = guild.get_member(user_id)
 
             if member is None:
-                failed.append(user_id)
+                try:
+                    member = await guild.fetch_member(user_id)
+                except discord.NotFound:
+                    failed += 1
+                    continue
+            
+            if member.id == interaction.client.user.id:
                 continue
-
-            try:
-                await member.send(embed=embed)
-            except discord.Forbidden:
-                failed.append(user_id)
 
         if failed:
             await interaction.followup.send(
-                f"Lobby inviate, ma {len(failed)} utenti non hanno ricevuto il DM",
+                f"Lobby inviate, ma {failed} utenti non hanno ricevuto il DM",
                 ephemeral=True
             )
     select.callback = select_callback
