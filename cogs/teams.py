@@ -90,7 +90,8 @@ class Teams(commands.Cog):
                         event,
                         mode="edit",
                         interaction=interaction
-                    )
+                    ),
+                    ephemeral=True
                 )
         await resolve_event(interaction, embed, events, event_selector_callback)
     
