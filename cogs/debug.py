@@ -218,7 +218,21 @@ class DebugCommands(commands.Cog):
         matches_number = getattr(event, "matches_number", None)
         if not matches_number:
             matches_number = max(1, len(teams) // 10)
+        settings = await fetch_one("""
+            SELECT kill_points
+            FROM events_settings
+            WHERE event_id = ?
+        """, (event_id,))
 
+        kill_points_value = settings[0] if settings else 1
+
+        placement_rows = await fetch_all("""
+            SELECT position, points
+            FROM placement_points
+            WHERE event_id = ?
+        """, (event_id,))
+
+        placement_dict = {p: pts for p, pts in placement_rows}
         inserted = 0
         buffer = []
         for match_number in range(1, matches_number + 1):
@@ -240,11 +254,18 @@ class DebugCommands(commands.Cog):
                 players = r["players"]
 
                 kills = sum(p[2] for p in players)
-
+                placement_pts = placement_dict.get(placement, 0)
+                kill_pts = kills * kill_points_value
+                total = placement_pts + kill_pts
                 match_data["teams"].append({
                     "team_id": team_id,
                     "placement": placement,
                     "kills": kills,
+                    "breakdown": {
+                        "placement_points": placement_pts,
+                        "kill_points": kill_pts,
+                        "total": total
+                    },
                     "players": players
                 })
                 await insert_results(
