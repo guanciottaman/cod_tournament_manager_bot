@@ -1,4 +1,7 @@
 import random
+import json
+from io import BytesIO
+
 import discord
 from discord import app_commands
 from discord.ext import commands
@@ -217,7 +220,10 @@ class DebugCommands(commands.Cog):
             matches_number = max(1, len(teams) // 10)
 
         inserted = 0
-
+        debug_data = {
+            "event_id": event_id,
+            "matches": []
+        }
         for match_number in range(1, matches_number + 1):
 
             if match_number in existing_matches:
@@ -226,8 +232,24 @@ class DebugCommands(commands.Cog):
             match_results = await generate_match_results(
                 teams
             )
+            match_data = {
+                "match": match_number,
+                "teams": []
+            }
 
             for r in match_results:
+                team_id = r["team_id"]
+                placement = r["placement"]
+                players = r["players"]
+
+                kills = sum(p.get("kills", 0) for p in players)
+
+                match_data["teams"].append({
+                    "team_id": team_id,
+                    "placement": placement,
+                    "kills": kills,
+                    "players": players
+                })
                 await insert_results(
                     event_id=event_id,
                     team_id=r["team_id"],
@@ -236,11 +258,14 @@ class DebugCommands(commands.Cog):
                     players=r["players"],
                     prove=IMAGE_POOL
                 )
+            debug_data["matches"].append(match_data)
 
             inserted += 1
-
+        json_bytes = json.dumps(debug_data, indent=2).encode("utf-8")
+        file_ = discord.File(BytesIO(json_bytes), filename="debug_risultati.json")
         await interaction.followup.send(
             f"Generati {inserted} match per evento {event_id}",
+            file=file_,
             ephemeral=True
         )
 
