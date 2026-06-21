@@ -54,7 +54,7 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
             self.add_item(inp)
     
     async def on_submit(self, interaction: discord.Interaction):
-        if not re.match(r"^.+\s\([^)]+\)$", self.nome_team.value):
+        if not re.match(r"^.+\s\([^)]+\)$", self.nome_team.value) and not self.edit_mode:
             await interaction.response.send_message(
                 "Il nome del team deve essere nel formato: Nome Team (CLAN)",
                 ephemeral=True
