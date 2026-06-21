@@ -37,9 +37,10 @@ async def termina_evento_callback(interaction: discord.Interaction, event: Event
     else:
         emb_description = f"Ecco le classifiche dell'evento **{event.name}**:\n\n**Claassifica team:**\n"
     for i, r in enumerate(teams_ranking_global):
+        team_id = r["team_id"]
         team_name = r["name"]
         team_score = r["score"]
-        emb_description += f"{i+1}. {team_name} | {team_score} punti\n"
+        emb_description += f"{i+1}. {team_name} | ID {team_id} | {team_score} punti\n"
     emb_description += "\n**MVPs:**\n"
     for i, p in enumerate(mvp_ranking_global):
         player_name = clean_player_name(p.get("player", "Unknown"))
@@ -56,9 +57,10 @@ async def termina_evento_callback(interaction: discord.Interaction, event: Event
             )
         )
         for j, r in enumerate(lobby_ranking):
+            team_id = r["team_id"]
             team_name = r["name"]
             team_score = r["score"]
-            emb_description += f"{j+1}. {team_name} | {team_score} punti\n"
+            emb_description += f"{j+1}. {team_name}| ID {team_id} |  | {team_score} punti\n"
         mvp_lobby_ranking = await compute_mvp_ranking(event_id, "lobby", lobby_id=lobby.lobby_id)
         mvp_lobby_image = build_mvp_image(mvp_lobby_ranking, lobby_name=lobby.name)
         files.append(

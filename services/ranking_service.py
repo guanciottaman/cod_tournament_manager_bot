@@ -112,7 +112,7 @@ async def compute_team_ranking(
     team_names = {}
 
     for ts_id, team_id, team_name, placement, penalty in rows:
-        team_names[team_id] = clean_player_name(team_name)
+        team_names[team_id] = team_name
 
         kills = match_kills.get(ts_id, 0)
 
