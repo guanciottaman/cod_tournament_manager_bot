@@ -12,10 +12,12 @@ from ui.embeds.event_builders import build_live_team_ranking_embed, build_live_m
 live_events: dict[int, dict[int, dict[int, Any]]] = {}
 
 
+TIME_TO_WAIT: int = 10
+
 async def live_mvp_loop(event_id: int, lobby_id: int):
     try:
         while True:
-            await asyncio.sleep(35 * 60)
+            await asyncio.sleep(TIME_TO_WAIT)
 
             event_state = live_events.get(event_id)
             if not event_state:
