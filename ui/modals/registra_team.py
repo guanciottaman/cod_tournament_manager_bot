@@ -156,6 +156,14 @@ class TeamKDModal(discord.ui.Modal, title="Inserisci KD team"):
                 if team_id is None:
                     await interaction.response.send_message("Nessuno slot disponibile", ephemeral=True)
                     return
+
+                await update_team_kd(team_id, kd_values)
+                lobbies = await get_lobbies(self.event_id)
+                event = await get_event_info(self.event_id, interaction.guild_id)
+                if event is None:
+                    return
+                embed = build_info_lobby_embed(event.name, lobbies, show_kd=False)
+                await interaction.user.send(embed=embed)
             else:
                 team_id, _ = await insert_teams(self.event_id, self.team_name, interaction.user.id, self.players)
             if not team_id:

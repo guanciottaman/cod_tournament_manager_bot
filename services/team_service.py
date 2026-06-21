@@ -62,16 +62,30 @@ async def assign_free_slot(
     leader_discord_id: int,
     players_names: list[str]
 ) -> int | None:
-    team_id = await fetch_one("SELECT team_id FROM teams WHERE lobby_id IS NULL AND event_id = ?", (event_id,))
+    team_id = await fetch_one("""
+        SELECT team_id 
+        FROM teams 
+        WHERE lobby_id IS NULL AND event_id = ?
+        ORDER BY team_id ASC
+        LIMIT 1
+    """, (event_id,))
     if team_id is None:
-        return
+        return None
     team_id = team_id[0]
+    row = await fetch_one(
+        "SELECT previous_lobby_id FROM teams WHERE team_id = ? AND event_id = ?",
+        (team_id, event_id)
+    )
+
+    if not row or row[0] is None:
+        return None
     await execute("""
         UPDATE teams SET 
             lobby_id = previous_lobby_id,
             name = ?,
             leader_discord_id = ?
         WHERE team_id = ? AND event_id = ?
+            AND previous_lobby_id IS NOT NULL
         """,
         (team_name, leader_discord_id, team_id, event_id)
     )
