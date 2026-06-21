@@ -239,7 +239,7 @@ class DebugCommands(commands.Cog):
                 placement = r["placement"]
                 players = r["players"]
 
-                kills = sum(p.get("kills", 0) for p in players)
+                kills = sum(p[2] for p in players)
 
                 match_data["teams"].append({
                     "team_id": team_id,
