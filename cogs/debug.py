@@ -220,10 +220,7 @@ class DebugCommands(commands.Cog):
             matches_number = max(1, len(teams) // 10)
 
         inserted = 0
-        debug_data = {
-            "event_id": event_id,
-            "matches": []
-        }
+        buffer = []
         for match_number in range(1, matches_number + 1):
 
             if match_number in existing_matches:
@@ -258,9 +255,13 @@ class DebugCommands(commands.Cog):
                     players=r["players"],
                     prove=IMAGE_POOL
                 )
-            debug_data["matches"].append(match_data)
+            buffer.append(match_data)
 
             inserted += 1
+        debug_data = {
+            "event_id": event_id,
+            "matches": buffer
+        }
         json_bytes = json.dumps(debug_data, indent=2).encode("utf-8")
         file_ = discord.File(BytesIO(json_bytes), filename="debug_risultati.json")
         await interaction.followup.send(
