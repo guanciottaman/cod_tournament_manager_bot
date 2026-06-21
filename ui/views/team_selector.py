@@ -1,23 +1,26 @@
 import discord
 
 from models.team import Team
+from models.event import Event
 from services.team_service import *
 from services.event_service import *
 from services.lobby_service import get_lobbies, switch_team_lobby
 from ui.modals.penalize_team import PenalizzaTeam
+from ui.modals.registra_team import RegistraTeamModal
 
 class TeamsSelectorView(discord.ui.View):
     def __init__(
             self,
             teams: list[Team],
-            event_id: int,
+            event: Event,
             mode: str = "info",
             page: int = 0,
             interaction: discord.Interaction | None = None
         ):
         super().__init__(timeout=180)
         self.teams = teams
-        self.event_id = event_id
+        self.event = event
+        self.event_id = self.event.event_id
         self.mode = mode
         self.page = page
         self.interaction = interaction
@@ -127,7 +130,18 @@ class TeamsSelectorView(discord.ui.View):
                 view.add_item(sposta_team_btn)
                 await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
             elif self.mode == "penalize":
-                await interaction.response.send_modal(PenalizzaTeam(self.event_id, team.team_id))
+                await interaction.response.send_modal(PenalizzaTeam(self.event_id, team_id))
+            elif self.mode == "edit":
+                await interaction.response.send_modal(
+                    RegistraTeamModal(
+                        event_id=self.event_id,
+                        members_number=self.event.players_per_team,
+                        is_kd_mode=True if event.lobby_mode in ("kd", "kd_balanced") else False,
+                        status=self.event.status,
+                        edit_mode=True,
+                        team_id=team_id
+                    ) 
+                )
             elif self.mode == "delete":
                 await delete_team(team_id, event.status)
                 await interaction.response.send_message("Team eliminato con successo!", ephemeral=True)

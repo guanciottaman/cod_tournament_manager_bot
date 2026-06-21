@@ -29,16 +29,6 @@ class Events(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__()
         self.bot = bot
-    
-    async def check_admin_role(self, interaction: discord.Interaction):
-        admin_role_id = await get_admin_role_id(interaction.guild_id)
-        if not admin_role_id:
-            return False
-
-        admin_role = interaction.guild.get_role(admin_role_id)
-        if admin_role is None:
-            return False
-        return admin_role in interaction.user.roles
 
     @app_commands.command(name="setup_server", description="Imposta il bot per questo server")
     @app_commands.checks.has_permissions(ban_members=True)
@@ -68,14 +58,14 @@ class Events(commands.Cog):
 
     @app_commands.command(name="crea_evento", description="Crea un nuovo evento")
     async def crea_evento(self, interaction: discord.Interaction):
-        if not await self.check_admin_role(interaction):
+        if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario a creare un nuovo evento!", ephemeral=True)
             return
         await interaction.response.send_modal(NomeEventoModal())
     
     @app_commands.command(name="config_lobby", description="Configura le lobby di un evento programmato")
     async def config_lobby(self, interaction: discord.Interaction):
-        if not await self.check_admin_role(interaction):
+        if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario per configurare le lobby di un evento!", ephemeral=True)
             return
         embed = discord.Embed(
@@ -87,7 +77,7 @@ class Events(commands.Cog):
 
     @app_commands.command(name="sposta_team", description="Sposta un team in un'altra lobby")
     async def sposta_team(self, interaction: discord.Interaction):
-        if not await self.check_admin_role(interaction):
+        if not await check_admin_role(interaction):
             await interaction.response.send_message(
                 "Non hai il ruolo necessario per spostare un team in un'altra lobby in un evento!",
                 ephemeral=True
@@ -102,14 +92,14 @@ class Events(commands.Cog):
             teams = await get_teams(event.event_id, setup_mode=True)
             await interaction.response.send_message(
                 embed=embed,
-                view=TeamsSelectorView(teams, event.event_id, "switch", interaction=interaction),
+                view=TeamsSelectorView(teams, event, "switch", interaction=interaction),
                 ephemeral=True
             )
         await resolve_event(interaction, embed, events, event_selector_callback)
 
     @app_commands.command(name="avvia_evento", description="Avvia un evento configurato")
     async def avvia_evento(self, interaction: discord.Interaction):
-        if not await self.check_admin_role(interaction):
+        if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario ad avviare un evento!", ephemeral=True)
             return
         events = await get_events_for_guild(interaction.guild_id, ["setup"])
@@ -122,7 +112,7 @@ class Events(commands.Cog):
     @app_commands.command(name="manda_codice_lobby", description="Manda il codice lobby ai capoteam di una certa lobby")
     @app_commands.describe(code="Il codice da mandare")
     async def manda_codice_lobby(self, interaction: discord.Interaction, code: int):
-        if not await self.check_admin_role(interaction):
+        if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario a mandare i codici lobby!", ephemeral=True)
             return
         events = await get_events_for_guild(interaction.guild_id, ["running"])
@@ -138,7 +128,7 @@ class Events(commands.Cog):
 
     @app_commands.command(name="info_evento", description="Ricevi informazioni su un certo evento")
     async def info_evento(self, interaction: discord.Interaction):
-        if not await self.check_admin_role(interaction):
+        if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario a ricevere informazioni su un evento!", ephemeral=True)
             return
         events = await get_events_for_guild(interaction.guild_id)
@@ -156,7 +146,7 @@ class Events(commands.Cog):
     
     @app_commands.command(name="info_lobby", description="Ricevi informazioni sulle lobby di un certo evento")
     async def info_lobby(self, interaction: discord.Interaction):
-        if not await self.check_admin_role(interaction):
+        if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario a ricevere informazioni sulle lobby di un evento!", ephemeral=True)
             return
         events = await get_events_for_guild(interaction.guild_id, ["setup", "running"])
@@ -169,7 +159,7 @@ class Events(commands.Cog):
     
     @app_commands.command(name="elimina_evento", description="Elimina un evento creato")
     async def elimina_evento(self, interaction: discord.Interaction):
-        if not await self.check_admin_role(interaction):
+        if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario per eliminare un evento!", ephemeral=True)
             return
         events = await get_events_for_guild(interaction.guild_id)
@@ -189,7 +179,7 @@ class Events(commands.Cog):
     
     @app_commands.command(name="info_team", description="Controlla informazioni su un team")
     async def info_team(self, interaction: discord.Interaction):
-        if not await self.check_admin_role(interaction):
+        if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario per avere info su un team!", ephemeral=True)
             return
         events = await get_events_for_guild(interaction.guild_id, ["ready", "setup", "running"])
@@ -207,7 +197,7 @@ class Events(commands.Cog):
             if not teams:
                 await interaction.response.send_message("Non sono presenti team iscritti a questo evento", ephemeral=True)
                 return
-            view = TeamsSelectorView(teams, event_id, "info", interaction=interaction)
+            view = TeamsSelectorView(teams, event, "info", interaction=interaction)
             embed = discord.Embed(
                 title="Info team",
                 color=discord.Colour.red(),
@@ -225,14 +215,14 @@ class Events(commands.Cog):
             color=discord.Colour.red(),
             description="Questa è una lista degli eventi attivi.\nScegli l'evento di cui vuoi eliminare un team."
         )
-        if not await self.check_admin_role(interaction):
+        if not await check_admin_role(interaction):
             await resolve_event(interaction, embed, events, delete_team_callback_personal)
         else:
             await resolve_event(interaction, embed, events, delete_team_callback)
     
     @app_commands.command(name="penalizza_team", description="Penalizza un team")
     async def penalizza_team(self, interaction: discord.Interaction):
-        if not await self.check_admin_role(interaction):
+        if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario per eliminare un team!", ephemeral=True)
             return
         events: list[Event] = await get_events_for_guild(interaction.guild_id, ["running"])
@@ -251,7 +241,7 @@ class Events(commands.Cog):
             )
             await interaction.response.send_message(
                 embed=embed,
-                view=TeamsSelectorView(teams, event_id, "penalize", interaction=interaction),
+                view=TeamsSelectorView(teams, event, "penalize", interaction=interaction),
                 ephemeral=True
             )
         
@@ -265,7 +255,7 @@ class Events(commands.Cog):
         status: Literal["pending", "accepted", "rejected", "edited"],
         page: int = 1
     ):
-        if not await self.check_admin_role(interaction):
+        if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario per eliminare un team!", ephemeral=True)
             return
         events: list[Event] = await get_events_for_guild(interaction.guild_id, ["running"])
@@ -281,7 +271,7 @@ class Events(commands.Cog):
 
     @app_commands.command(name="termina_evento", description="Termina un evento")
     async def termina_evento(self, interaction: discord.Interaction):
-        if not await self.check_admin_role(interaction):
+        if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario per eliminare un team!", ephemeral=True)
             return
         ranking_channel_id = await get_ranking_channel_id(interaction.guild_id)

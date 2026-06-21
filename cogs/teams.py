@@ -4,6 +4,7 @@ from discord import app_commands
 
 from ui.resolvers.inserisci_risultato_cb import inserisci_risultato_callback
 from ui.modals.registra_team import RegistraTeamModal
+from ui.views.team_selector import TeamsSelectorView
 from services.team_service import *
 from services.event_service import *
 from services.event_flow import resolve_event
@@ -54,22 +55,43 @@ class Teams(commands.Cog):
             lobby_mode = event.lobby_mode
             members_number = event.players_per_team
             is_kd_mode = True if lobby_mode in ("kd", "kd_balanced") else False
-            team_id = await get_team_id(event_id, interaction.user.id)
-            if team_id is None:
+            if not await check_admin_role(interaction):
+                team_id = await get_team_id(event_id, interaction.user.id)
+                if team_id is None:
+                    await interaction.response.send_message(
+                        "Non hai registrato nessun team per questo evento!\nUsa /registra_team per farlo.",
+                        ephemeral=True
+                    )
+                    return
+                await interaction.response.send_modal(
+                    RegistraTeamModal(
+                        event_id=event_id,
+                        members_number=members_number,
+                        is_kd_mode=is_kd_mode,
+                        status=event.status,
+                        edit_mode=True,
+                        team_id=team_id
+                    )
+                )
+            else:
+                teams = await get_teams(
+                    event_id,
+                    setup_mode=True if event.status == "setup" else False
+                )
+                embed = discord.Embed(
+                    title="Modifica team",
+                    color=discord.Color.blue(),
+                    description="Scegli il team da modificare"
+                )
                 await interaction.response.send_message(
-                    "Non hai registrato nessun team per questo evento!\nUsa /registra_team per farlo.",
-                    ephemeral=True
+                    embed=embed,
+                    view=TeamsSelectorView(
+                        teams,
+                        event,
+                        mode="edit",
+                        interaction=interaction
+                    )
                 )
-                return
-            await interaction.response.send_modal(
-                RegistraTeamModal(
-                    event_id=event_id,
-                    members_number=members_number,
-                    is_kd_mode=is_kd_mode,
-                    edit_mode=True,
-                    team_id=team_id
-                )
-            )
         await resolve_event(interaction, embed, events, event_selector_callback)
     
     @app_commands.command(name="inserisci_risultato", description="Inserisci i risultati di un match")

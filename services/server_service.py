@@ -1,5 +1,5 @@
 import sqlite3
-
+import discord
 from db.db import *
 
 async def check_server_registered(guild_id: int) -> bool:
@@ -51,3 +51,13 @@ async def get_ranking_channel_id(guild_id: int) -> int | None:
         return row[0]
     else:
         return None
+
+async def check_admin_role(interaction: discord.Interaction):
+    admin_role_id = await get_admin_role_id(interaction.guild_id)
+    if not admin_role_id:
+        return False
+
+    admin_role = interaction.guild.get_role(admin_role_id)
+    if admin_role is None:
+        return False
+    return admin_role in interaction.user.roles
