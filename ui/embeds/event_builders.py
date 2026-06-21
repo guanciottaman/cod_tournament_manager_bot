@@ -97,7 +97,7 @@ def build_live_mvp_ranking_embed(event_name: str, lobby_name: str, mvp_ranking: 
         title="Classifiche Live MVP Evento",
         color=discord.Color.blurple(),
     )
-    emb_description = f"Ecco la classifiche degli MVP dell'evento **{event_name}** per la tua lobby {lobby_name}:\n\n**MVP:**\n"
+    emb_description = f"Ecco la classifiche degli MVP dell'evento **{event_name}** per la tua **LOBBY {lobby_name}**:\n\n**MVP:**\n"
     for i, player in enumerate(mvp_ranking, start=1):
         name = player["player"]
         kills = player.get("kills", 0)
@@ -112,7 +112,7 @@ def build_live_team_ranking_embed(event_name: str, lobby_name: str, team_ranking
         title="Classifiche Live Evento",
         color=discord.Color.blurple(),
     )
-    emb_description = f"Ecco la classifiche dell'evento **{event_name}** per la tua lobby {lobby_name}:\n\n**Claassifica team:**\n"
+    emb_description = f"Ecco la classifiche dell'evento **{event_name}** per la tua **LOBBY {lobby_name}**:\n\n**Claassifica team:**\n"
     for i, team in enumerate(team_ranking, start=1):
         name = team["name"]
         score = team["score"]
