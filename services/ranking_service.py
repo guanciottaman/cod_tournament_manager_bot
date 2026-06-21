@@ -61,8 +61,7 @@ async def compute_team_ranking(
             ts.id,
             ts.team_id,
             t.name,
-            ts.placement,
-            COALESCE(t.penalty_points, 0)
+            ts.placement
             FROM team_scores ts
             JOIN teams t ON t.team_id = ts.team_id
             WHERE ts.event_id = ?
@@ -76,6 +75,18 @@ async def compute_team_ranking(
         params.append(lobby_id)
 
     rows = await fetch_all(query, tuple(params))
+
+    penalties = await fetch_all(
+        """
+            SELECT team_id, COALESCE(penalty_points, 0)
+            FROM teams
+            WHERE event_id = ?
+        """,
+        (event_id,)
+    )
+    team_penalties = {
+        pen[0]: pen[1] for pen in penalties
+    }
 
     settings = await fetch_one("""
         SELECT kill_points, drop_worst_match 
@@ -109,9 +120,10 @@ async def compute_team_ranking(
     # 5. build per-team ranking
     team_matches = defaultdict(list)
     team_kills = defaultdict(int)
+    
     team_names = {}
 
-    for ts_id, team_id, team_name, placement, penalty in rows:
+    for ts_id, team_id, team_name, placement in rows:
         team_names[team_id] = team_name
 
         kills = match_kills.get(ts_id, 0)
@@ -119,7 +131,6 @@ async def compute_team_ranking(
         match_score = (
             (kills * kill_points)
             + placement_dict.get(placement, 0)
-            - penalty
         )
 
         team_matches[team_id].append(match_score)
@@ -137,7 +148,7 @@ async def compute_team_ranking(
         final.append({
             "team_id": team_id,
             "name": team_names.get(team_id, "Unknown"),
-            "score": sum(matches),
+            "score": sum(matches) - team_penalties.get(team_id, 0),
             "kills": team_kills[team_id]
         })
 
