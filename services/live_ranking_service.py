@@ -56,7 +56,7 @@ async def live_mvp_loop(event_id: int, lobby_id: int):
 async def live_team_loop(event_id: int, lobby_id: int):
     try:
         while True:
-            await asyncio.sleep(35 * 60)
+            await asyncio.sleep(TIME_TO_WAIT)
 
             event_state = live_events.get(event_id)
             if not event_state:
