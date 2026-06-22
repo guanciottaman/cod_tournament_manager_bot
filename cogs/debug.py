@@ -174,8 +174,12 @@ class DebugCommands(commands.Cog):
             leader_id: int = 10_000_000 + i
             kds = [generate_kd() for _ in range(team_count)]
 
-            team_id, _ = await insert_teams(event_id, team_name, leader_id, players)
-            kd = await update_team_kd(team_id, kds)
+            team_tuple = await insert_teams(event_id, team_name, leader_id, players)
+            if team_tuple is None:
+                raise ValueError("Problema nell'inserimento")
+            team_id, member_ids = team_tuple
+            player_kd_dict = dict(zip(member_ids, kds))
+            kd = await update_team_kd(team_id, player_kd_dict)
 
             created_teams.append(
                 f"{team_name} | KD: {kd:.2f} | {len(players)} players"
