@@ -78,7 +78,7 @@ async def inserisci_risultato_callback(
     files = []
 
     for i, url in enumerate([prova1, prova2]):
-        buffer = await download_file(url)
+        buffer = await download_file(url.url)
         if buffer is None:
             continue
 
