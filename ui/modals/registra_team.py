@@ -190,7 +190,11 @@ class TeamKDModal(discord.ui.Modal, title="Inserisci KD team"):
         if self.edit_mode:
             member_ids = await edit_teams(self.team_id, self.players)
 
-            await update_team_kd(self.team_id, member_ids, kd_values)
+            players_kd_dict = {
+                member_id: kd
+                for member_id, kd in zip(member_ids, kd_values)
+            }
+            await update_team_kd(self.team_id, players_kd_dict)
 
             await interaction.response.send_message(
                 "Hai modificato il tuo team con successo.",
@@ -198,17 +202,22 @@ class TeamKDModal(discord.ui.Modal, title="Inserisci KD team"):
             )
         else:
             if self.status == "setup":
-                team_id, member_ids = await assign_free_slot(
+                team_tuple = await assign_free_slot(
                     self.event_id,
                     self.team_name,
                     interaction.user.id,
                     self.players
                 )
-                if team_id is None:
+                if team_tuple is None:
                     await interaction.response.send_message("Nessuno slot disponibile", ephemeral=True)
                     return
+                team_id, member_ids = team_tuple
+                players_kd_dict = {
+                    member_id: kd
+                    for member_id, kd in zip(member_ids, kd_values)
+                }
 
-                await update_team_kd(team_id, member_ids, kd_values)
+                await update_team_kd(team_id, players_kd_dict)
                 lobbies = await get_lobbies(self.event_id)
                 event = await get_event_info(self.event_id, interaction.guild_id)
                 if event is None:
@@ -216,11 +225,16 @@ class TeamKDModal(discord.ui.Modal, title="Inserisci KD team"):
                 embed = build_info_lobby_embed(event.name, lobbies, show_kd=False)
                 await interaction.user.send(embed=embed)
             else:
-                team_id, member_ids = await insert_teams(self.event_id, self.team_name, interaction.user.id, self.players)
-                if not team_id:
+                team_tuple = await insert_teams(self.event_id, self.team_name, interaction.user.id, self.players)
+                if team_tuple is None:
                     await interaction.response.send_message("Errore interno team_id", ephemeral=True)
                     return
-                await update_team_kd(team_id, member_ids, kd_values)
+                team_id, member_ids = team_tuple
+                players_kd_dict = {
+                    member_id: kd
+                    for member_id, kd in zip(member_ids, kd_values)
+                }
+                await update_team_kd(team_id, players_kd_dict)
 
             await interaction.response.send_message(
                 "Hai iscritto il tuo team all'evento con successo.",
