@@ -99,12 +99,12 @@ class Teams(commands.Cog):
         await resolve_event(interaction, embed, events, event_selector_callback)
     
     @app_commands.command(name="inserisci_risultato", description="Inserisci i risultati di un match")
-    @app_commands.describe(PROVA1="Prima prova dei risultati", PROVA2="Seconda prova dei risultati")
+    @app_commands.describe(prova1="Prima prova dei risultati", prova2="Seconda prova dei risultati")
     async def inserisci_risultato(
         self,
         interaction: discord.Interaction,
-        PROVA1: discord.Attachment,
-        PROVA2: discord.Attachment
+        prova1: discord.Attachment,
+        prova2: discord.Attachment
     ):
         events = await get_events_for_guild(interaction.guild_id, ["running"])
         embed = discord.Embed(
@@ -113,7 +113,7 @@ class Teams(commands.Cog):
             description="Questa è una lista degli eventi attivi.\nScegli l'evento del team che hai iscritto."
         )
         async def wrapper(interaction: discord.Interaction, event: Event):
-            await inserisci_risultato_callback(interaction, event, PROVA1, PROVA2)
+            await inserisci_risultato_callback(interaction, event, prova1, prova2)
         await resolve_event(interaction, embed, events, wrapper)
 
 
