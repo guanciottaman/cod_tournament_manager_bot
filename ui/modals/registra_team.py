@@ -217,7 +217,10 @@ class TeamKDModal(discord.ui.Modal, title="Inserisci KD team"):
 
     async def on_submit(self, interaction: discord.Interaction):
         try:
-            kd_values = [float(inp.value) for inp in self.inputs]
+            kd_values = [
+                float(inp.value.replace(",", "."))
+                for inp in self.inputs
+            ]
         except ValueError:
             await interaction.response.send_message(
                 "KD non valido. Controlla di aver usato il punto e non la virgola",
