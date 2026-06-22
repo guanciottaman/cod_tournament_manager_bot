@@ -28,6 +28,7 @@ async def inserisci_risultato_callback(
             ephemeral=True
         )
         return
+    await interaction.response.defer(ephemeral=True)
     embed = discord.Embed(
         title="Inserisci risultato",
         description="**ATTENZIONE**\nIl risultato non è ancora stato inserito, controlla le foto che hai caricato e, in caso di errore, rifai il comando, altrimenti clicca il bottone qui sotto per inserire i risultati",
@@ -54,7 +55,6 @@ async def inserisci_risultato_callback(
                 ephemeral=True
             )
             return
-        await interaction.response.defer(ephemeral=True)
         view = discord.ui.View()
         match_selector = discord.ui.Select(
             placeholder="Seleziona il match...",
