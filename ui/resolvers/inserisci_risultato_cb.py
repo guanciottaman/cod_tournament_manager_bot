@@ -54,6 +54,7 @@ async def inserisci_risultato_callback(
                 ephemeral=True
             )
             return
+        await interaction.response.defer(ephemeral=True)
         view = discord.ui.View()
         match_selector = discord.ui.Select(
             placeholder="Seleziona il match...",
@@ -83,4 +84,4 @@ async def inserisci_risultato_callback(
             continue
 
         files.append(discord.File(buffer, filename=f"prova_{i+1}.png"))
-    await interaction.response.send_message(embed=embed, view=view, ephemeral=True, files=files)
+    await interaction.followup.send(embed=embed, view=view, ephemeral=True, files=files)
