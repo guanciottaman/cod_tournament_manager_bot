@@ -8,6 +8,7 @@ from services.lobby_service import get_lobbies, switch_team_lobby
 from services.server_service import get_admin_role_id
 from ui.modals.penalize_team import PenalizzaTeam
 from ui.modals.registra_team import RegistraTeamModal
+from ui.embeds.lobby_builders import build_info_lobby_embed
 
 class TeamsSelectorView(discord.ui.View):
     def __init__(
@@ -30,6 +31,10 @@ class TeamsSelectorView(discord.ui.View):
         self.add_item(self.build_select())
 
     async def notify_users(self, interaction: discord.Interaction):
+        await interaction.response.defer(thinking=True, ephemeral=True)
+        lobbies = await get_lobbies(self.event_id)
+        embed = build_info_lobby_embed(self.event.name, lobbies)
+        embed.title = "AGGIORNAMENTO TEAM LOBBY"
         failed = 0
 
         guild = interaction.guild
@@ -40,7 +45,7 @@ class TeamsSelectorView(discord.ui.View):
         admin_role = guild.get_role(admin_role_id)
 
         admins = set(m.id for m in admin_role.members) if admin_role else set()
-
+        leader_ids = await get_leader_ids(self.event_id)
         leaders = set(leader_ids)
 
         for user_id in (leaders | admins):
@@ -158,8 +163,28 @@ class TeamsSelectorView(discord.ui.View):
                             f"Il team {team.name} è stato spostato nella lobby {lobby.name}",
                             ephemeral=True
                         )
-                        if self.send_lobbies:
+                        confirm_view = discord.ui.View()
+                        sposta_team_yes = discord.ui.Button(
+                            label="Si",
+                            style=discord.ButtonStyle.green
+                        )
+                        sposta_team_no = discord.ui.Button(
+                            label="No",
+                            style=discord.ButtonStyle.red
+                        )
+                        async def yes_callback(interaction: discord.Interaction):
                             await self.notify_users(interaction)
+                        sposta_team_yes.callback = yes_callback
+                        async def no_callback(interaction: discord.Interaction):
+                            await interaction.response.send_message("Non è stato mandato nessun dm.", ephemeral=True)
+                        sposta_team_no.callback = no_callback
+                        confirm_view.add_item(sposta_team_yes)
+                        confirm_view.add_item(sposta_team_no)
+                        await interaction.followup.send(
+                            "Vuoi mandare un aggiornamento delle lobby ai capoteam e agli admin?",
+                            view=confirm_view,
+                            ephemeral=True
+                        )
                     lobby_selector.callback = lobby_selector_callback
                     view.add_item(lobby_selector)
                     await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
