@@ -43,16 +43,17 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
             self.remove_item(self.nome_team)
             self.player_names = players_names
             self.capoteam.default = self.player_names[0]
+            other_players = players_names[1:]
             if kds is not None:
                 self.kds = kds
 
         self.inputs: list[discord.ui.TextInput] = []
             
-        for i in range(self.members_number-1):
+        for i, name in enumerate(other_players):
             inp = discord.ui.TextInput(
                 label=f"Giocatore {i+2}",
                 placeholder=f"Inserisci l'username di CoD del giocatore {i+2} (compreso il numero)...",
-                default=None if players_names is None else self.player_names[i],
+                default=None if players_names is None else name,
                 min_length=3,
                 max_length=40
             )
@@ -182,17 +183,17 @@ class TeamKDModal(discord.ui.Modal, title="Inserisci KD team"):
 
     async def on_submit(self, interaction: discord.Interaction):
         try:
-            kd_values = {float(inp.value) for inp in self.inputs}
+            kd_values = [float(inp.value) for inp in self.inputs]
         except ValueError:
-            await interaction.response.send_message("KD non valido", ephemeral=True)
+            await interaction.response.send_message(
+                "KD non valido. Controlla di aver usato il punto e non la virgola",
+                ephemeral=True
+            )
             return
         if self.edit_mode:
             member_ids = await edit_teams(self.team_id, self.players)
 
-            players_kd_dict = {
-                member_id: kd
-                for member_id, kd in zip(member_ids, kd_values)
-            }
+            players_kd_dict = dict(zip(member_ids, kd_values))
             await update_team_kd(self.team_id, players_kd_dict)
 
             await interaction.response.send_message(
@@ -211,10 +212,7 @@ class TeamKDModal(discord.ui.Modal, title="Inserisci KD team"):
                     await interaction.response.send_message("Nessuno slot disponibile", ephemeral=True)
                     return
                 team_id, member_ids = team_tuple
-                players_kd_dict = {
-                    member_id: kd
-                    for member_id, kd in zip(member_ids, kd_values)
-                }
+                players_kd_dict = dict(zip(member_ids, kd_values))
 
                 await update_team_kd(team_id, players_kd_dict)
                 lobbies = await get_lobbies(self.event_id)
@@ -229,10 +227,7 @@ class TeamKDModal(discord.ui.Modal, title="Inserisci KD team"):
                     await interaction.response.send_message("Errore interno team_id", ephemeral=True)
                     return
                 team_id, member_ids = team_tuple
-                players_kd_dict = {
-                    member_id: kd
-                    for member_id, kd in zip(member_ids, kd_values)
-                }
+                players_kd_dict = dict(zip(member_ids, kd_values))
                 await update_team_kd(team_id, players_kd_dict)
 
             await interaction.response.send_message(
