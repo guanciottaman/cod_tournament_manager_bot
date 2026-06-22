@@ -123,7 +123,12 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
                 return
             try:
                 if self.status == "setup":
-                    team_id = await assign_free_slot(self.event_id, self.nome_team.value, interaction.user.id, names)
+                    team_id, _ = await assign_free_slot(
+                        self.event_id,
+                        self.nome_team.value,
+                        interaction.user.id,
+                        names
+                    )
                     if team_id is None:
                         await interaction.response.send_message("C'è stato un problema!", ephemeral=True)
                         return
@@ -177,7 +182,8 @@ class TeamKDModal(discord.ui.Modal, title="Inserisci KD team"):
 
     async def on_submit(self, interaction: discord.Interaction):
         try:
-            kd_values = [float(inp.value) for inp in self.inputs]
+            member_ids = await get_mem
+            kd_values = {float(inp.value) for inp in self.inputs}
         except ValueError:
             await interaction.response.send_message("KD non valido", ephemeral=True)
             return
@@ -192,7 +198,12 @@ class TeamKDModal(discord.ui.Modal, title="Inserisci KD team"):
             )
         else:
             if self.status == "setup":
-                team_id, member_ids = await assign_free_slot(self.event_id, self.team_name, interaction.user.id, self.players)
+                team_id, member_ids = await assign_free_slot(
+                    self.event_id,
+                    self.team_name,
+                    interaction.user.id,
+                    self.players
+                )
                 if team_id is None:
                     await interaction.response.send_message("Nessuno slot disponibile", ephemeral=True)
                     return

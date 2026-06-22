@@ -101,14 +101,19 @@ async def assign_free_slot(
     return (team_id, member_ids)
 
 async def edit_teams(team_id: int, players_names: list[str]) -> list[int]:
-    await execute("DELETE FROM team_members WHERE team_id = ?", (team_id,))
-    member_ids: list[int] = []
-    for player_name in players_names:
-        member_id = await execute(
-            "INSERT INTO team_members (team_id, member_name) VALUES (?, ?)",
-            (team_id, player_name)
+    rows = await fetch_all(
+        "SELECT member_id FROM team_members WHERE team_id = ? ORDER BY member_id",
+        (team_id,)
+    )
+
+    member_ids = [r[0] for r in rows]
+
+    for member_id, name in zip(member_ids, players_names):
+        await execute(
+            "UPDATE team_members SET member_name = ? WHERE member_id = ?",
+            (name, member_id)
         )
-        member_ids.append(member_id)
+
     return member_ids
 
 async def get_players_names(team_id: int):
@@ -127,21 +132,21 @@ def compute_team_kd(players_kd: list[float]) -> float:
         return 0.0
     return sum(players_kd) / len(players_kd)
 
-async def update_team_kd(team_id: int, member_ids: list[int], players_kd: list[float]):
-    if len(member_ids) != len(players_kd):
-        raise ValueError("member_ids e players_kd devono avere la stessa lunghezza")
-    for i, member_id in enumerate(member_ids):
+async def update_team_kd(team_id: int, players_kd: dict[int, float]):
+    for member_id, kd in players_kd.items():
         await execute(
             "UPDATE team_members SET kd = ? WHERE member_id = ?",
-            (players_kd[i], member_id)
+            (kd, member_id)
         )
-    kd = compute_team_kd(players_kd)
+
+    avg_kd = compute_team_kd(list(players_kd.values()))
 
     await execute(
         "UPDATE teams SET kd = ? WHERE team_id = ?",
-        (kd, team_id)
+        (avg_kd, team_id)
     )
-    return kd
+
+    return avg_kd
 
 async def get_team_player_ids(
     team_id: int
