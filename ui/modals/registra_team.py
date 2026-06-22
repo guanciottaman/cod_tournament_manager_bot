@@ -182,7 +182,6 @@ class TeamKDModal(discord.ui.Modal, title="Inserisci KD team"):
 
     async def on_submit(self, interaction: discord.Interaction):
         try:
-            member_ids = await get_mem
             kd_values = {float(inp.value) for inp in self.inputs}
         except ValueError:
             await interaction.response.send_message("KD non valido", ephemeral=True)
