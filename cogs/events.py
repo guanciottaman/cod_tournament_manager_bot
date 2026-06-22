@@ -185,9 +185,6 @@ class Events(commands.Cog):
     
     @app_commands.command(name="info_team", description="Controlla informazioni su un team")
     async def info_team(self, interaction: discord.Interaction):
-        if not await check_admin_role(interaction):
-            await interaction.response.send_message("Non hai il ruolo necessario per avere info su un team!", ephemeral=True)
-            return
         events = await get_events_for_guild(interaction.guild_id, ["ready", "setup", "running"])
         embed = discord.Embed(
             title="Info team",
@@ -196,20 +193,47 @@ class Events(commands.Cog):
         )
         async def event_selector_callback(interaction: discord.Interaction, event: Event):
             event_id = event.event_id
-            if event.status == "setup":
-                teams = await get_teams(event_id, setup_mode=True)
+            if not await check_admin_role(interaction):
+                team = await get_team_from_leader(event_id, interaction.user.id)
+                if team is None:
+                    await interaction.response.send_message(
+                        "Non hai iscritto nessun team a questo evento",
+                        ephemeral=True
+                    )
+                    return
+                team_members = await get_team_members(team.team_id)
+                embed = discord.Embed(
+                    title=team.name,
+                    color=discord.Color.blue()
+                )
+                leader_discord_id = team.leader_discord_id
+                capoteam = interaction.guild.get_member(leader_discord_id) if leader_discord_id > 10e16 else None
+
+                emb_description = f"**Evento:** {event.name}\n**Leader:** {capoteam.mention if capoteam is not None else leader_discord_id}\nK/D {team.kd:.2f}\n\n**Membri:**\n"
+
+                if team_members:
+                    kds = await get_team_kds(team.team_id)
+                    for i, m in enumerate(team_members):
+                        emb_description += f"{i+1}. {m[0]}{f' K/D {kds[i]}' if kds else ''}\n"
+                else:
+                    emb_description += "*Nessun membro*"
+                embed.description = emb_description
+                await interaction.response.send_message(embed=embed, ephemeral=True)
             else:
-                teams = await get_teams(event_id)
-            if not teams:
-                await interaction.response.send_message("Non sono presenti team iscritti a questo evento", ephemeral=True)
-                return
-            view = TeamsSelectorView(teams, event, "info", interaction=interaction)
-            embed = discord.Embed(
-                title="Info team",
-                color=discord.Colour.red(),
-                description="Seleziona il team su cui vuoi informazioni"
-            )
-            await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+                if event.status == "setup":
+                    teams = await get_teams(event_id, setup_mode=True)
+                else:
+                    teams = await get_teams(event_id)
+                if not teams:
+                    await interaction.response.send_message("Non sono presenti team iscritti a questo evento", ephemeral=True)
+                    return
+                view = TeamsSelectorView(teams, event, "info", interaction=interaction)
+                embed = discord.Embed(
+                    title="Info team",
+                    color=discord.Colour.red(),
+                    description="Seleziona il team su cui vuoi informazioni"
+                )
+                await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
     
         await resolve_event(interaction, embed, events, event_selector_callback)
 
