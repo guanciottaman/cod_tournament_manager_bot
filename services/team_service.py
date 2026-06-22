@@ -61,7 +61,7 @@ async def assign_free_slot(
     team_name: str,
     leader_discord_id: int,
     players_names: list[str]
-) -> int | None:
+) -> tuple[int, list[int]] | None:
     team_id = await fetch_one("""
         SELECT team_id 
         FROM teams 
@@ -90,23 +90,32 @@ async def assign_free_slot(
         (team_name, leader_discord_id, team_id, event_id)
     )
     await execute("DELETE FROM team_members WHERE team_id = ?", (team_id,))
+    member_ids: list[int] = []
     for n in players_names:
-        await execute(
+        member_id = await execute(
             "INSERT INTO team_members (team_id, member_name) VALUES (?, ?)",
             (team_id, n)
         )
-    return team_id
+        member_ids.append(member_id)
 
-async def edit_teams(team_id: int, players_names: list[str]):
+    return (team_id, member_ids)
+
+async def edit_teams(team_id: int, players_names: list[str]) -> list[int]:
     await execute("DELETE FROM team_members WHERE team_id = ?", (team_id,))
+    member_ids: list[int] = []
     for player_name in players_names:
-        await execute(
+        member_id = await execute(
             "INSERT INTO team_members (team_id, member_name) VALUES (?, ?)",
             (team_id, player_name)
         )
+        member_ids.append(member_id)
+    return member_ids
 
 async def get_players_names(team_id: int):
-    rows = await fetch_all("SELECT member_name FROM team_members WHERE team_id = ?", (team_id,))
+    rows = await fetch_all(
+        "SELECT member_name FROM team_members WHERE team_id = ? ORDER BY member_id",
+        (team_id,)
+    )
     if rows:
         players = [r[0] for r in rows]
     else:
@@ -118,7 +127,14 @@ def compute_team_kd(players_kd: list[float]) -> float:
         return 0.0
     return sum(players_kd) / len(players_kd)
 
-async def update_team_kd(team_id: int, players_kd: list[float]):
+async def update_team_kd(team_id: int, member_ids: list[int], players_kd: list[float]):
+    if len(member_ids) != len(players_kd):
+        raise ValueError("member_ids e players_kd devono avere la stessa lunghezza")
+    for i, member_id in enumerate(member_ids):
+        await execute(
+            "UPDATE team_members SET kd = ? WHERE member_id = ?",
+            (players_kd[i], member_id)
+        )
     kd = compute_team_kd(players_kd)
 
     await execute(
@@ -131,7 +147,7 @@ async def get_team_player_ids(
     team_id: int
 ) -> list[int]:
     rows = await fetch_all(
-        "SELECT member_id FROM team_members WHERE team_id = ?",
+        "SELECT member_id FROM team_members WHERE team_id = ? ORDER BY member_id",
         (team_id,)
     )
     return [r[0] for r in rows]
@@ -271,7 +287,7 @@ async def set_result_status(result_id: int, status: str):
 
 async def get_inserted_matches(event_id: int, team_id: int) -> set[int]:
     rows = await fetch_all(
-        "SELECT match_number FROM team_scores WHERE event_id = ? AND team_id = ?",
+        "SELECT match_number FROM team_scores WHERE event_id = ? AND team_id = ? ORDER BY id",
         (event_id, team_id)
     )
     return {r[0] for r in rows}
@@ -279,7 +295,7 @@ async def get_inserted_matches(event_id: int, team_id: int) -> set[int]:
 
 async def get_inserted_match_numbers(event_id: int) -> set[int]:
     rows = await fetch_all(
-        "SELECT DISTINCT match_number FROM team_scores WHERE event_id = ?",
+        "SELECT DISTINCT match_number FROM team_scores WHERE event_id = ? ORDER BY id",
         (event_id,)
     )
     return {r[0] for r in rows}
@@ -299,3 +315,14 @@ async def penalize_team(team_id: int, penalty_points: int):
         "UPDATE teams SET penalty_points = penalty_points + ? WHERE team_id = ?",
         (penalty_points, team_id)
     )
+
+async def get_team_kds(team_id: int) -> list[float] | None:
+    rows = await fetch_all(
+        "SELECT kd FROM team_members WHERE team_id = ? ORDER BY member_id",
+        (team_id,)
+    )
+
+    if not rows:
+        return None
+
+    return [row[0] for row in rows]

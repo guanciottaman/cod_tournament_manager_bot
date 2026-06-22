@@ -5,6 +5,7 @@ from models.event import Event
 from services.team_service import *
 from services.event_service import *
 from services.lobby_service import get_lobbies, switch_team_lobby
+from services.server_service import get_admin_role_id
 from ui.modals.penalize_team import PenalizzaTeam
 from ui.modals.registra_team import RegistraTeamModal
 
@@ -15,7 +16,8 @@ class TeamsSelectorView(discord.ui.View):
             event: Event,
             mode: str = "info",
             page: int = 0,
-            interaction: discord.Interaction | None = None
+            interaction: discord.Interaction | None = None,
+            send_lobbies: bool = False
         ):
         super().__init__(timeout=180)
         self.teams = teams
@@ -24,7 +26,39 @@ class TeamsSelectorView(discord.ui.View):
         self.mode = mode
         self.page = page
         self.interaction = interaction
+        self.send_lobbies = send_lobbies
         self.add_item(self.build_select())
+
+    async def notify_users(self, interaction: discord.Interaction):
+        failed = 0
+
+        guild = interaction.guild
+        if guild is None:
+            return
+
+        admin_role_id = await get_admin_role_id(interaction.guild_id)
+        admin_role = guild.get_role(admin_role_id)
+
+        admins = set(m.id for m in admin_role.members) if admin_role else set()
+
+        leaders = set(leader_ids)
+
+        for user_id in (leaders | admins):
+            member = guild.get_member(user_id)
+            if member is None:
+                failed += 1
+                continue
+
+            try:
+                await member.send(embed=embed)
+            except discord.Forbidden:
+                failed += 1
+
+        if failed:
+            await interaction.followup.send(
+                f"DM falliti: {failed}",
+                ephemeral=True
+            )
 
     def get_leader_name(self, interaction: discord.Interaction, leader_id: int) -> str:
         member = interaction.guild.get_member(leader_id)
@@ -76,8 +110,9 @@ class TeamsSelectorView(discord.ui.View):
             emb_description = f"**Evento:** {event.name}\n**Leader:** {capoteam.mention if capoteam is not None else leader_discord_id}\nK/D {team.kd:.2f}\n\n**Membri:**\n"
 
             if team_members:
+                kds = await get_team_kds(team_id)
                 for i, m in enumerate(team_members):
-                    emb_description += f"{i+1}. {m[0]}\n"
+                    emb_description += f"{i+1}. {m[0]}{f' K/D {kds[i]}' if kds else ''}\n"
             else:
                 emb_description += "*Nessun membro*"
             embed.description = emb_description
@@ -123,6 +158,8 @@ class TeamsSelectorView(discord.ui.View):
                             f"Il team {team.name} è stato spostato nella lobby {lobby.name}",
                             ephemeral=True
                         )
+                        if self.send_lobbies:
+                            await self.notify_users(interaction)
                     lobby_selector.callback = lobby_selector_callback
                     view.add_item(lobby_selector)
                     await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
@@ -132,6 +169,7 @@ class TeamsSelectorView(discord.ui.View):
             elif self.mode == "penalize":
                 await interaction.response.send_modal(PenalizzaTeam(self.event_id, team_id))
             elif self.mode == "edit":
+                players_names = await get_players_names(team_id)
                 await interaction.response.send_modal(
                     RegistraTeamModal(
                         event_id=self.event_id,
@@ -139,7 +177,9 @@ class TeamsSelectorView(discord.ui.View):
                         is_kd_mode=True if event.lobby_mode in ("kd", "kd_balanced") else False,
                         status=self.event.status,
                         edit_mode=True,
-                        team_id=team_id
+                        team_id=team_id,
+                        players_names=players_names,
+                        kds=None if event.lobby_mode not in ("kd", "kd_balanced") else await get_team_kds(team_id)
                     ) 
                 )
             elif self.mode == "delete":

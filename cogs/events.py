@@ -89,10 +89,39 @@ class Events(commands.Cog):
             description="Hai già configurato le lobby dei seguenti eventi.\nScegli l'evento in cui vuoi spostare un team!"
         )
         async def event_selector_callback(interaction: discord.Interaction, event: Event):
-            teams = await get_teams(event.event_id, setup_mode=True)
+            view = discord.ui.View()
+            sposta_team_yes = discord.ui.Button(
+                label="Si",
+                style=discord.ButtonStyle.green
+            )
+            sposta_team_no = discord.ui.Button(
+                label="No",
+                style=discord.ButtonStyle.red
+            )
+            def make_callback(send_lobbies: bool):
+                async def callback(interaction: discord.Interaction):
+                    teams = await get_teams(event.event_id, setup_mode=True)
+
+                    await interaction.response.send_message(
+                        embed=embed,
+                        view=TeamsSelectorView(
+                            teams,
+                            event,
+                            "switch",
+                            interaction=interaction,
+                            send_lobbies=send_lobbies
+                        ),
+                        ephemeral=True
+                    )
+
+                return callback
+            sposta_team_yes.callback = make_callback(send_lobbies=True)
+            sposta_team_no.callback = make_callback(send_lobbies=False)
+            view.add_item(sposta_team_yes)
+            view.add_item(sposta_team_no)
             await interaction.response.send_message(
-                embed=embed,
-                view=TeamsSelectorView(teams, event, "switch", interaction=interaction),
+                "Stai per spostare un team in un'altra lobby, vuoi rimandare le lobby ai capiteam una volta fatto?",
+                view=view,
                 ephemeral=True
             )
         await resolve_event(interaction, embed, events, event_selector_callback)

@@ -28,6 +28,8 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
             status: str,
             edit_mode: bool = False,
             team_id: int | None=None,
+            players_names: list[str] | None = None,
+            kds: list[float] | None = None
         ):
         super().__init__()
         self.event_id = event_id
@@ -35,17 +37,22 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
         self.is_kd_mode = is_kd_mode
         self.status = status
         self.edit_mode: bool = edit_mode
-        if edit_mode and team_id is not None:
+        if edit_mode and team_id is not None and players_names is not None:
             self.team_id = team_id
             self.title = "Modifica il tuo team"
             self.remove_item(self.nome_team)
+            self.player_names = players_names
+            self.capoteam.default = self.player_names[0]
+            if kds is not None:
+                self.kds = kds
 
         self.inputs: list[discord.ui.TextInput] = []
+            
         for i in range(self.members_number-1):
-
             inp = discord.ui.TextInput(
                 label=f"Giocatore {i+2}",
                 placeholder=f"Inserisci l'username di CoD del giocatore {i+2} (compreso il numero)...",
+                default=None if players_names is None else self.player_names[i],
                 min_length=3,
                 max_length=40
             )
@@ -65,20 +72,53 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
             names.append(inp.value)
 
         if self.is_kd_mode:
-            view = discord.ui.View()
-            btn = discord.ui.Button(style=discord.ButtonStyle.green, label="INSERISCI K/D")
-            async def btn_callback(interaction: discord.Interaction):
-                if self.edit_mode:
+            if self.edit_mode:
+                view = discord.ui.View()
+                yes_btn = discord.ui.Button(style=discord.ButtonStyle.green, label="Si")
+                async def yes_callback(interaction: discord.Interaction):
                     await interaction.response.send_modal(
-                        TeamKDModal(self.event_id, names, self.status, edit_mode=self.edit_mode, team_id=self.team_id)
+                        TeamKDModal(
+                            self.event_id, names,
+                            self.status,
+                            edit_mode=self.edit_mode,
+                            team_id=self.team_id,
+                            kds=self.kds
+                        )
                     )
-                else:
+                yes_btn.callback = yes_callback
+                view.add_item(yes_btn)
+                no_btn = discord.ui.Button(style=discord.ButtonStyle.red, label="No")
+                async def no_callback(interaction: discord.Interaction):
+                    await edit_teams(self.team_id, names)
+                    await interaction.response.send_message(
+                        "Hai modificato il tuo team con successo!",
+                        ephemeral=True
+                    )
+                    return
+                no_btn.callback = no_callback
+                view.add_item(no_btn)
+                await interaction.response.send_message(
+                    """
+                    # ATTENZIONE
+                    Questo evento richiede di inserire i valori K/D del proprio team, vuoi modificare anche quelli?
+                    Se premi no, solo i nomi dei membri saranno modificati.
+                    """,
+                    view=view
+                )
+            else:
+                view = discord.ui.View()
+                btn = discord.ui.Button(style=discord.ButtonStyle.green, label="INSERISCI K/D")
+                async def btn_callback(interaction: discord.Interaction):
                     await interaction.response.send_modal(
                         TeamKDModal(self.event_id, names, self.status, self.nome_team.value, False)
                     )
-            btn.callback = btn_callback
-            view.add_item(btn)
-            await interaction.response.send_message("# ATTENZIONE:\nIl tuo team non è stato ancora registrato.\n Hai inserito le info del team, l'evento richiede i rapporti K/D dei tuoi membri. Clicca il bottone qui sotto", view=view, ephemeral=True)
+                btn.callback = btn_callback
+                view.add_item(btn)
+                await interaction.response.send_message(
+                    "# ATTENZIONE:\nIl tuo team non è stato ancora registrato.\n Hai inserito le info del team, l'evento richiede i rapporti K/D dei tuoi membri. Clicca il bottone qui sotto", 
+                    view=view,
+                    ephemeral=True
+                )
         else:
             if self.edit_mode:
                 await edit_teams(self.team_id, names)
@@ -90,7 +130,6 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
                     if team_id is None:
                         await interaction.response.send_message("C'è stato un problema!", ephemeral=True)
                         return
-                    await update_team_kd(team_id, [0]*len(names))
                     lobbies = await get_lobbies(self.event_id)
                     event = await get_event_info(self.event_id, interaction.guild_id)
                     if event is None:
@@ -113,7 +152,8 @@ class TeamKDModal(discord.ui.Modal, title="Inserisci KD team"):
             status: str,
             team_name: str | None = None,
             edit_mode: bool = False,
-            team_id: int | None=None
+            team_id: int | None=None,
+            kds: list[float] | None = None
         ):
         super().__init__()
         self.event_id = event_id
@@ -121,14 +161,17 @@ class TeamKDModal(discord.ui.Modal, title="Inserisci KD team"):
         self.players = players_list
         self.status = status
         self.edit_mode = edit_mode
-        if self.edit_mode:
+        if self.edit_mode and team_id is not None and kds is not None:
             self.team_id = team_id
+            self.kds = kds
+
         self.inputs: list[discord.ui.TextInput] = []
 
-        for p in self.players:
+        for i, p in enumerate(self.players):
             inp = discord.ui.TextInput(
                 label=f"KD {p}",
                 placeholder="Inserisci KD",
+                default=None if kds is None else str(self.kds[i]),
                 min_length=1,
                 max_length=5
             )
@@ -142,9 +185,9 @@ class TeamKDModal(discord.ui.Modal, title="Inserisci KD team"):
             await interaction.response.send_message("KD non valido", ephemeral=True)
             return
         if self.edit_mode:
-            await edit_teams(self.team_id, self.players)
+            member_ids = await edit_teams(self.team_id, self.players)
 
-            await update_team_kd(self.team_id, kd_values)
+            await update_team_kd(self.team_id, member_ids, kd_values)
 
             await interaction.response.send_message(
                 "Hai modificato il tuo team con successo.",
@@ -152,12 +195,12 @@ class TeamKDModal(discord.ui.Modal, title="Inserisci KD team"):
             )
         else:
             if self.status == "setup":
-                team_id = await assign_free_slot(self.event_id, self.team_name, interaction.user.id, self.players)
+                team_id, member_ids = await assign_free_slot(self.event_id, self.team_name, interaction.user.id, self.players)
                 if team_id is None:
                     await interaction.response.send_message("Nessuno slot disponibile", ephemeral=True)
                     return
 
-                await update_team_kd(team_id, kd_values)
+                await update_team_kd(team_id, member_ids, kd_values)
                 lobbies = await get_lobbies(self.event_id)
                 event = await get_event_info(self.event_id, interaction.guild_id)
                 if event is None:
@@ -165,11 +208,11 @@ class TeamKDModal(discord.ui.Modal, title="Inserisci KD team"):
                 embed = build_info_lobby_embed(event.name, lobbies, show_kd=False)
                 await interaction.user.send(embed=embed)
             else:
-                team_id, _ = await insert_teams(self.event_id, self.team_name, interaction.user.id, self.players)
-            if not team_id:
-                await interaction.response.send_message("Errore interno team_id", ephemeral=True)
-                return
-            await update_team_kd(team_id, kd_values)
+                team_id, member_ids = await insert_teams(self.event_id, self.team_name, interaction.user.id, self.players)
+                if not team_id:
+                    await interaction.response.send_message("Errore interno team_id", ephemeral=True)
+                    return
+                await update_team_kd(team_id, member_ids, kd_values)
 
             await interaction.response.send_message(
                 "Hai iscritto il tuo team all'evento con successo.",

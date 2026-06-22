@@ -63,6 +63,7 @@ class Teams(commands.Cog):
                         ephemeral=True
                     )
                     return
+                players_names = await get_players_names(team_id)
                 await interaction.response.send_modal(
                     RegistraTeamModal(
                         event_id=event_id,
@@ -70,7 +71,9 @@ class Teams(commands.Cog):
                         is_kd_mode=is_kd_mode,
                         status=event.status,
                         edit_mode=True,
-                        team_id=team_id
+                        team_id=team_id,
+                        players_names=players_names,
+                        kds=None if event.lobby_mode not in ("kd", "kd_balanced") else await get_team_kds(team_id)
                     )
                 )
             else:
@@ -96,12 +99,12 @@ class Teams(commands.Cog):
         await resolve_event(interaction, embed, events, event_selector_callback)
     
     @app_commands.command(name="inserisci_risultato", description="Inserisci i risultati di un match")
-    @app_commands.describe(prova1="Prima prova dei risultati", prova2="Seconda prova dei risultati")
+    @app_commands.describe(PROVA1="Prima prova dei risultati", PROVA2="Seconda prova dei risultati")
     async def inserisci_risultato(
         self,
         interaction: discord.Interaction,
-        prova1: discord.Attachment,
-        prova2: discord.Attachment
+        PROVA1: discord.Attachment,
+        PROVA2: discord.Attachment
     ):
         events = await get_events_for_guild(interaction.guild_id, ["running"])
         embed = discord.Embed(
@@ -110,7 +113,7 @@ class Teams(commands.Cog):
             description="Questa è una lista degli eventi attivi.\nScegli l'evento del team che hai iscritto."
         )
         async def wrapper(interaction: discord.Interaction, event: Event):
-            await inserisci_risultato_callback(interaction, event, prova1, prova2)
+            await inserisci_risultato_callback(interaction, event, PROVA1, PROVA2)
         await resolve_event(interaction, embed, events, wrapper)
 
 

@@ -1,16 +1,6 @@
 import discord
-import aiohttp
-from io import BytesIO
-from services.team_service import insert_results, edit_results, get_team_player_ids, get_leader_discord_id, set_result_status
 
-async def download_file(url: str):
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as resp:
-            if resp.status != 200:
-                return None
-
-            data = await resp.read()
-            return BytesIO(data)
+from services.team_service import insert_results, edit_results, get_team_player_ids, get_leader_discord_id
 
 class RegistraRisultatiModal(discord.ui.Modal, title="Registra i risultati"):
     placement_input = discord.ui.TextInput(
@@ -82,18 +72,9 @@ class RegistraRisultatiModal(discord.ui.Modal, title="Registra i risultati"):
                 players_kills,
                 self.prove
             )
-            files = []
-
-            for i, url in enumerate(self.prove):
-                buffer = await download_file(url)
-                if buffer is None:
-                    continue
-
-                files.append(discord.File(buffer, filename=f"prova_{i+1}.png"))
             await interaction.followup.send(
                 f"Il risultato del match {self.match_selected} è stato registrato!",
-                ephemeral=True,
-                files=files
+                ephemeral=True
             )
         else:
             await edit_results(
