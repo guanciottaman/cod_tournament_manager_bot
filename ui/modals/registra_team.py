@@ -68,6 +68,7 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
                 self.inputs.append(inp)
 
         else:
+            other_players = []
             for i in range(members_number - 1):
                 inp = discord.ui.TextInput(
                     label=f"Giocatore {i+2}",
@@ -78,13 +79,29 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
                 self.add_item(inp)
                 self.inputs.append(inp)
             
+    def normalize_team_name(self, name: str) -> str:
+        name = name.strip()
+
+        # se manca lo spazio prima della parentesi lo aggiunge
+        name = re.sub(r"\s*\(", " (", name)
+
+        # pulisce spazi doppi
+        name = re.sub(r"\s+", " ", name)
+
+        return name
+
     async def on_submit(self, interaction: discord.Interaction):
-        if not re.match(r"^.+\s\([^)]+\)$", self.nome_team.value) and not self.edit_mode:
-            await interaction.response.send_message(
-                "Il nome del team deve essere nel formato: Nome Team (CLAN)",
-                ephemeral=True
-            )
-            return
+        if not self.edit_mode:
+            nome_team = self.normalize_team_name(self.nome_team.value)
+
+            if not re.match(r"^(.+?)\s*\(([^)]+)\)\s*$", nome_team):
+                await interaction.response.send_message(
+                    "Formato richiesto: Nome Team (CLAN)",
+                    ephemeral=True
+                )
+                return
+        else:
+            nome_team = ""
         names = [self.capoteam.value]
         for inp in self.inputs:
             names.append(inp.value)
@@ -125,7 +142,7 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
                 btn = discord.ui.Button(style=discord.ButtonStyle.green, label="INSERISCI K/D")
                 async def btn_callback(interaction: discord.Interaction):
                     await interaction.response.send_modal(
-                        TeamKDModal(self.event_id, names, self.status, self.nome_team.value, False)
+                        TeamKDModal(self.event_id, names, self.status, nome_team, False)
                     )
                 btn.callback = btn_callback
                 view.add_item(btn)
@@ -143,7 +160,7 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
                 if self.status == "setup":
                     team_tuple = await assign_free_slot(
                         self.event_id,
-                        self.nome_team.value,
+                        nome_team,
                         interaction.user.id,
                         names
                     )
@@ -157,7 +174,7 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
                     embed = build_info_lobby_embed(event.name, lobbies, show_kd=False)
                     await interaction.user.send(embed=embed)
                 else:
-                    await insert_teams(self.event_id, self.nome_team.value, interaction.user.id, names)
+                    await insert_teams(self.event_id, nome_team, interaction.user.id, names)
             except ValueError:
                 await interaction.response.send_message("Hai già iscritto un team a questo evento!", ephemeral=True)
                 return

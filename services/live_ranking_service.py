@@ -12,7 +12,7 @@ from ui.embeds.event_builders import build_live_team_ranking_embed, build_live_m
 live_events: dict[int, dict[int, dict[int, Any]]] = {}
 
 
-TIME_TO_WAIT: int = 10
+TIME_TO_WAIT: int = 35 * 60
 
 async def live_mvp_loop(event_id: int, lobby_id: int):
     try:
