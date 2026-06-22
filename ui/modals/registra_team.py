@@ -36,31 +36,48 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
         self.members_number = members_number
         self.is_kd_mode = is_kd_mode
         self.status = status
-        self.edit_mode: bool = edit_mode
+        self.edit_mode = edit_mode
         if edit_mode and team_id is not None and players_names is not None:
             self.team_id = team_id
             self.title = "Modifica il tuo team"
             self.remove_item(self.nome_team)
             self.player_names = players_names
             self.capoteam.default = self.player_names[0]
-            other_players = players_names[1:]
             if kds is not None:
                 self.kds = kds
+        other_players = players_names[1:] if players_names else []
 
         self.inputs: list[discord.ui.TextInput] = []
-            
-        for i, name in enumerate(other_players):
-            inp = discord.ui.TextInput(
-                label=f"Giocatore {i+2}",
-                placeholder=f"Inserisci l'username di CoD del giocatore {i+2} (compreso il numero)...",
-                default=None if players_names is None else name,
-                min_length=3,
-                max_length=40
-            )
 
-            self.inputs.append(inp)
-            self.add_item(inp)
-    
+
+        if edit_mode and players_names:
+            self.player_names = players_names
+            self.capoteam.default = self.player_names[0]
+
+            other_players = players_names[1:]
+
+            for i, name in enumerate(other_players):
+                inp = discord.ui.TextInput(
+                    label=f"Giocatore {i+2}",
+                    placeholder=f"Inserisci l'username...",
+                    default=name,
+                    min_length=3,
+                    max_length=40
+                )
+                self.add_item(inp)
+                self.inputs.append(inp)
+
+        else:
+            for i in range(members_number - 1):
+                inp = discord.ui.TextInput(
+                    label=f"Giocatore {i+2}",
+                    placeholder="Inserisci username...",
+                    min_length=3,
+                    max_length=40
+                )
+                self.add_item(inp)
+                self.inputs.append(inp)
+            
     async def on_submit(self, interaction: discord.Interaction):
         if not re.match(r"^.+\s\([^)]+\)$", self.nome_team.value) and not self.edit_mode:
             await interaction.response.send_message(
@@ -124,13 +141,13 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
                 return
             try:
                 if self.status == "setup":
-                    team_id, _ = await assign_free_slot(
+                    team_tuple = await assign_free_slot(
                         self.event_id,
                         self.nome_team.value,
                         interaction.user.id,
                         names
                     )
-                    if team_id is None:
+                    if team_tuple is None:
                         await interaction.response.send_message("C'è stato un problema!", ephemeral=True)
                         return
                     lobbies = await get_lobbies(self.event_id)
