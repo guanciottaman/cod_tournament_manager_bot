@@ -154,7 +154,7 @@ class LobbyConfigView(discord.ui.View):
         if admin_role is None:
             admins = set()
         else:
-            admins = {m.id for m in admin_role.members}
+            admins = {m.id for m in admin_role.members if m.id != interaction.client.user.id}
 
         leaders = set(leader_ids)
 

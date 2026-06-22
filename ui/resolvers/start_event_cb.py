@@ -27,7 +27,7 @@ async def start_event_callback(interaction: discord.Interaction, event: Event):
         admin_role_id = await get_admin_role_id(interaction.guild_id)
         admin_role = interaction.guild.get_role(admin_role_id)
 
-        admin_ids = {m.id for m in admin_role.members} if admin_role else set()
+        admin_ids = {m.id for m in admin_role.members if m.id != interaction.client.user.id} if admin_role else set()
 
         leader_map = {
             lobby.lobby_id: await get_leader_ids(event.event_id, lobby.lobby_id)

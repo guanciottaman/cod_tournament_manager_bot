@@ -44,7 +44,7 @@ class TeamsSelectorView(discord.ui.View):
         admin_role_id = await get_admin_role_id(interaction.guild_id)
         admin_role = guild.get_role(admin_role_id)
 
-        admins = set(m.id for m in admin_role.members) if admin_role else set()
+        admins = set(m.id for m in admin_role.members if m.id != interaction.client.user.id) if admin_role else set()
         leader_ids = await get_leader_ids(self.event_id)
         leaders = set(leader_ids)
 

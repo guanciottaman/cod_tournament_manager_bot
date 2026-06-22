@@ -50,7 +50,7 @@ async def delete_team_callback_personal(interaction: discord.Interaction, event:
         if admin_role is None:
             return
         for admin in admin_role.members:
-            if admin.id == interaction.user.id:
+            if admin.id == interaction.user.id or admin.id == interaction.client.user.id:
                 continue
             try:
                 await admin.send(
