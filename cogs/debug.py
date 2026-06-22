@@ -171,7 +171,8 @@ class DebugCommands(commands.Cog):
         for i in range(amount):
             team_name = generate_team_name()
             players = generate_players(team_count)
-            leader_id: int = 10_000_000 + i
+            base = random.randint(10_000_000, 99_999_999)
+            leader_id = base + i
             kds = [generate_kd() for _ in range(team_count)]
 
             team_tuple = await insert_teams(event_id, team_name, leader_id, players)
