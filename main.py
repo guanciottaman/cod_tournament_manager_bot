@@ -105,7 +105,7 @@ class Bot(commands.Bot):
             member_id INTEGER PRIMARY KEY AUTOINCREMENT,
             team_id INTEGER,
             member_name TEXT,
-            kd REAL DEFAULT 0
+            kd REAL DEFAULT 0,
                       
             FOREIGN KEY (team_id) REFERENCES teams(team_id) ON DELETE CASCADE
         )""")
