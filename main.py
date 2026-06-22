@@ -103,9 +103,9 @@ class Bot(commands.Bot):
         )""")
         await execute("""CREATE TABLE IF NOT EXISTS team_members(
             member_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            team_id INTEGER,
-            member_name TEXT,
-            kd REAL DEFAULT 0,
+            team_id INTEGER NOT NULL,
+            member_name TEXT NOT NULL,
+            kd REAL NOT NULL DEFAULT 0,
                       
             FOREIGN KEY (team_id) REFERENCES teams(team_id) ON DELETE CASCADE
         )""")
