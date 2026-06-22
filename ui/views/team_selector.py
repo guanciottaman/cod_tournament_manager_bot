@@ -18,9 +18,10 @@ class TeamsSelectorView(discord.ui.View):
             self,
             teams: list[Team],
             event: Event,
-            lobbies: list[Lobby],
             mode: str = "info",
             page: int = 0,
+            use_lobbies: bool = False,
+            lobbies: list[Lobby] | None = None,
             interaction: discord.Interaction | None = None,
             send_lobbies: bool = False,
         ):
@@ -28,23 +29,25 @@ class TeamsSelectorView(discord.ui.View):
         self.teams = teams
         self.event = event
         self.event_id = self.event.event_id
-        self.lobbies = lobbies
+        
         self.mode = mode
         self.page = page
+        self.use_lobbies = use_lobbies
         self.interaction = interaction
         self.send_lobbies = send_lobbies
-        self.teams_by_lobby = defaultdict(list)
+        self.teams_by_lobby = defaultdict(list[Team])
 
         for t in self.teams:
             if t.lobby is None:
                 continue
             self.teams_by_lobby[t.lobby].append(t)
+        
+        if self.use_lobbies and lobbies is not None:
+            self.lobbies = lobbies
 
-        self.lobby_ids: list[int] = list(self.teams_by_lobby.keys())
-        if not self.lobby_ids:
-            self.lobby_ids = []
-        self.use_lobbies = len(self.lobby_ids) > 0
-        self.lobby_ids.sort()
+            self.lobby_map = {l.lobby_id: l for l in self.lobbies}
+            self.lobby_ids = list(self.lobby_map.keys())
+            self.lobby_ids.sort()
         self.add_item(self.build_select())
 
     async def notify_users(self, interaction: discord.Interaction):
@@ -90,7 +93,7 @@ class TeamsSelectorView(discord.ui.View):
 
     def build_select(self) -> discord.ui.Select:
         if self.use_lobbies:
-            lobby = self.lobbies[self.page]
+            lobby = self.lobby_map[self.lobby_ids[self.page]]
             page_teams: list[Team] = self.teams_by_lobby[lobby.lobby_id]
             placeholder = f"{lobby.name} (pagina {self.page + 1}/{len(self.lobbies)})"
         else:
@@ -102,7 +105,8 @@ class TeamsSelectorView(discord.ui.View):
         if not page_teams:
             return discord.ui.Select(
                 placeholder="Nessun team disponibile",
-                options=[discord.SelectOption(label="Vuoto", value="0")]
+                options=[discord.SelectOption(label="Vuoto", value="0")],
+                disabled=True
             )
 
 

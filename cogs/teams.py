@@ -6,6 +6,7 @@ from ui.resolvers.inserisci_risultato_cb import inserisci_risultato_callback
 from ui.modals.registra_team import RegistraTeamModal
 from ui.views.team_selector import TeamsSelectorView
 from services.team_service import *
+from services.lobby_service import get_lobbies
 from services.event_service import *
 from services.event_flow import resolve_event
 from services.server_service import *
@@ -93,6 +94,8 @@ class Teams(commands.Cog):
                     view=TeamsSelectorView(
                         teams,
                         event,
+                        use_lobbies=False if event.status not in ("setup", "running") else True,
+                        lobbies=None if event.status not in ("setup", "running") else await get_lobbies(event_id),
                         mode="edit",
                         interaction=interaction
                     ),
