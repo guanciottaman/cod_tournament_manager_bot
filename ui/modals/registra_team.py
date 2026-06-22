@@ -97,7 +97,7 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
             match = re.match(r"^(.+?)\s*\(([^)]+)\)\s*$", nome_team)
             if not match:
                 await interaction.response.send_message(
-                    "Formato richiesto: Nome Team (CLAN)",
+                    "# ATTENZIONE\nIl team non è stato creato. Il nome team deve essere nel formato '<Nome team> (<CLAN>)' e CLAN può avere massimo 5 caratteri.",
                     ephemeral=True
                 )
                 return

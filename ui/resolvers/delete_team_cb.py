@@ -56,7 +56,7 @@ async def delete_team_callback_personal(interaction: discord.Interaction, event:
                 await admin.send(
                 f"{interaction.user.name} ha eliminato il suo team {team.name} nell'evento {event.name}!"
             )
-            except discord.Forbidden:
+            except (discord.Forbidden, discord.HTTPException):
                 continue
     delete_btn.callback = delete_callback
     view.add_item(delete_btn)

@@ -26,18 +26,23 @@ async def get_team_id(event_id: int, leader_discord_id: int):
     return row[0] if row else None
 
 
+async def already_has_team(
+    event_id: int,
+    leader_discord_id: int
+) -> bool:
+    existing = await fetch_one(
+        "SELECT 1 FROM teams WHERE event_id = ? AND leader_discord_id = ? LIMIT 1",
+        (event_id, leader_discord_id)
+    )
+    return existing is not None
+
 async def insert_teams(
     event_id: int,
     name: str,
     leader_discord_id: int,
     players_names: list[str]
 ) -> tuple[int, list[int]] | None:
-    existing = await fetch_one(
-        "SELECT team_id FROM teams WHERE event_id = ? AND leader_discord_id = ?",
-        (event_id, leader_discord_id)
-    )
-
-    if existing:
+    if await already_has_team(event_id, leader_discord_id):
         raise ValueError("USER_ALREADY_HAS_TEAM")
     team_id = await execute(
         "INSERT INTO teams (event_id, name, leader_discord_id) VALUES (?, ?, ?)",

@@ -4,6 +4,7 @@ from collections import defaultdict
 
 from models.team import Team
 from models.event import Event
+from models.lobby import Lobby
 from services.team_service import *
 from services.event_service import *
 from services.lobby_service import get_lobbies, switch_team_lobby
@@ -17,15 +18,17 @@ class TeamsSelectorView(discord.ui.View):
             self,
             teams: list[Team],
             event: Event,
+            lobbies: list[Lobby],
             mode: str = "info",
             page: int = 0,
             interaction: discord.Interaction | None = None,
-            send_lobbies: bool = False
+            send_lobbies: bool = False,
         ):
         super().__init__(timeout=180)
         self.teams = teams
         self.event = event
         self.event_id = self.event.event_id
+        self.lobbies = lobbies
         self.mode = mode
         self.page = page
         self.interaction = interaction
@@ -87,9 +90,9 @@ class TeamsSelectorView(discord.ui.View):
 
     def build_select(self) -> discord.ui.Select:
         if self.use_lobbies:
-            lobby_id = self.lobby_ids[self.page]
-            page_teams: list[Team] = self.teams_by_lobby[lobby_id]
-            placeholder = f"Lobby {lobby_id} (pagina {self.page + 1}/{len(self.lobby_ids)})"
+            lobby = self.lobbies[self.page]
+            page_teams: list[Team] = self.teams_by_lobby[lobby.lobby_id]
+            placeholder = f"{lobby.name} (pagina {self.page + 1}/{len(self.lobbies)})"
         else:
             start = self.page * 25
             end = start + 25
@@ -166,7 +169,7 @@ class TeamsSelectorView(discord.ui.View):
                         options=[
                             discord.SelectOption(
                                 label=lobby.name, value=str(lobby.lobby_id)
-                            ) for lobby in lobbies
+                            ) for lobby in lobbies if team not in lobby.teams
                         ],
                         min_values=1,
                         max_values=1

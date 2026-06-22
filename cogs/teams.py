@@ -31,6 +31,8 @@ class Teams(commands.Cog):
                 if not await has_free_slot(event.event_id):
                     await interaction.response.send_message("Non ci sono slot liberi al momento!", ephemeral=True)
                     return
+            if await already_has_team(event.event_id, interaction.user.id):
+                await interaction.response.send_message("Hai già iscritto un team a questo evento!", ephemeral=True)
             await interaction.response.send_modal(
                 RegistraTeamModal(
                     event_id=event.event_id,
