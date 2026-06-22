@@ -94,12 +94,30 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
         if not self.edit_mode:
             nome_team = self.normalize_team_name(self.nome_team.value)
 
-            if not re.match(r"^(.+?)\s*\(([^)]+)\)\s*$", nome_team):
+            match = re.match(r"^(.+?)\s*\(([^)]+)\)\s*$", nome_team)
+            if not match:
                 await interaction.response.send_message(
                     "Formato richiesto: Nome Team (CLAN)",
                     ephemeral=True
                 )
                 return
+
+            clan_tag = match.group(2).strip().upper()
+
+            if len(clan_tag) > 5:
+                await interaction.response.send_message(
+                    "Il tag clan non può essere più lungo di 5 caratteri.",
+                    ephemeral=True
+                )
+                return
+            
+            if not clan_tag.isalnum():
+                await interaction.response.send_message(
+                    "Il tag clan può contenere solo lettere e numeri.",
+                    ephemeral=True
+                )
+                return
+
         else:
             nome_team = ""
         names = [self.capoteam.value]
