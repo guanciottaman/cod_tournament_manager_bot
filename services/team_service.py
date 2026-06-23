@@ -105,14 +105,15 @@ async def assign_free_slot(
 
     return (team_id, member_ids)
 
-async def edit_teams(team_id: int, players_names: list[str]) -> list[int]:
+async def edit_teams(team_id: int, players_names: list[str], team_name: str | None = None) -> list[int]:
+    if team_name is not None:
+        await execute("UPDATE teams SET name = ? WHERE team_id = ?", (team_name, team_id))
     rows = await fetch_all(
         "SELECT member_id FROM team_members WHERE team_id = ? ORDER BY member_id",
         (team_id,)
     )
 
     member_ids = [r[0] for r in rows]
-
     for member_id, name in zip(member_ids, players_names):
         await execute(
             "UPDATE team_members SET member_name = ? WHERE member_id = ?",

@@ -29,7 +29,8 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
             edit_mode: bool = False,
             team_id: int | None=None,
             players_names: list[str] | None = None,
-            kds: list[float] | None = None
+            kds: list[float] | None = None,
+            is_admin: bool = False
         ):
         super().__init__()
         self.event_id = event_id
@@ -37,10 +38,12 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
         self.is_kd_mode = is_kd_mode
         self.status = status
         self.edit_mode = edit_mode
+        self.is_admin = is_admin
         if edit_mode and team_id is not None and players_names is not None:
             self.team_id = team_id
             self.title = "Modifica il tuo team"
-            self.remove_item(self.nome_team)
+            if not is_admin:
+                self.remove_item(self.nome_team)
             self.player_names = players_names
             self.capoteam.default = self.player_names[0]
             if kds is not None:
@@ -91,7 +94,7 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
         return name
 
     async def on_submit(self, interaction: discord.Interaction):
-        if not self.edit_mode:
+        if not self.edit_mode or self.is_admin:
             nome_team = self.normalize_team_name(self.nome_team.value)
 
             match = re.match(r"^(.+?)\s*\(([^)]+)\)\s*$", nome_team)
@@ -142,7 +145,7 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
                 view.add_item(yes_btn)
                 no_btn = discord.ui.Button(style=discord.ButtonStyle.red, label="No")
                 async def no_callback(interaction: discord.Interaction):
-                    await edit_teams(self.team_id, names)
+                    await edit_teams(self.team_id, names, nome_team if nome_team else None)
                     await interaction.response.send_message(
                         "Hai modificato il tuo team con successo!",
                         ephemeral=True
@@ -171,7 +174,7 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
                 )
         else:
             if self.edit_mode:
-                await edit_teams(self.team_id, names)
+                await edit_teams(self.team_id, names, team_name=nome_team if nome_team else None)
                 await interaction.response.send_message("Hai modificato il tuo team con successo!", ephemeral=True)
                 return
             try:
@@ -246,7 +249,7 @@ class TeamKDModal(discord.ui.Modal, title="Inserisci KD team"):
             )
             return
         if self.edit_mode:
-            member_ids = await edit_teams(self.team_id, self.players)
+            member_ids = await edit_teams(self.team_id, self.players, self.team_name if self.team_name else None)
 
             players_kd_dict = dict(zip(member_ids, kd_values))
             await update_team_kd(self.team_id, players_kd_dict)
