@@ -157,7 +157,7 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
                 no_btn.callback = no_callback
                 view.add_item(no_btn)
                 await interaction.response.send_message(
-                    "# ATTENZIONE\nQuesto evento richiede di inserire i valori K/D del proprio team, vuoi modificare anche quelli?\nSe premi no, solo i nomi dei membri saranno modificati.\nSe non premi alcun bottone il team non verrà modificato.",
+                    "# ATTENZIONE\nQuesto evento richiede di inserire i valori K/D del proprio team, vuoi modificare anche quelli?\nSe premi no, solo i nomi dei membri saranno modificati.\nSE NON PREMI ALCUN BOTTONE IL TEAM NON VERRÀ MODIFICATO.",
                     view=view,
                     ephemeral=True
                 )
