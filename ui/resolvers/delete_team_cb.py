@@ -2,6 +2,7 @@ import discord
 
 from models.event import Event
 from services.event_service import get_teams_by_event, get_team_from_leader, delete_team
+from services.lobby_service import get_lobbies
 from services.server_service import get_admin_role_id
 from services.team_service import get_teams
 from ui.views.team_selector import TeamsSelectorView
