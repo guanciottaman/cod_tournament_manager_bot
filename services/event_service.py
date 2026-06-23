@@ -238,7 +238,8 @@ async def delete_team(team_id: int, status: str):
         await execute("""
             UPDATE teams
             SET previous_lobby_id = lobby_id,
-                lobby_id = NULL
+                lobby_id = NULL,
+                leader_discord_id = NULL
             WHERE team_id = ?
         """, (team_id,))
     else:
