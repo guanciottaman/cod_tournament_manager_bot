@@ -30,7 +30,8 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
             team_id: int | None=None,
             players_names: list[str] | None = None,
             kds: list[float] | None = None,
-            is_admin: bool = False
+            is_admin: bool = False,
+            team_name: str | None = None
         ):
         super().__init__()
         self.event_id = event_id
@@ -44,6 +45,8 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
             self.title = "Modifica il tuo team"
             if not is_admin:
                 self.remove_item(self.nome_team)
+            elif is_admin and team_name is not None:
+                self.nome_team.default = team_name
             self.player_names = players_names
             self.capoteam.default = self.player_names[0]
             if kds is not None:
