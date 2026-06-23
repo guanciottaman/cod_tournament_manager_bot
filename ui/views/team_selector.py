@@ -239,7 +239,8 @@ class TeamsSelectorView(discord.ui.View):
                         team_id=team_id,
                         players_names=players_names,
                         kds=None if event.lobby_mode not in ("kd", "kd_balanced") else await get_team_kds(team_id),
-                        is_admin=True
+                        is_admin=True,
+                        team_name=team.name
                     ) 
                 )
             elif self.mode == "delete":
