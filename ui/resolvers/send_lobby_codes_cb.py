@@ -8,7 +8,7 @@ async def send_lobby_codes_callback(
     interaction: discord.Interaction, 
     event: Event, 
     lobbies: list[Lobby], 
-    code: int
+    code: str
 ):
     event_id = event.event_id
     view = discord.ui.View()

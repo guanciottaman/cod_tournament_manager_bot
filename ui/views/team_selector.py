@@ -76,7 +76,7 @@ class TeamsSelectorView(discord.ui.View):
 
             try:
                 await member.send(embed=embed)
-            except discord.Forbidden:
+            except (discord.Forbidden, discord.HTTPException):
                 failed += 1
 
         if failed:

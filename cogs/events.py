@@ -119,7 +119,7 @@ class Events(commands.Cog):
 
     @app_commands.command(name="manda_codice_lobby", description="Manda il codice lobby ai capoteam di una certa lobby")
     @app_commands.describe(code="Il codice da mandare")
-    async def manda_codice_lobby(self, interaction: discord.Interaction, code: int):
+    async def manda_codice_lobby(self, interaction: discord.Interaction, code: str):
         if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario a mandare i codici lobby!", ephemeral=True)
             return

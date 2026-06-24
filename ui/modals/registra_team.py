@@ -6,6 +6,43 @@ from services.team_service import *
 from ui.embeds.lobby_builders import build_info_lobby_embed
 from services.lobby_service import get_lobbies
 from services.event_service import get_event_info
+from services.server_service import get_admin_role_id
+
+async def notify_admins(interaction: discord.Interaction, team_name: str, members: list[tuple[str, float | None]]):
+    embed = discord.Embed(
+        title="Nuovo team registrato",
+        color=discord.Color.blue()
+    )
+    emb_description = f"Nome team: **{team_name}**\nMembri:\n"
+    for i, (member_name, member_kd) in enumerate(members):
+        emb_description += f"{i+1}. {member_name}{f' {member_kd} K/D' if member_kd is not None else ''}"
+    embed.description = emb_description
+    failed = 0
+
+    guild = interaction.guild
+    if guild is None:
+        return
+
+    admin_role_id = await get_admin_role_id(interaction.guild_id)
+    admin_role = guild.get_role(admin_role_id)
+    if admin_role is None:
+        return
+
+    admins: set[int] = set(m.id for m in admin_role.members if m.id != interaction.client.user.id) if admin_role else set()
+
+    for user_id in admins:
+        member = guild.get_member(user_id)
+        if member is None:
+            failed += 1
+            continue
+
+        try:
+            await member.send(embed=embed)
+        except (discord.Forbidden, discord.HTTPException):
+            failed += 1
+
+    await interaction.followup.send("Gli admin sono stati notificati.", ephemeral=True)
+    
 
 class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
     nome_team = discord.ui.TextInput(
@@ -203,6 +240,7 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
                 await interaction.response.send_message("Hai già iscritto un team a questo evento!", ephemeral=True)
                 return
             await interaction.response.send_message("Hai registrato il tuo team correttamente!", ephemeral=True)
+            await notify_admins(interaction, nome_team, [(n, None) for n in names])
 
 
 class TeamKDModal(discord.ui.Modal, title="Inserisci KD team"):
@@ -290,8 +328,8 @@ class TeamKDModal(discord.ui.Modal, title="Inserisci KD team"):
                 team_id, member_ids = team_tuple
                 players_kd_dict = dict(zip(member_ids, kd_values))
                 await update_team_kd(team_id, players_kd_dict)
-
             await interaction.response.send_message(
                 "Hai iscritto il tuo team all'evento con successo.",
                 ephemeral=True
             )
+            await notify_admins(interaction, self.team_name, [(n, kd) for n, kd in zip(self.players, kd_values)])
