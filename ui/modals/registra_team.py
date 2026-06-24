@@ -15,7 +15,7 @@ async def notify_admins(interaction: discord.Interaction, team_name: str, member
     )
     emb_description = f"Nome team: **{team_name}**\nMembri:\n"
     for i, (member_name, member_kd) in enumerate(members):
-        emb_description += f"{i+1}. {member_name}{f' {member_kd} K/D' if member_kd is not None else ''}"
+        emb_description += f"{i+1}. {member_name}{f' {member_kd} K/D' if member_kd is not None else ''}\n"
     embed.description = emb_description
     failed = 0
 

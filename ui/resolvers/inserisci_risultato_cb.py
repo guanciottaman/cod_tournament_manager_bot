@@ -31,7 +31,7 @@ async def inserisci_risultato_callback(
     await interaction.response.defer(ephemeral=True)
     embed = discord.Embed(
         title="Inserisci risultato",
-        description=f"**ATTENZIONE**\nIL RISULTATO NON È STATO ANCORA REGISTRATO, controlla le foto che hai caricato e, in caso di errore, rifai il comando, altrimenti clicca il bottone qui sotto per inserire i risultati\n**Foto caricate:**\nPrima foto: {prova1.url}\nSeconda foto: {prova2.url}",
+        description=f"**ATTENZIONE**\nIL RISULTATO NON È STATO ANCORA REGISTRATO, controlla le foto che hai caricato e, in caso di errore, rifai il comando, altrimenti clicca il bottone qui sotto per inserire i risultati\n**Foto caricate:**\nPrima foto: {prova1.proxy_url}\nSeconda foto: {prova2.proxy_url}",
         color=discord.Colour.blurple()
     )
     view = discord.ui.View()
