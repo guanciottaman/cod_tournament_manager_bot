@@ -31,9 +31,12 @@ async def inserisci_risultato_callback(
     await interaction.response.defer(ephemeral=True)
     embed = discord.Embed(
         title="Inserisci risultato",
-        description=f"**ATTENZIONE**\nIL RISULTATO NON È STATO ANCORA REGISTRATO, controlla le foto che hai caricato e, in caso di errore, rifai il comando, altrimenti clicca il bottone qui sotto per inserire i risultati\n**Foto caricate:**\nPrima foto: {prova1.proxy_url}\nSeconda foto: {prova2.proxy_url}",
+        description=f"**ATTENZIONE**\nIL RISULTATO NON È STATO ANCORA REGISTRATO, controlla le foto che hai caricato e, in caso di errore, rifai il comando, altrimenti clicca il bottone qui sotto per inserire i risultati\n*",
         color=discord.Colour.blurple()
     )
+    embed.set_image(url=prova1.url)
+    second_embed = discord.Embed(color=discord.Color.blurple())
+    second_embed.set_image(url=prova2.url)
     view = discord.ui.View()
     insert_result_btn = discord.ui.Button(label="INSERISCI RISULTATO", style=discord.ButtonStyle.green)
     async def insert_result_callback(interaction: discord.Interaction):
@@ -76,4 +79,4 @@ async def inserisci_risultato_callback(
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
     insert_result_btn.callback = insert_result_callback
     view.add_item(insert_result_btn)
-    await interaction.followup.send(embed=embed, view=view, ephemeral=True)
+    await interaction.followup.send(embeds=[embed, second_embed], view=view, ephemeral=True)
