@@ -31,7 +31,7 @@ async def inserisci_risultato_callback(
     await interaction.response.defer(ephemeral=True)
     embed = discord.Embed(
         title="Inserisci risultato",
-        description="**ATTENZIONE**\nIL RISULTATO NON È STATO ANCORA REGISTRATO, controlla le foto che hai caricato e, in caso di errore, rifai il comando, altrimenti clicca il bottone qui sotto per inserire i risultati",
+        description=f"**ATTENZIONE**\nIL RISULTATO NON È STATO ANCORA REGISTRATO, controlla le foto che hai caricato e, in caso di errore, rifai il comando, altrimenti clicca il bottone qui sotto per inserire i risultati\n**Foto caricate:**\nPrima foto: {prova1.url}\nSeconda foto: {prova2.url}",
         color=discord.Colour.blurple()
     )
     view = discord.ui.View()
@@ -76,12 +76,4 @@ async def inserisci_risultato_callback(
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
     insert_result_btn.callback = insert_result_callback
     view.add_item(insert_result_btn)
-    files = []
-
-    for i, url in enumerate([prova1, prova2]):
-        buffer = await download_file(url.url)
-        if buffer is None:
-            continue
-
-        files.append(discord.File(buffer, filename=f"prova_{i+1}.png"))
-    await interaction.followup.send(embed=embed, view=view, ephemeral=True, files=files)
+    await interaction.followup.send(embed=embed, view=view, ephemeral=True)
