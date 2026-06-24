@@ -1,18 +1,7 @@
 import discord
-import aiohttp
-from io import BytesIO
 from models.event import Event
 from services.team_service import get_team_id, get_inserted_matches, get_players_names
 from ui.modals.registra_risultati import RegistraRisultatiModal
-
-async def download_file(url: str):
-    async with aiohttp.ClientSession() as session:
-        async with session.get(url) as resp:
-            if resp.status != 200:
-                return None
-
-            data = await resp.read()
-            return BytesIO(data)
 
 async def inserisci_risultato_callback(
     interaction: discord.Interaction,
