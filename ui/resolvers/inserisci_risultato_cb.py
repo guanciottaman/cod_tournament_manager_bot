@@ -20,7 +20,7 @@ async def inserisci_risultato_callback(
     await interaction.response.defer(ephemeral=True)
     embed = discord.Embed(
         title="Inserisci risultato",
-        description=f"**ATTENZIONE**\nIL RISULTATO NON È STATO ANCORA REGISTRATO, controlla le foto che hai caricato e, in caso di errore, rifai il comando, altrimenti clicca il bottone qui sotto per inserire i risultati\n*",
+        description=f"**ATTENZIONE**\nIL RISULTATO NON È STATO ANCORA REGISTRATO, controlla le foto che hai caricato e, in caso di errore, rifai il comando, altrimenti clicca il bottone qui sotto per inserire i risultati\n",
         color=discord.Colour.blurple()
     )
     embed.set_image(url=prova1.url)
