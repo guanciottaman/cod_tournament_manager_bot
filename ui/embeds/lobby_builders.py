@@ -31,10 +31,7 @@ async def build_config_lobbies_embed(event_id: int, lobbies_number: int, teams_c
         f"{i+1}. LOBBY {name}" for i, name in enumerate(names_list)
     )
 
-    emb_description += (
-        f"**Numero Lobby:** {lobbies_number}\n\n"
-        f"**Nomi Lobby:**\n{lobby_text}"
-    )
+    emb_description += f"**Nomi Lobby:**\n{lobby_text}"
     embed.description = emb_description
 
     return embed
@@ -72,7 +69,7 @@ def build_info_lobby_embed(event_name: str, lobbies: list[Lobby], show_kd: bool 
         title=event_name,
         color=discord.Color.red()
     )
-    emb_description = f"Numero lobby: {len(lobbies)}\n\n"
+    emb_description = ""
     for lobby in lobbies:
         emb_description += f"**LOBBY {lobby.name} ({len(lobby.teams)} team)**\n\n**SLOT | TEAM**\n"
         for i, team in enumerate(lobby.teams):
