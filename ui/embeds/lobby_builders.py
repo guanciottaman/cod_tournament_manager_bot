@@ -74,7 +74,7 @@ def build_info_lobby_embed(event_name: str, lobbies: list[Lobby], show_kd: bool 
     )
     emb_description = f"Numero lobby: {len(lobbies)}\n\n"
     for lobby in lobbies:
-        emb_description += f"**LOBBY {lobby.name} ({len(lobby.teams)} team)**\n\n**Slot | Team**\n"
+        emb_description += f"**LOBBY {lobby.name} ({len(lobby.teams)} team)**\n\n**SLOT | TEAM**\n"
         for i, team in enumerate(lobby.teams):
             emb_description += f"{i}. {team.name}"
             if show_kd:

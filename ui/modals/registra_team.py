@@ -124,13 +124,8 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
             
     def normalize_team_name(self, name: str) -> str:
         name = name.strip()
-
-        # se manca lo spazio prima della parentesi lo aggiunge
         name = re.sub(r"\s*\(", " (", name)
-
-        # pulisce spazi doppi
         name = re.sub(r"\s+", " ", name)
-
         return name
 
     async def on_submit(self, interaction: discord.Interaction):
@@ -145,7 +140,13 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
                 )
                 return
 
+            team_name_clean = match.group(1).strip()
+            team_name_clean = team_name_clean[0].upper() + team_name_clean[1:]
+            if not team_name_clean:
+                await interaction.response.send_message("Nome team non valido", ephemeral=True)
+                return
             clan_tag = match.group(2).strip().upper()
+            nome_team = f"{team_name_clean} ({clan_tag})"
 
             if len(clan_tag) > 5:
                 await interaction.response.send_message(
