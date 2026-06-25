@@ -79,7 +79,7 @@ async def termina_evento_callback(interaction: discord.Interaction, event: Event
             embed=embed,
             files=files
         )
-    except discord.Forbidden:
+    except (discord.Forbidden, discord.HTTPException):
         await interaction.followup.send(
             "Il bot non ha i permessi per vedere o scrivere nel canale!"
         )
