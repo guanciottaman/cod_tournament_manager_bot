@@ -136,11 +136,6 @@ class LobbyConfigView(discord.ui.View):
         embed = await build_event_start_summary(lobbies)
 
         await interaction.edit_original_response(embed=embed, view=None)
-        leader_ids = await get_leader_ids(self.event_id)
-
-        if not leader_ids:
-            await interaction.followup.send("C'è stato un problema con i capoteam!", ephemeral=True)
-            return
 
         embed = build_info_lobby_embed(event.name, lobbies, show_kd=False)
 
@@ -156,10 +151,7 @@ class LobbyConfigView(discord.ui.View):
         else:
             admins = {m.id for m in admin_role.members if m.id != interaction.client.user.id}
 
-        leaders = set(leader_ids)
-
-        all_user_ids = leaders | admins
-        for user_id in all_user_ids:
+        for user_id in admins:
             member = guild.get_member(user_id)
 
             if member is None:
