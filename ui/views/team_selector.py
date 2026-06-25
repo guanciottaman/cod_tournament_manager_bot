@@ -53,7 +53,7 @@ class TeamsSelectorView(discord.ui.View):
     async def notify_users(self, interaction: discord.Interaction):
         await interaction.response.defer(thinking=True, ephemeral=True)
         lobbies = await get_lobbies(self.event_id)
-        embed = build_info_lobby_embed(self.event.name, lobbies)
+        embed = build_info_lobby_embed(self.event.name, lobbies, show_kd=False)
         embed.title = "AGGIORNAMENTO TEAM LOBBY"
         failed = 0
 
