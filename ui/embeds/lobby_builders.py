@@ -32,8 +32,8 @@ async def build_config_lobbies_embed(event_id: int, lobbies_number: int, teams_c
     )
 
     emb_description += (
-        f"**Numero lobby:** {lobbies_number}\n\n"
-        f"**Nomi lobby:**\n{lobby_text}"
+        f"**Numero Lobby:** {lobbies_number}\n\n"
+        f"**Nomi Lobby:**\n{lobby_text}"
     )
     embed.description = emb_description
 
@@ -47,7 +47,7 @@ async def build_event_start_summary(lobbies: list[Lobby]) -> discord.Embed:
     )
 
     embed.add_field(
-        name="Numero lobby",
+        name="Numero Lobby",
         value=str(len(lobbies)),
         inline=True
     )
@@ -56,11 +56,11 @@ async def build_event_start_summary(lobbies: list[Lobby]) -> discord.Embed:
 
     for i, lobby in enumerate(lobbies, start=1):
         description_lines.append(
-            f"**{i}. LOBBY {lobby.name}** → {len(lobby.teams)} team"
+            f"**{i}. LOBBY {lobby.name}** → {len(lobby.teams)} Team"
         )
 
     embed.add_field(
-        name="Distribuzione team",
+        name="Distribuzione Team",
         value="\n".join(description_lines),
         inline=False
     )
