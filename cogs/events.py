@@ -23,6 +23,7 @@ from services.lobby_service import get_lobbies
 from services.team_service import *
 from services.ranking_service import *
 from services.image_service import *
+from services.live_ranking_service import stop_live
 
     
 class Events(commands.Cog):
@@ -358,6 +359,22 @@ class Events(commands.Cog):
         async def wrapper(interaction: discord.Interaction, event: Event):
             await termina_evento_callback(interaction, event, ranking_channel)
         await resolve_event(interaction, embed, events, wrapper)
+    
+    @app_commands.command(name="stop_live", description="Ferma le classifiche live")
+    async def controlla_risultati(self, interaction: discord.Interaction):
+        if not await check_admin_role(interaction):
+            await interaction.response.send_message("Non hai il ruolo necessario per fermare le classifiche live!", ephemeral=True)
+            return
+        async def event_selector_callback(interaction: discord.Interaction, event: Event):
+            await stop_live(event.event_id)
+            await interaction.response.send_message("Le classifiche live sono state fermate con successo!", ephemeral=True)
+        embed = discord.Embed(
+            title="Ferma classifiche live",
+            color=discord.Color.red(),
+            description="Scegli l'evento per cui fermare le classifiche live"
+        )
+        events = await get_events_for_guild(interaction.guild_id, ["running"])
+        await resolve_event(interaction, embed, events, event_selector_callback)
 
 
 async def setup(bot: commands.Bot):

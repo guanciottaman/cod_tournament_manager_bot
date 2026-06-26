@@ -225,7 +225,7 @@ async def get_event_results(event_id: int, status: str) -> list[TeamScore]:
         JOIN teams t ON t.team_id = ts.team_id
         WHERE ts.status = ?
         AND ts.event_id = ?
-        ORDER BY ts.created_at ASC
+        ORDER BY ts.team_id ASC, ts.created_at ASC
     """, (status, event_id))
 
     if not team_rows:
@@ -310,6 +310,16 @@ async def get_inserted_match_numbers(event_id: int) -> set[int]:
         (event_id,)
     )
     return {r[0] for r in rows}
+
+async def get_inserted_matches_count(event_id: int) -> dict[int, int]:
+    rows = await fetch_all("""
+        SELECT team_id, COUNT(DISTINCT match_number)
+        FROM team_scores
+        WHERE event_id = ?
+        GROUP BY team_id
+    """, (event_id,))
+
+    return {r[0]: r[1] for r in rows}
 
 async def get_leader_discord_id(team_id: int) -> int | None:
     row = await fetch_one(

@@ -3,7 +3,8 @@ import discord
 
 from typing import Any
 
-from services.event_service import get_event_info
+from services.event_service import get_event_info, get_matches_number
+from services.team_service import get_inserted_matches_count
 from services.lobby_service import get_lobby
 from services.ranking_service import compute_team_ranking, compute_mvp_ranking
 from ui.embeds.event_builders import build_live_team_ranking_embed, build_live_mvp_ranking_embed
@@ -12,7 +13,7 @@ from ui.embeds.event_builders import build_live_team_ranking_embed, build_live_m
 live_events: dict[int, dict[int, dict[int, Any]]] = {}
 
 
-TIME_TO_WAIT: int = 35 * 60
+TIME_TO_WAIT: int = 10
 
 async def live_mvp_loop(event_id: int, lobby_id: int):
     try:
@@ -80,9 +81,20 @@ async def live_team_loop(event_id: int, lobby_id: int):
                 print(e)
                 continue
 
-            embed = build_live_team_ranking_embed(event.name, lobby.name, ranking)
+            inserted_matches = await get_inserted_matches_count(event_id)
+            matches_number = await get_matches_number(event_id)
+            if matches_number is None:
+                raise ValueError("Matches number not found")
 
-            messages: dict[int, discord.Message] = lobby_state["messages"]
+            embed = build_live_team_ranking_embed(
+                event.name,
+                lobby.name,
+                ranking,
+                inserted_matches,
+                matches_number
+            )
+
+            messages: dict[int, discord.Message] = lobby_state["team_messages"]
 
             for leader_id, msg in list(messages.items()):
                 try:
@@ -117,8 +129,17 @@ async def start_live(event_id: int, guild: discord.Guild, leader_ids: list[int],
         lobby_id=lobby_id,
         include_pending=True
     )
-
-    embed = build_live_team_ranking_embed(event.name, lobby.name, ranking)
+    inserted_matches = await get_inserted_matches_count(event_id)
+    matches_number = await get_matches_number(event_id)
+    if matches_number is None:
+        raise ValueError("Matches number not found")
+    embed = build_live_team_ranking_embed(
+        event.name,
+        lobby.name,
+        ranking,
+        inserted_matches,
+        matches_number
+    )
 
     # 3. invio DM ai leader
     team_messages: dict[int, discord.Message] = {}

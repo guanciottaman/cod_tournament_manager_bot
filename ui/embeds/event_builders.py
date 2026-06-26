@@ -107,7 +107,13 @@ def build_live_mvp_ranking_embed(event_name: str, lobby_name: str, mvp_ranking: 
     embed.set_footer(text="Le classifiche verranno aggiornate ogni 35 minuti")
     return embed
 
-def build_live_team_ranking_embed(event_name: str, lobby_name: str, team_ranking: list[dict[str, Any]]) -> discord.Embed:
+def build_live_team_ranking_embed(
+    event_name: str,
+    lobby_name: str,
+    team_ranking: list[dict[str, Any]],
+    inserted_matches: dict[int, int],
+    matches_number: int
+) -> discord.Embed:
     embed = discord.Embed(
         title="Classifiche Live Evento",
         color=discord.Color.blurple(),
@@ -117,8 +123,9 @@ def build_live_team_ranking_embed(event_name: str, lobby_name: str, team_ranking
         name = team["name"]
         score = team["score"]
         kills = team.get("kills", 0)
+        inserted = inserted_matches.get(team["team_id"], 0)
 
-        emb_description += f"**{i}. {name}** | {score} pts | {kills} kill\n"
+        emb_description += f"**{i}. {name}** | {score} pts | {kills} kill ({inserted}/{matches_number} match inseriti)\n"
     embed.description = emb_description
     embed.set_footer(text="Le classifiche verranno aggiornate ogni 35 minuti")
     return embed

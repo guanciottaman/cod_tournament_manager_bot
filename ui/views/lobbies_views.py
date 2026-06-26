@@ -142,7 +142,11 @@ class LobbyConfigView(discord.ui.View):
         guild = interaction.guild
 
         failed = 0
+        leader_ids = await get_leader_ids(self.event_id)
 
+        if not leader_ids:
+            await interaction.followup.send("C'è stato un problema con i capoteam!", ephemeral=True)
+            return
         admin_role_id = await get_admin_role_id(interaction.guild_id)
         admin_role = interaction.guild.get_role(admin_role_id)
 
@@ -150,8 +154,11 @@ class LobbyConfigView(discord.ui.View):
             admins = set()
         else:
             admins = {m.id for m in admin_role.members if m.id != interaction.client.user.id}
+        leaders = set(leader_ids)
 
-        for user_id in admins:
+        all_user_ids = leaders | admins
+
+        for user_id in all_user_ids:
             member = guild.get_member(user_id)
 
             if member is None:
