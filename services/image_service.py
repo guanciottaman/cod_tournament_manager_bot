@@ -1,5 +1,5 @@
 import io
-import re
+import regex
 from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
@@ -11,23 +11,28 @@ MEDALS_COLORS = [
     (205, 127, 50)    # bronzo
 ]
 
-def _load_fonts(size: int, bold: bool = False):
-    try:
-        text_font = ImageFont.truetype(
-            "assets/Rajdhani-Bold.ttf" if bold else "assets/Rajdhani-Regular.ttf",
-            size
-        )
+_font_cache = {}
 
-        emoji_font = ImageFont.truetype(
-            "assets/NotoSansSymbols2-Regular.ttf",
-            size
-        )
+def _load_fonts(
+    size: int,
+    bold: bool = False
+) -> tuple[ImageFont.FreeTypeFont, ImageFont.FreeTypeFont]:
+    key = (size, bold)
+    if key in _font_cache:
+        return _font_cache[key]
 
-        return text_font, emoji_font
+    text_font = ImageFont.truetype(
+        "assets/Rajdhani-Bold.ttf" if bold else "assets/Rajdhani-Regular.ttf",
+        size
+    )
 
-    except:
-        fallback = ImageFont.load_default()
-        return fallback, fallback
+    emoji_font = ImageFont.truetype(
+        "assets/NotoSansSymbols2-Regular.ttf",
+        size
+    )
+
+    _font_cache[key] = (text_font, emoji_font)
+    return text_font, emoji_font
 
 def draw_text_with_emoji(
     draw: ImageDraw.ImageDraw,
@@ -39,16 +44,12 @@ def draw_text_with_emoji(
 ):
     x, y = pos
 
-    # split corretto per emoji (non split normale!)
-    parts = re.findall(r"\X", text)
+    parts = regex.findall(r"\X", text)
 
     for ch in parts:
-        try:
-            draw.text((x, y), ch, font=text_font, fill=fill)
-        except:
-            draw.text((x, y), ch, font=emoji_font, fill=fill)
-
-        x += text_font.getlength(ch)
+        font = emoji_font if len(ch.encode("utf-8")) > 3 else text_font
+        draw.text((x, y), ch, font=font, fill=fill)
+        x += draw.textlength(ch, font=font)
 
 async def build_leaderboard_image(ranking: list[dict[str, Any]], lobby_name: str | None = None) -> io.BytesIO:
     w, h = 1080, 1350

@@ -12,3 +12,4 @@ yarl==1.23.0
 aiosqlite>=0.22.1
 Pillow>=12.2.0
 pytz>=2026.2
+regex>=2026.5.9
