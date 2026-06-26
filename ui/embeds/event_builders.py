@@ -120,7 +120,7 @@ def build_live_team_ranking_embed(
         title="Classifiche Live Evento",
         color=discord.Color.blurple(),
     )
-    emb_description = f"Ecco la classifiche dell'evento **{event_name}** per la tua **LOBBY {lobby_name}**:\n\n**Claassifica Team:**\n"
+    emb_description = f"Ecco la classifiche dell'evento **{event_name}** per la tua **LOBBY {lobby_name}**:\n\n**Classifica Team:**\n"
     for i, team in enumerate(team_ranking, start=1):
         name = team["name"]
         score = team["score"]
