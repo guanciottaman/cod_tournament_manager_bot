@@ -361,7 +361,7 @@ class Events(commands.Cog):
         await resolve_event(interaction, embed, events, wrapper)
     
     @app_commands.command(name="stop_live", description="Ferma le classifiche live")
-    async def controlla_risultati(self, interaction: discord.Interaction):
+    async def stop_live(self, interaction: discord.Interaction):
         if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario per fermare le classifiche live!", ephemeral=True)
             return
