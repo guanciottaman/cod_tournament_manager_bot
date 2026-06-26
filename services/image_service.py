@@ -11,6 +11,10 @@ MEDALS_COLORS = [
     (205, 127, 50)    # bronzo
 ]
 
+GOLD_MEDAL = Image.open("assets/gold.png").convert("RGBA")
+SILVER_MEDAL = Image.open("assets/silver.png").convert("RGBA")
+BRONZE_MEDAL = Image.open("assets/bronze.png").convert("RGBA")
+
 _font_cache = {}
 
 def _load_fonts(
@@ -27,12 +31,19 @@ def _load_fonts(
     )
 
     emoji_font = ImageFont.truetype(
-        "assets/NotoSansSymbols2-Regular.ttf",
+        "assets/NotoEmoji-Regular.ttf",
         size
     )
 
     _font_cache[key] = (text_font, emoji_font)
     return text_font, emoji_font
+
+def is_emoji(ch: str) -> bool:
+    return any(
+        '\U0001F300' <= c <= '\U0001FAFF' or
+        '\u2600' <= c <= '\u26FF'
+        for c in ch
+    )
 
 def draw_text_with_emoji(
     draw: ImageDraw.ImageDraw,
@@ -44,12 +55,15 @@ def draw_text_with_emoji(
 ):
     x, y = pos
 
-    parts = regex.findall(r"\X", text)
+    for cluster in regex.findall(r"\X", text):
+        try:
+            draw.text((x, y), cluster, font=text_font, fill=fill)
+            font_used = text_font
+        except:
+            draw.text((x, y), cluster, font=emoji_font, fill=fill)
+            font_used = emoji_font
 
-    for ch in parts:
-        font = emoji_font if len(ch.encode("utf-8")) > 3 else text_font
-        draw.text((x, y), ch, font=font, fill=fill)
-        x += draw.textlength(ch, font=font)
+        x += draw.textlength(cluster, font=font_used)
 
 async def build_leaderboard_image(ranking: list[dict[str, Any]], lobby_name: str | None = None) -> io.BytesIO:
     w, h = 1080, 1350
@@ -85,9 +99,9 @@ async def build_leaderboard_image(ranking: list[dict[str, Any]], lobby_name: str
         usable_height = h - header_bottom - bottom_margin
         row_height = usable_height // max_rows
         size = int(row_height)
-        gold_medal = Image.open("assets/gold.png").convert("RGBA").resize((size, size))
-        silver_medal = Image.open("assets/silver.png").convert("RGBA").resize((size, size))
-        bronze_medal = Image.open("assets/bronze.png").convert("RGBA").resize((size, size))
+        gold_medal = GOLD_MEDAL.resize((size, size))
+        silver_medal = SILVER_MEDAL.resize((size, size))
+        bronze_medal = BRONZE_MEDAL.resize((size, size))
         medals = [gold_medal, silver_medal, bronze_medal]
         y = header_bottom
 
@@ -150,9 +164,9 @@ def build_mvp_image(
         font=title_font
     )
     size = 120
-    gold_medal = Image.open("assets/gold.png").convert("RGBA").resize((size, size))
-    silver_medal = Image.open("assets/silver.png").convert("RGBA").resize((size, size))
-    bronze_medal = Image.open("assets/bronze.png").convert("RGBA").resize((size, size))
+    gold_medal = GOLD_MEDAL.resize((size, size))
+    silver_medal = SILVER_MEDAL.resize((size, size))
+    bronze_medal = BRONZE_MEDAL.resize((size, size))
     medals = [gold_medal, silver_medal, bronze_medal]
     
     start_y = 500
