@@ -1,6 +1,8 @@
 import discord
 
 from typing import Any
+import datetime
+import pytz
 
 from services.event_service import *
 from models.team import TeamScore
@@ -104,7 +106,7 @@ def build_live_mvp_ranking_embed(event_name: str, lobby_name: str, mvp_ranking: 
 
         emb_description += f"**{i}. {name}** | {kills} kill\n"
     embed.description = emb_description
-    embed.set_footer(text="Le classifiche verranno aggiornate ogni 35 minuti")
+    embed.set_footer(text=f"Le classifiche verranno aggiornate ogni 35 minuti | {datetime.datetime.now(pytz.timezone('Europe/Rome')):%H:%M}")
     return embed
 
 def build_live_team_ranking_embed(
@@ -127,5 +129,5 @@ def build_live_team_ranking_embed(
 
         emb_description += f"**{i}. {name}** | {score} pts | {kills} kill ({inserted}/{matches_number} match inseriti)\n"
     embed.description = emb_description
-    embed.set_footer(text="Le classifiche verranno aggiornate ogni 35 minuti")
+    embed.set_footer(text=f"Le classifiche verranno aggiornate ogni 35 minuti | {datetime.datetime.now(pytz.timezone('Europe/Rome')):%H:%M}")
     return embed
