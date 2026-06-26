@@ -96,6 +96,7 @@ class Bot(commands.Bot):
             penalty_points INTEGER DEFAULT 0,
             kd REAL DEFAULT 0,
             previous_lobby_id INTEGER,
+            slot INTEGER NOT NULL DEFAULT -1,
             
             FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE,
             FOREIGN KEY (lobby_id) REFERENCES lobbies(lobby_id) ON DELETE SET NULL,

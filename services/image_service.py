@@ -1,4 +1,5 @@
 import io
+import re
 from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
@@ -10,14 +11,44 @@ MEDALS_COLORS = [
     (205, 127, 50)    # bronzo
 ]
 
-def _load_font(size: int, bold: bool = False):
+def _load_fonts(size: int, bold: bool = False):
     try:
-        if bold:
-            return ImageFont.truetype("assets/Rajdhani-Bold.ttf", size)
-        return ImageFont.truetype("assets/Rajdhani-Regular.ttf", size)
-    except:
-        return ImageFont.load_default()
+        text_font = ImageFont.truetype(
+            "assets/Rajdhani-Bold.ttf" if bold else "assets/Rajdhani-Regular.ttf",
+            size
+        )
 
+        emoji_font = ImageFont.truetype(
+            "assets/NotoSansSymbols2-Regular.ttf",
+            size
+        )
+
+        return text_font, emoji_font
+
+    except:
+        fallback = ImageFont.load_default()
+        return fallback, fallback
+
+def draw_text_with_emoji(
+    draw: ImageDraw.ImageDraw,
+    pos: tuple[int, int],
+    text: str,
+    text_font: ImageFont.FreeTypeFont,
+    emoji_font: ImageFont.FreeTypeFont,
+    fill: tuple[int, int, int]
+):
+    x, y = pos
+
+    # split corretto per emoji (non split normale!)
+    parts = re.findall(r"\X", text)
+
+    for ch in parts:
+        try:
+            draw.text((x, y), ch, font=text_font, fill=fill)
+        except:
+            draw.text((x, y), ch, font=emoji_font, fill=fill)
+
+        x += text_font.getlength(ch)
 
 async def build_leaderboard_image(ranking: list[dict[str, Any]], lobby_name: str | None = None) -> io.BytesIO:
     w, h = 1080, 1350
@@ -25,8 +56,8 @@ async def build_leaderboard_image(ranking: list[dict[str, Any]], lobby_name: str
     img = Image.new("RGBA", (w, h), (250, 250, 250))
     draw = ImageDraw.Draw(img)
 
-    title_font = _load_font(64, bold=True)
-    name_font = _load_font(42, bold=True)
+    title_font, _ = _load_fonts(64, bold=True)
+    name_font, name_font_emoji = _load_fonts(42, bold=True)
 
     draw.text(
         (w // 2, 220),
@@ -51,7 +82,7 @@ async def build_leaderboard_image(ranking: list[dict[str, Any]], lobby_name: str
         )
     else:
         usable_height = h - header_bottom - bottom_margin
-        row_height = usable_height / max_rows
+        row_height = usable_height // max_rows
         size = int(row_height)
         gold_medal = Image.open("assets/gold.png").convert("RGBA").resize((size, size))
         silver_medal = Image.open("assets/silver.png").convert("RGBA").resize((size, size))
@@ -70,12 +101,8 @@ async def build_leaderboard_image(ranking: list[dict[str, Any]], lobby_name: str
             if i < 3:
                 medal = medals[i]
                 img.paste(medal, (80, line_y), medal)
-            draw.text(
-                (80+row_height, line_y),
-                f"{i + 1}°  {name}",
-                fill=color,
-                font=name_font
-            )
+
+            draw_text_with_emoji(draw, (80+row_height, line_y), name, name_font, name_font_emoji, color)
 
             draw.text(
                 (w - 300, line_y),
@@ -111,8 +138,8 @@ def build_mvp_image(
     img = Image.new("RGBA", (width, height), (250, 250, 250))
     draw = ImageDraw.Draw(img)
 
-    title_font = _load_font(64, bold=True)
-    name_font = _load_font(48, bold=True)
+    title_font, _ = _load_fonts(64, bold=True)
+    name_font, name_font_emoji = _load_fonts(48, bold=True)
 
     draw.text(
         (width // 2, 350),
@@ -150,12 +177,13 @@ def build_mvp_image(
             if medal is not None:
                 img.paste(medal, (150, y-30), medal)
 
-            draw.text(
+            draw_text_with_emoji(
+                draw,
                 (width // 2, y+30),
-                f"{i+1}° {name}",
-                fill=MEDALS_COLORS[i] if i < 3 else (10, 10, 10),
-                anchor="mm",
-                font=name_font
+                name,
+                name_font,
+                name_font_emoji,
+                MEDALS_COLORS[i] if i < 3 else (10, 10, 10)
             )
 
             draw.text(
