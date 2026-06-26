@@ -76,6 +76,12 @@ async def compute_team_ranking(
 
     rows = await fetch_all(query, tuple(params))
 
+    teams = await fetch_all("""
+        SELECT team_id, name
+        FROM teams
+        WHERE event_id = ?
+    """, (event_id,))
+
     penalties = await fetch_all(
         """
             SELECT team_id, COALESCE(penalty_points, 0)
@@ -118,10 +124,13 @@ async def compute_team_ranking(
         match_kills[ts_id] += kills
 
     # 5. build per-team ranking
-    team_matches = defaultdict(list)
-    team_kills = defaultdict(int)
+    team_matches: dict[int, list[dict[str, int]]] = defaultdict(list)
     
-    team_names = {}
+    team_names: dict[int, str] = {}
+
+    for team_id, name in teams:
+        team_names[team_id] = name
+        team_matches[team_id] = []
 
     for ts_id, team_id, team_name, placement in rows:
         team_names[team_id] = team_name
@@ -133,25 +142,28 @@ async def compute_team_ranking(
             + placement_dict.get(placement, 0)
         )
 
-        team_matches[team_id].append(match_score)
-        team_kills[team_id] += kills
+        team_matches[team_id].append({
+            "score": match_score,
+            "kills": kills
+        })
 
     final = []
 
-    for team_id, matches in team_matches.items():
-        if not matches:
-            continue
+    for team_id, name in teams:
+        matches = team_matches.get(team_id, [])
 
         if drop_worst_match and len(matches) > 1:
-            matches = sorted(matches)[1:]
+            matches = sorted(matches, key=lambda m: m["score"])[1:]
+
+        score = sum(m["score"] for m in matches) - team_penalties.get(team_id, 0)
+        kills = sum(m["kills"] for m in matches)
 
         final.append({
             "team_id": team_id,
-            "name": team_names.get(team_id, "Unknown"),
-            "score": sum(matches) - team_penalties.get(team_id, 0),
-            "kills": team_kills[team_id]
+            "name": name,
+            "score": score,
+            "kills": kills
         })
-
     return sorted(final, key=lambda x: x["score"], reverse=True)
 
 async def compute_mvp_ranking(

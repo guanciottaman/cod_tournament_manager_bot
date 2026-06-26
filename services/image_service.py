@@ -3,7 +3,7 @@ import regex
 from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
-
+from pilmoji import Pilmoji
 
 MEDALS_COLORS = [
     (233, 168, 37),   # oro
@@ -17,10 +17,10 @@ BRONZE_MEDAL = Image.open("assets/bronze.png").convert("RGBA")
 
 _font_cache = {}
 
-def _load_fonts(
+def _load_font(
     size: int,
     bold: bool = False
-) -> tuple[ImageFont.FreeTypeFont, ImageFont.FreeTypeFont]:
+) -> ImageFont.FreeTypeFont:
     key = (size, bold)
     if key in _font_cache:
         return _font_cache[key]
@@ -30,40 +30,8 @@ def _load_fonts(
         size
     )
 
-    emoji_font = ImageFont.truetype(
-        "assets/NotoEmoji-Regular.ttf",
-        size
-    )
-
-    _font_cache[key] = (text_font, emoji_font)
-    return text_font, emoji_font
-
-def is_emoji(ch: str) -> bool:
-    return any(
-        '\U0001F300' <= c <= '\U0001FAFF' or
-        '\u2600' <= c <= '\u26FF'
-        for c in ch
-    )
-
-def draw_text_with_emoji(
-    draw: ImageDraw.ImageDraw,
-    pos: tuple[int, int],
-    text: str,
-    text_font: ImageFont.FreeTypeFont,
-    emoji_font: ImageFont.FreeTypeFont,
-    fill: tuple[int, int, int]
-):
-    x, y = pos
-
-    for cluster in regex.findall(r"\X", text):
-        try:
-            draw.text((x, y), cluster, font=text_font, fill=fill)
-            font_used = text_font
-        except:
-            draw.text((x, y), cluster, font=emoji_font, fill=fill)
-            font_used = emoji_font
-
-        x += draw.textlength(cluster, font=font_used)
+    _font_cache[key] = text_font
+    return text_font
 
 async def build_leaderboard_image(ranking: list[dict[str, Any]], lobby_name: str | None = None) -> io.BytesIO:
     w, h = 1080, 1350
@@ -71,8 +39,8 @@ async def build_leaderboard_image(ranking: list[dict[str, Any]], lobby_name: str
     img = Image.new("RGBA", (w, h), (250, 250, 250))
     draw = ImageDraw.Draw(img)
 
-    title_font, _ = _load_fonts(64, bold=True)
-    name_font, name_font_emoji = _load_fonts(42, bold=True)
+    title_font = _load_font(64, bold=True)
+    name_font = _load_font(42, bold=True)
 
     draw.text(
         (w // 2, 220),
@@ -104,38 +72,45 @@ async def build_leaderboard_image(ranking: list[dict[str, Any]], lobby_name: str
         bronze_medal = BRONZE_MEDAL.resize((size, size))
         medals = [gold_medal, silver_medal, bronze_medal]
         y = header_bottom
+        with Pilmoji(img) as pilmoji:
+            for i, t in enumerate(ranking[:max_rows]):
+                name = t.get("name", "Unknown")
+                score = t.get("score", 0)
+                kills = t.get("kills", 0)
 
-        for i, t in enumerate(ranking[:max_rows]):
-            name = t.get("name", "Unknown")
-            score = t.get("score", 0)
-            kills = t.get("kills", 0)
+                color = MEDALS_COLORS[i] if i < 3 else (40, 40, 40)
+                line_y = int(y + 20)
 
-            color = MEDALS_COLORS[i] if i < 3 else (40, 40, 40)
-            line_y = int(y + 20)
+                if i < 3:
+                    medal = medals[i]
+                    img.paste(medal, (80, line_y), medal)
 
-            if i < 3:
-                medal = medals[i]
-                img.paste(medal, (80, line_y), medal)
+                
+                pilmoji.text(
+                    (80 + row_height, line_y),
+                    name,
+                    fill=color,
+                    font=name_font
+                )
 
-            draw_text_with_emoji(draw, (80+row_height, line_y), name, name_font, name_font_emoji, color)
 
-            draw.text(
-                (w - 300, line_y),
-                f"{score} pt",
-                fill=color,
-                anchor="ra",
-                font=name_font
-            )
+                pilmoji.text(
+                    (w - 300, line_y),
+                    f"{score} pt",
+                    fill=color,
+                    anchor="ra",
+                    font=name_font
+                )
 
-            draw.text(
-                (w - 80, line_y),
-                f"{kills} kills",
-                fill=(60, 60, 60),
-                anchor="ra",
-                font=name_font
-            )
+                pilmoji.text(
+                    (w - 80, line_y),
+                    f"{kills} kills",
+                    fill=(60, 60, 60),
+                    anchor="ra",
+                    font=name_font
+                )
 
-            y += row_height
+                y += row_height
 
     buf = io.BytesIO()
     img.save(buf, format="PNG")
@@ -153,8 +128,8 @@ def build_mvp_image(
     img = Image.new("RGBA", (width, height), (250, 250, 250))
     draw = ImageDraw.Draw(img)
 
-    title_font, _ = _load_fonts(64, bold=True)
-    name_font, name_font_emoji = _load_fonts(48, bold=True)
+    title_font = _load_font(64, bold=True)
+    name_font = _load_font(48, bold=True)
 
     draw.text(
         (width // 2, 350),
@@ -182,32 +157,29 @@ def build_mvp_image(
             font=name_font
         )
     else:
-        for i, d in enumerate(mvps):
-            name = d["player"]
-            kills = d["kills"]
+        with Pilmoji(img) as pilmoji:
+            for i, d in enumerate(mvps):
+                name = d["player"]
+                kills = d["kills"]
 
-            y = start_y + i * spacing
+                y = start_y + i * spacing
 
-            medal = medals[i] if i < len(medals) else None
-            if medal is not None:
-                img.paste(medal, (150, y-30), medal)
-
-            draw_text_with_emoji(
-                draw,
-                (width // 2, y+30),
-                name,
-                name_font,
-                name_font_emoji,
-                MEDALS_COLORS[i] if i < 3 else (10, 10, 10)
-            )
-
-            draw.text(
-                (width-130, y),
-                f"{kills} Kill",
-                fill=(10, 10, 10),
-                anchor="ra",
-                font=name_font
-            )
+                medal = medals[i] if i < len(medals) else None
+                if medal is not None:
+                    img.paste(medal, (150, y-30), medal)
+                pilmoji.text(
+                    (width // 2, y+30),
+                    name,
+                    fill=MEDALS_COLORS[i] if i < 3 else (10, 10, 10),
+                    font=name_font
+                )
+                pilmoji.text(
+                    (width-130, y),
+                    f"{kills} Kill",
+                    fill=(10, 10, 10),
+                    anchor="ra",
+                    font=name_font
+                )
 
     buffer = io.BytesIO()
     img.save(buffer, format="PNG")
