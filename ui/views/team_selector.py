@@ -144,8 +144,10 @@ class TeamsSelectorView(discord.ui.View):
             )
             leader_discord_id = team.leader_discord_id
             capoteam = interaction.guild.get_member(leader_discord_id) if leader_discord_id > 10e16 else None
+            inserted_matches = await get_inserted_matches_count(event.event_id)
+            matches_number = event.matches_number
 
-            emb_description = f"**Evento:** {event.name}\n**Leader:** {capoteam.mention if capoteam is not None else leader_discord_id}\nK/D {team.kd:.2f}\n\n**Membri:**\n"
+            emb_description = f"**Evento:** {event.name}\n**Leader:** {capoteam.mention if capoteam is not None else leader_discord_id}\nMatch inseriti: {inserted_matches}/{matches_number}\nK/D {team.kd:.2f}\n\n**Membri:**\n"
 
             if team_members:
                 kds = await get_team_kds(team_id)
