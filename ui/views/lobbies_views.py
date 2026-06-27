@@ -2,11 +2,9 @@ import discord
 
 from ui.embeds.lobby_builders import *
 from ui.modals.lobbies_names import LobbiesNamesModal
-from ui.embeds.lobby_builders import build_info_lobby_embed
 from services.lobby_service import *
 from services.team_service import get_teams
-from services.event_service import set_event_status, get_leader_ids
-from services.server_service import get_admin_role_id
+from services.event_service import set_event_status
 
 
 class LobbyConfigView(discord.ui.View):
@@ -136,41 +134,3 @@ class LobbyConfigView(discord.ui.View):
         embed = await build_event_start_summary(lobbies)
 
         await interaction.edit_original_response(embed=embed, view=None)
-
-        embed = build_info_lobby_embed(event.name, lobbies, show_kd=False)
-
-        guild = interaction.guild
-
-        failed = 0
-        leader_ids = await get_leader_ids(self.event_id)
-
-        if not leader_ids:
-            await interaction.followup.send("C'è stato un problema con i capoteam!", ephemeral=True)
-            return
-        admin_role_id = await get_admin_role_id(interaction.guild_id)
-        admin_role = interaction.guild.get_role(admin_role_id)
-
-        if admin_role is None:
-            admins = set()
-        else:
-            admins = {m.id for m in admin_role.members if m.id != interaction.client.user.id}
-        leaders = set(leader_ids)
-
-        all_user_ids = leaders | admins
-
-        for user_id in all_user_ids:
-            member = guild.get_member(user_id)
-
-            if member is None:
-                failed += 1
-                continue
-
-            try:
-                await member.send(embed=embed)
-            except (discord.Forbidden, discord.HTTPException):
-                failed += 1
-        if failed:
-            await interaction.followup.send(
-                f"Lobby inviate, ma {failed} utenti non hanno ricevuto il DM",
-                ephemeral=True
-            )
