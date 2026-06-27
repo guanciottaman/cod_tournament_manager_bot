@@ -206,3 +206,9 @@ marimo/_static/
 marimo/_lsp/
 __marimo__/
 cogs/__pycache__/events.cpython-314.pyc
+bin/fonttools
+.gitignore
+bin/pyftmerge
+bin/pyftsubset
+bin/ttx
+share/man/man1/ttx.1

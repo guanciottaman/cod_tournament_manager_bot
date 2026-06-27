@@ -1,9 +1,13 @@
 import io
-import regex
 from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
-from pilmoji import Pilmoji
+
+FONT_MAP = {
+    "rajdhani": ImageFont.truetype("assets/Rajdhani-Regular.ttf", 48),
+    "jp": ImageFont.truetype("assets/NotoSansJP-Regular.otf", 48),
+    "latin": ImageFont.truetype("assets/NotoSans-Regular.ttf", 48),
+}
 
 MEDALS_COLORS = [
     (233, 168, 37),   # oro
@@ -15,6 +19,62 @@ GOLD_MEDAL = Image.open("assets/gold.png").convert("RGBA")
 SILVER_MEDAL = Image.open("assets/silver.png").convert("RGBA")
 BRONZE_MEDAL = Image.open("assets/bronze.png").convert("RGBA")
 
+FONTS = [
+    ImageFont.truetype("assets/Rajdhani-Regular.ttf", 48),
+    ImageFont.truetype("assets/Rajdhani-Bold.ttf", 64),
+    ImageFont.truetype("assets/NotoSansJP-Regular.otf", 48),
+    ImageFont.truetype("assets/NotoSans-VariableFont.ttf", 48),
+]
+
+from PIL import ImageFont, ImageDraw
+
+FONT_RANGES = [
+    ("jp", ImageFont.truetype("assets/NotoSansJP-Regular.otf", 48)),
+    ("latin", ImageFont.truetype("assets/Rajdhani-Regular.ttf", 48)),
+    ("fallback", ImageFont.truetype("assets/NotoSans-Regular.ttf", 48)),
+]
+
+def font_supports_text(font, text: str) -> bool:
+    try:
+        return font.getmask(text).getbbox() is not None
+    except:
+        return False
+
+
+def pick_font(text: str):
+    for name, font in FONT_RANGES:
+        if font_supports_text(font, text):
+            return font
+    return FONT_RANGES[-1][1]
+
+
+def draw_text_fallback(draw: ImageDraw.ImageDraw, pos, text: str, fill=(0, 0, 0)):
+    x, y = pos
+
+    buffer = ""
+    current_font = None
+
+    def flush():
+        nonlocal x, buffer, current_font
+        if not buffer:
+            return
+        draw.text((x, y), buffer, font=current_font, fill=fill)
+        x += draw.textlength(buffer, font=current_font)
+        buffer = ""
+
+    for ch in text:
+        font = pick_font(ch)
+
+        if current_font is None:
+            current_font = font
+
+        if font != current_font:
+            flush()
+            current_font = font
+
+        buffer += ch
+
+    flush()
 _font_cache = {}
 
 def _load_font(
@@ -72,45 +132,44 @@ async def build_leaderboard_image(ranking: list[dict[str, Any]], lobby_name: str
         bronze_medal = BRONZE_MEDAL.resize((size, size))
         medals = [gold_medal, silver_medal, bronze_medal]
         y = header_bottom
-        with Pilmoji(img) as pilmoji:
-            for i, t in enumerate(ranking[:max_rows]):
-                name = t.get("name", "Unknown")
-                score = t.get("score", 0)
-                kills = t.get("kills", 0)
+        for i, t in enumerate(ranking[:max_rows]):
+            name = t.get("name", "Unknown")
+            score = t.get("score", 0)
+            kills = t.get("kills", 0)
 
-                color = MEDALS_COLORS[i] if i < 3 else (40, 40, 40)
-                line_y = int(y + 20)
+            color = MEDALS_COLORS[i] if i < 3 else (40, 40, 40)
+            line_y = int(y + 20)
 
-                if i < 3:
-                    medal = medals[i]
-                    img.paste(medal, (80, line_y), medal)
-
-                
-                pilmoji.text(
-                    (80 + row_height, line_y),
-                    name,
-                    fill=color,
-                    font=name_font
-                )
+            if i < 3:
+                medal = medals[i]
+                img.paste(medal, (80, line_y), medal)
 
 
-                pilmoji.text(
-                    (w - 300, line_y),
-                    f"{score} pt",
-                    fill=color,
-                    anchor="ra",
-                    font=name_font
-                )
+            draw_text_with_fallback(
+                draw,
+                (80 + row_height, line_y),
+                name,
+                fill=color,
+            )
 
-                pilmoji.text(
-                    (w - 80, line_y),
-                    f"{kills} kills",
-                    fill=(60, 60, 60),
-                    anchor="ra",
-                    font=name_font
-                )
 
-                y += row_height
+            draw.text(
+                (w - 300, line_y),
+                f"{score} pt",
+                fill=color,
+                anchor="ra",
+                font=name_font
+            )
+
+            draw.text(
+                (w - 80, line_y),
+                f"{kills} kills",
+                fill=(60, 60, 60),
+                anchor="ra",
+                font=name_font
+            )
+
+            y += row_height
 
     buf = io.BytesIO()
     img.save(buf, format="PNG")
@@ -157,29 +216,28 @@ def build_mvp_image(
             font=name_font
         )
     else:
-        with Pilmoji(img) as pilmoji:
-            for i, d in enumerate(mvps):
-                name = d["player"]
-                kills = d["kills"]
+        for i, d in enumerate(mvps):
+            name = d["player"]
+            kills = d["kills"]
 
-                y = start_y + i * spacing
+            y = start_y + i * spacing
 
-                medal = medals[i] if i < len(medals) else None
-                if medal is not None:
-                    img.paste(medal, (150, y-30), medal)
-                pilmoji.text(
-                    (width // 2, y+30),
-                    name,
-                    fill=MEDALS_COLORS[i] if i < 3 else (10, 10, 10),
-                    font=name_font
-                )
-                pilmoji.text(
-                    (width-130, y),
-                    f"{kills} Kill",
-                    fill=(10, 10, 10),
-                    anchor="ra",
-                    font=name_font
-                )
+            medal = medals[i] if i < len(medals) else None
+            if medal is not None:
+                img.paste(medal, (150, y-30), medal)
+            draw_text_with_fallback(
+                draw,
+                (width // 2, y+30),
+                name,
+                fill=MEDALS_COLORS[i] if i < 3 else (10, 10, 10),
+            )
+            draw.text(
+                (width-130, y),
+                f"{kills} Kill",
+                fill=(10, 10, 10),
+                anchor="ra",
+                font=name_font
+            )
 
     buffer = io.BytesIO()
     img.save(buffer, format="PNG")

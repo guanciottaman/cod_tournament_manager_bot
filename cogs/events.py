@@ -5,6 +5,7 @@ from discord import app_commands
 from typing import Literal
 
 from ui.embeds.event_builders import *
+from ui.embeds.lobby_builders import build_info_lobby_embed
 from ui.modals.nome_evento import NomeEventoModal
 from ui.views.elimina_evento import EliminaEventoView
 from ui.views.setup_view import SetupView, DeleteServerView
@@ -292,6 +293,52 @@ class Events(commands.Cog):
                 ephemeral=True
             )
         
+        await resolve_event(interaction, embed, events, event_selector_callback)
+    
+    @app_commands.command(name="invia_lobby", description="Invia le lobby ai capoteam e agli admin (solo in setup mode)")
+    async def invia_lobby(self, interaction: discord.Interaction):
+        if not await check_admin_role(interaction):
+            await interaction.response.send_message("Non hai il ruolo necessario per inviare le lobby!", ephemeral=True)
+            return
+        events: list[Event] = await get_events_for_guild(interaction.guild_id, ["setup"])
+        embed = discord.Embed(
+            title="Invia lobby",
+            color=discord.Colour.blue(),
+            description="Questa è una lista degli eventi in corso.\nScegli l'evento di cui vuoi inviare le lobby."
+        )
+        async def event_selector_callback(interaction: discord.Interaction, event: Event):
+            await interaction.response.defer(ephemeral=True)
+            lobbies = await get_lobbies(event.event_id)
+            embed = build_info_lobby_embed(event.name, lobbies, show_kd=False)
+            failed = 0
+
+            guild = interaction.guild
+            if guild is None:
+                return
+
+            admin_role_id = await get_admin_role_id(interaction.guild_id)
+            admin_role = guild.get_role(admin_role_id)
+
+            admins: set[int] = set(m.id for m in admin_role.members if m.id != interaction.client.user.id) if admin_role else set()
+            leader_ids = await get_leader_ids(event.event_id)
+            leaders = set(leader_ids)
+            for user_id in (leaders | admins):
+                member = guild.get_member(user_id)
+                if member is None:
+                    failed += 1
+                    continue
+
+                try:
+                    await member.send(embed=embed)
+                except (discord.Forbidden, discord.HTTPException):
+                    failed += 1
+
+            if failed:
+                await interaction.followup.send(
+                    f"DM falliti: {failed}",
+                    ephemeral=True
+                )
+            await interaction.followup.send("Lobby mandate a capoteam e admin", ephemeral=True)
         await resolve_event(interaction, embed, events, event_selector_callback)
 
     @app_commands.command(name="controlla_risultati", description="Controlla i risultati dei team")
