@@ -3,12 +3,6 @@ from typing import Any
 
 from PIL import Image, ImageDraw, ImageFont
 
-FONT_MAP = {
-    "rajdhani": ImageFont.truetype("assets/Rajdhani-Regular.ttf", 48),
-    "jp": ImageFont.truetype("assets/NotoSansJP-Regular.otf", 48),
-    "latin": ImageFont.truetype("assets/NotoSans-Regular.ttf", 48),
-}
-
 MEDALS_COLORS = [
     (233, 168, 37),   # oro
     (125, 125, 125),  # argento
@@ -19,62 +13,6 @@ GOLD_MEDAL = Image.open("assets/gold.png").convert("RGBA")
 SILVER_MEDAL = Image.open("assets/silver.png").convert("RGBA")
 BRONZE_MEDAL = Image.open("assets/bronze.png").convert("RGBA")
 
-FONTS = [
-    ImageFont.truetype("assets/Rajdhani-Regular.ttf", 48),
-    ImageFont.truetype("assets/Rajdhani-Bold.ttf", 64),
-    ImageFont.truetype("assets/NotoSansJP-Regular.otf", 48),
-    ImageFont.truetype("assets/NotoSans-VariableFont.ttf", 48),
-]
-
-from PIL import ImageFont, ImageDraw
-
-FONT_RANGES = [
-    ("jp", ImageFont.truetype("assets/NotoSansJP-Regular.otf", 48)),
-    ("latin", ImageFont.truetype("assets/Rajdhani-Regular.ttf", 48)),
-    ("fallback", ImageFont.truetype("assets/NotoSans-Regular.ttf", 48)),
-]
-
-def font_supports_text(font, text: str) -> bool:
-    try:
-        return font.getmask(text).getbbox() is not None
-    except:
-        return False
-
-
-def pick_font(text: str):
-    for name, font in FONT_RANGES:
-        if font_supports_text(font, text):
-            return font
-    return FONT_RANGES[-1][1]
-
-
-def draw_text_fallback(draw: ImageDraw.ImageDraw, pos, text: str, fill=(0, 0, 0)):
-    x, y = pos
-
-    buffer = ""
-    current_font = None
-
-    def flush():
-        nonlocal x, buffer, current_font
-        if not buffer:
-            return
-        draw.text((x, y), buffer, font=current_font, fill=fill)
-        x += draw.textlength(buffer, font=current_font)
-        buffer = ""
-
-    for ch in text:
-        font = pick_font(ch)
-
-        if current_font is None:
-            current_font = font
-
-        if font != current_font:
-            flush()
-            current_font = font
-
-        buffer += ch
-
-    flush()
 _font_cache = {}
 
 def _load_font(
@@ -145,10 +83,10 @@ async def build_leaderboard_image(ranking: list[dict[str, Any]], lobby_name: str
                 img.paste(medal, (80, line_y), medal)
 
 
-            draw_text_with_fallback(
-                draw,
+            draw.text(
                 (80 + row_height, line_y),
                 name,
+                font=name_font,
                 fill=color,
             )
 
@@ -225,10 +163,10 @@ def build_mvp_image(
             medal = medals[i] if i < len(medals) else None
             if medal is not None:
                 img.paste(medal, (150, y-30), medal)
-            draw_text_with_fallback(
-                draw,
+            draw.text(
                 (width // 2, y+30),
                 name,
+                font=name_font,
                 fill=MEDALS_COLORS[i] if i < 3 else (10, 10, 10),
             )
             draw.text(
