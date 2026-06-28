@@ -91,7 +91,14 @@ class ControllaRisultatiView(discord.ui.View):
         await interaction.response.edit_message(embeds=embed, view=self)
     
     async def _handle(self, interaction: discord.Interaction, status: str):
-        await set_result_status(self.team_scores[self.page].team_score_id, status)
+        rows = await set_result_status(self.team_scores[self.page].team_score_id, status, self.team_scores[self.page].status)
+        if rows == 0:
+            await interaction.response.send_message(
+                "Questo risultato è già stato modificato da qualcun altro.",
+                ephemeral=True
+            )
+            await self.refresh(interaction)
+            return
         self.team_scores.pop(self.page)
 
         if not self.team_scores:

@@ -90,10 +90,11 @@ async def create_lobbies_db(event_id: int, names: list[str]) -> list[int]:
     lobby_ids: list[int] = []
 
     for name in names:
-        lobby_id = await execute(
+        c = await execute(
             "INSERT INTO lobbies (event_id, name) VALUES (?, ?)",
             (event_id, name)
         )
+        lobby_id = c.lastrowid
         lobby_ids.append(lobby_id)
 
     return lobby_ids

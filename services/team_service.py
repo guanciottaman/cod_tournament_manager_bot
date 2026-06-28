@@ -44,16 +44,18 @@ async def insert_teams(
 ) -> tuple[int, list[int]] | None:
     if await already_has_team(event_id, leader_discord_id):
         raise ValueError("USER_ALREADY_HAS_TEAM")
-    team_id = await execute(
+    c = await execute(
         "INSERT INTO teams (event_id, name, leader_discord_id) VALUES (?, ?, ?)",
         (event_id, name, leader_discord_id))
+    team_id = c.lastrowid
     try:
         player_ids: list[int] = []
         for player_name in players_names:
-            player_id = await execute(
+            c = await execute(
                 "INSERT INTO team_members (team_id, member_name) VALUES (?, ?)",
                 (team_id, player_name)
             )
+            player_id = c.lastrowid
             player_ids.append(player_id)
     except Exception as e:
         await execute("DELETE FROM teams WHERE team_id = ?", (team_id,))
@@ -97,10 +99,11 @@ async def assign_free_slot(
     await execute("DELETE FROM team_members WHERE team_id = ?", (team_id,))
     member_ids: list[int] = []
     for n in players_names:
-        member_id = await execute(
+        c = await execute(
             "INSERT INTO team_members (team_id, member_name) VALUES (?, ?)",
             (team_id, n)
         )
+        member_id = c.lastrowid
         member_ids.append(member_id)
 
     return (team_id, member_ids)
@@ -171,12 +174,13 @@ async def insert_results(
     players: list[tuple[int, str, int]],
     prove: list[str]
 ):
-    team_score_id = await execute("""
+    c = await execute("""
         INSERT INTO team_scores (
             event_id, team_id, placement, match_number, created_at
         )
         VALUES (?, ?, ?, ?, datetime('now'))
     """, (event_id, team_id, placement, match))
+    team_score_id = c.lastrowid
     for player_id, player_name, kills in players:
         await execute("""
             INSERT INTO player_scores (
@@ -290,11 +294,17 @@ async def get_event_results(event_id: int, status: str) -> list[TeamScore]:
 
     return results
 
-async def set_result_status(result_id: int, status: str):
-    await execute(
-        "UPDATE team_scores SET status = ? WHERE id = ?",
-        (status, result_id)
+async def set_result_status(result_id: int, status: str, old_status: str = "pending"):
+    c = await execute(
+        """
+        UPDATE team_scores
+        SET status = ?
+        WHERE id = ?
+        AND status = ?
+        """,
+        (status, result_id, old_status)
     )
+    return c.rowcount
 
 async def get_inserted_matches(event_id: int, team_id: int) -> set[int]:
     rows = await fetch_all(
