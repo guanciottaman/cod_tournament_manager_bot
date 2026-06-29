@@ -306,6 +306,12 @@ async def set_result_status(result_id: int, status: str, old_status: str = "pend
     )
     return c.rowcount
 
+async def get_team_score_by_id(team_score_id: int):
+    return await fetch_one(
+        "SELECT id, team_id, status, match_number FROM team_scores WHERE id = ?",
+        (team_score_id,)
+    )
+
 async def get_inserted_matches(event_id: int, team_id: int) -> set[int]:
     rows = await fetch_all(
         "SELECT match_number FROM team_scores WHERE event_id = ? AND team_id = ? ORDER BY id",

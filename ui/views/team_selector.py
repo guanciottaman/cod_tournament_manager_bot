@@ -245,8 +245,26 @@ class TeamsSelectorView(discord.ui.View):
                     ) 
                 )
             elif self.mode == "delete":
-                await delete_team(team_id, event.status)
-                await interaction.response.send_message("Team eliminato con successo!", ephemeral=True)
+                view = discord.ui.View()
+                delete_btn = discord.ui.Button(
+                    label="Conferma",
+                    style=discord.ButtonStyle.red
+                )
+                async def delete_team_callback(interaction: discord.Interaction):
+                    await delete_team(team_id, event.status)
+                    await interaction.response.send_message("Team eliminato con successo!", ephemeral=True)
+                delete_btn.callback = delete_team_callback
+                view.add_item(delete_btn)
+                embed = discord.Embed(
+                    title="Elimina team",
+                    color=discord.Color.red(),
+                    description=f"Sei sicuro di voler eliminare il tuo team {team.name}?"
+                )
+                await interaction.response.send_message(
+                    embed=embed,
+                    view=view,
+                    ephemeral=True
+                )
         select.callback = callback
         return select
 

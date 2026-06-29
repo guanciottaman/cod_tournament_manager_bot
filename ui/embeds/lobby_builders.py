@@ -64,10 +64,17 @@ async def build_event_start_summary(lobbies: list[Lobby]) -> discord.Embed:
 
     return embed
 
-def build_info_lobby_embed(event_name: str, lobbies: list[Lobby], show_kd: bool = True) -> discord.Embed:
+def build_info_lobby_embed(
+    event_name: str,
+    lobbies: list[Lobby],
+    show_kd: bool = True,
+    show_matches: bool = False,
+    inserted_matches_count: dict[int, int] | None = None,
+    matches_number: int | None = None
+) -> discord.Embed:
     embed = discord.Embed(
         title=event_name,
-        color=discord.Color.red()
+        color=discord.Color.blue()
     )
     emb_description = ""
     for lobby in lobbies:
@@ -75,7 +82,9 @@ def build_info_lobby_embed(event_name: str, lobbies: list[Lobby], show_kd: bool 
         for i, team in enumerate(lobby.teams):
             emb_description += f"{i}. {team.name}"
             if show_kd:
-                emb_description += f" (K/D {team.kd:.2f})"
+                emb_description += f" | K/D {team.kd:.2f}"
+            if show_matches and inserted_matches_count is not None and matches_number is not None:
+                emb_description += f" | ({inserted_matches_count.get(team.team_id, 0)}/{matches_number} match inseriti)"
             emb_description += "\n"
         emb_description += "\n"
     embed.description = emb_description

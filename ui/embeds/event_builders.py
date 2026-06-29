@@ -96,7 +96,7 @@ def build_results_embed(
 
 def build_live_mvp_ranking_embed(event_name: str, lobby_name: str, mvp_ranking: list[dict[str, Any]]) -> discord.Embed:
     embed = discord.Embed(
-        title="Classifiche Live MVP Evento",
+        title="Classifica Live MVP Evento",
         color=discord.Color.blurple(),
     )
     emb_description = f"Ecco la classifiche degli MVP dell'evento **{event_name}** per la tua **LOBBY {lobby_name}**:\n\n**MVP:**\n"
@@ -117,7 +117,7 @@ def build_live_team_ranking_embed(
     matches_number: int
 ) -> discord.Embed:
     embed = discord.Embed(
-        title="Classifiche Live Evento",
+        title="Classifica Live Evento",
         color=discord.Color.blurple(),
     )
     emb_description = f"Ecco la classifiche dell'evento **{event_name}** per la tua **LOBBY {lobby_name}**:\n\n**Classifica Team:**\n"
