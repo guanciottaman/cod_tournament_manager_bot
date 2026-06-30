@@ -4,9 +4,8 @@ import asyncio
 from models.event import Event
 from ui.embeds.lobby_builders import build_event_start_summary
 from services.lobby_service import get_lobbies
-from services.event_service import set_event_status, get_leader_ids
+from services.event_service import set_event_status
 from services.live_ranking_service import start_live
-from services.server_service import get_admin_role_id
 
 async def start_event_callback(interaction: discord.Interaction, event: Event):
     lobbies = await get_lobbies(event.event_id)
