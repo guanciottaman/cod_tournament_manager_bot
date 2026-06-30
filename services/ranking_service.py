@@ -183,7 +183,7 @@ async def compute_mvp_ranking(
     drop_worst_match = bool(row[0]) if row else False
 
     # struttura: player -> list of match contributions
-    player_matches = defaultdict(list)
+    player_matches: dict[str, list[int]] = defaultdict(list)
 
     for _, team_name, _, player_name, kills in rows:
         clan = extract_clan(team_name)

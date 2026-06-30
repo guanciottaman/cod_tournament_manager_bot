@@ -48,6 +48,23 @@ class Events(commands.Cog):
             view=SetupView(),
             ephemeral=True
         )
+    
+    @app_commands.command(name="modifica_config_server", description="Modifica la configurazione di questo server")
+    @app_commands.checks.has_permissions(ban_members=True)
+    async def modifica_config_server(self, interaction: discord.Interaction):
+        exists = await check_server_registered(interaction.guild_id)
+
+        if not exists:
+            await interaction.response.send_message(
+                "Il tuo server non è ancora registrato!",
+                ephemeral=True
+            )
+            return
+
+        await interaction.response.send_message(
+            view=SetupView(),
+            ephemeral=True
+        )
 
     @app_commands.command(name="elimina_config_server", description="Elimina la configurazione di questo server")
     @app_commands.checks.has_permissions(ban_members=True)

@@ -4,10 +4,22 @@ from services.server_service import *
 
 
 class SetupView(discord.ui.View):
-    def __init__(self):
+    def __init__(self, edit_mode: bool = False):
         super().__init__(timeout=None)
         self.ranking_channel: discord.TextChannel | None = None
         self.admin_role: discord.Role | None = None
+        self.live_ranking_channel: discord.TextChannel | None = None
+        self.edit_mode = edit_mode
+        self.confirm_button = discord.ui.Button(
+            label="Conferma",
+            style=discord.ButtonStyle.green,
+            row=2
+        )
+        self.confirm_button.callback = self.confirm_setup
+        self.add_item(self.confirm_button)
+
+        if self.edit_mode:
+            self.confirm_button.label = "Salva modifiche"
 
     @discord.ui.select(
         cls=discord.ui.ChannelSelect,
@@ -33,32 +45,58 @@ class SetupView(discord.ui.View):
         self.admin_role = select.values[0]
         await interaction.response.defer()
 
-    @discord.ui.button(
-        label="Conferma",
-        style=discord.ButtonStyle.green,
+    @discord.ui.select(
+        cls=discord.ui.ChannelSelect,
+        channel_types=[discord.ChannelType.text],
+        placeholder="Seleziona il canale per le classifiche live",
+        min_values=1,
+        max_values=1,
         row=2
     )
-    async def confirm_setup(self, interaction: discord.Interaction, button: discord.ui.Button):
-        if not all([
-            self.ranking_channel,
-            self.admin_role
-        ]):
-            await interaction.response.send_message("Tutte le opzioni devono essere inserite!", ephemeral=True)
-            return
-        
-        success = await create_server_config(
-            interaction.guild_id,
-            self.ranking_channel.id,
-            self.admin_role.id
-        )
+    async def select_live_ranking_channel(self, interaction: discord.Interaction, select: discord.ui.ChannelSelect):
+        self.live_ranking_channel = select.values[0]
 
-        if not success:
-            await interaction.response.send_message(
-                "Il tuo server è già registrato!",
-                ephemeral=True
+
+    async def confirm_setup(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if not self.edit_mode:
+            if not all([
+                self.ranking_channel,
+                self.admin_role,
+                self.live_ranking_channel
+            ]):
+                await interaction.response.send_message("Tutte le opzioni devono essere inserite!", ephemeral=True)
+                return
+            success = await create_server_config(
+                interaction.guild_id,
+                self.ranking_channel.id,
+                self.admin_role.id,
+                self.live_ranking_channel.id
             )
-            return
-        await interaction.response.send_message("Il tuo server è stato registrato con successo!", ephemeral=True)
+
+            if not success:
+                await interaction.response.send_message(
+                    "Il tuo server è già registrato!",
+                    ephemeral=True
+                )
+                return
+        else:
+            if not any([
+                self.ranking_channel,
+                self.admin_role,
+                self.live_ranking_channel
+            ]):
+                await interaction.response.send_message(
+                    "Non hai modificato nessun valore.",
+                    ephemeral=True
+                )
+                return
+            await edit_server_config(
+                interaction.guild_id,
+                ranking_channel_id=self.ranking_channel.id if self.ranking_channel else None,
+                admin_role_id=self.admin_role.id if self.admin_role else None,
+                live_ranking_channel_id=self.live_ranking_channel.id if self.live_ranking_channel else None,
+            )
+        await interaction.response.send_message(f"Il tuo server è stato {'registrato' if not self.edit_mode else 'modificato'} con successo!", ephemeral=True)
 
 
 class DeleteServerView(discord.ui.View):
