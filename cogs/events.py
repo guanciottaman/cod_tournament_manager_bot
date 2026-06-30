@@ -62,7 +62,7 @@ class Events(commands.Cog):
             return
 
         await interaction.response.send_message(
-            view=SetupView(),
+            view=SetupView(edit_mode=True),
             ephemeral=True
         )
 
