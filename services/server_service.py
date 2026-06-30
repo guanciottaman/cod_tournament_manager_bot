@@ -29,6 +29,7 @@ async def get_server_config(guild_id: int) -> ServerConfig | None:
     server_config = await fetch_one(
         "SELECT ranking_channel_id, admin_role_id, live_ranking_channel_id FROM server_configs WHERE guild_id = ?",
         (guild_id,)
+    )
     if not server_config:
         return None
     return ServerConfig(
