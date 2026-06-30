@@ -72,7 +72,7 @@ class SetupView(discord.ui.View):
     @discord.ui.button(
         label="Conferma",
         style=discord.ButtonStyle.green,
-        row=2
+        row=3
     )
     async def confirm_setup(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not self.edit_mode:

@@ -64,26 +64,36 @@ class Events(commands.Cog):
                 ephemeral=True
             )
             return
+        await interaction.response.defer(ephemeral=True)
         config = await get_server_config(interaction.guild_id)
         if config is None:
-            await interaction.response.send_message("C'è stato un problema!", ephemeral=True)
+            await interaction.followup.send("C'è stato un problema!", ephemeral=True)
             return
         view = SetupView(edit_mode=True)
-        ranking_channel = interaction.guild.get_channel(config.ranking_channel_id)
-        view.ranking_channel = ranking_channel
-        admin_role = interaction.guild.get_role(config.admin_role_id)
-        view.admin_role = admin_role
-        live_ranking_channel = interaction.guild.get_channel(config.live_ranking_channel_id)
-        view.live_ranking_channel = live_ranking_channel
+        if config.ranking_channel_id is not None:
+            ranking_channel = interaction.guild.get_channel(config.ranking_channel_id)
+            view.ranking_channel = ranking_channel
+        else:
+            ranking_channel = None
+        if config.admin_role_id is not None:
+            admin_role = interaction.guild.get_role(config.admin_role_id)
+            view.admin_role = admin_role
+        else:
+            admin_role = None
+        if config.live_ranking_channel_id is not None:
+            live_ranking_channel = interaction.guild.get_channel(config.live_ranking_channel_id)
+            view.live_ranking_channel = live_ranking_channel
+        else:
+            live_ranking_channel = None
         embed = build_server_config_embed(
             interaction.guild.name,
             ranking_channel,
             admin_role,
             live_ranking_channel
         )
-        await interaction.response.send_message(
+        await interaction.followup.send(
             embed=embed,
-            view=SetupView(edit_mode=True),
+            view=view,
             ephemeral=True
         )
 
