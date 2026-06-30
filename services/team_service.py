@@ -173,7 +173,7 @@ async def insert_results(
     match: int,
     players: list[tuple[int, str, int]],
     prove: list[str]
-):
+) -> int | None:
     c = await execute("""
         INSERT INTO team_scores (
             event_id, team_id, placement, match_number, created_at
@@ -194,6 +194,7 @@ async def insert_results(
             INSERT INTO score_screenshots (team_score_id, image_url)
             VALUES (?, ?)
         """, (team_score_id, url))
+    return team_score_id
 
 async def edit_results(
     event_id: int,
@@ -206,7 +207,7 @@ async def edit_results(
         UPDATE team_scores SET 
             placement = ?,
             status = 'edited'
-        WHERE event_id = ? AND team_id = ? AND id = ?
+        WHERE event_id = ? AND team_id = ? AND id = ? AND status = 'pending'
     """, (placement, event_id, team_id, team_score_id))
     for player_id, _, kills in players_kills:
         await execute("""
