@@ -4,16 +4,17 @@ import discord
 from typing import Any
 
 from services.event_service import get_event_info, get_matches_number
+from services.server_service import get_live_ranking_channel_id
 from services.team_service import get_inserted_matches_count
 from services.lobby_service import get_lobby
 from services.ranking_service import compute_team_ranking, compute_mvp_ranking
 from ui.embeds.event_builders import build_live_team_ranking_embed, build_live_mvp_ranking_embed
 
 
-live_events: dict[int, dict[int, dict[int, Any]]] = {}
+live_events: dict[int, dict[int, dict[str, Any]]] = {}
 
 
-TIME_TO_WAIT: int = 10
+TIME_TO_WAIT: int = 5
 
 async def live_mvp_loop(event_id: int, lobby_id: int):
     try:
@@ -44,13 +45,14 @@ async def live_mvp_loop(event_id: int, lobby_id: int):
 
             embed = build_live_mvp_ranking_embed(event.name, lobby.name, ranking)
 
-            messages = lobby_state["mvp_messages"]
-
-            for user_id, msg in list(messages.items()):
-                try:
-                    await msg.edit(embed=embed)
-                except:
-                    messages.pop(user_id, None)
+            msg = lobby_state["mvp_message"]
+            try:
+                await msg.edit(embed=embed)
+            except discord.NotFound:
+                live_events.get(event_id, {}).pop(lobby_id, None)
+                return
+            except discord.HTTPException:
+                pass
     except asyncio.CancelledError:
         return
 
@@ -94,17 +96,18 @@ async def live_team_loop(event_id: int, lobby_id: int):
                 matches_number
             )
 
-            messages: dict[int, discord.Message] = lobby_state["team_messages"]
+            msg = lobby_state["team_message"]
 
-            for leader_id, msg in list(messages.items()):
-                try:
-                    await msg.edit(embed=embed)
-                except:
-                    messages.pop(leader_id, None)
+            try:
+                await msg.edit(embed=embed)
+            except discord.NotFound:
+                return
+            except discord.HTTPException:
+                pass
     except asyncio.CancelledError:
         return
 
-async def start_live(event_id: int, guild: discord.Guild, leader_ids: list[int], lobby_id: int):
+async def start_live(event_id: int, guild: discord.Guild, lobby_id: int):
     # 1. dati base
     event = await get_event_info(event_id, guild.id)
     if event is None:
@@ -133,7 +136,20 @@ async def start_live(event_id: int, guild: discord.Guild, leader_ids: list[int],
     matches_number = await get_matches_number(event_id)
     if matches_number is None:
         raise ValueError("Matches number not found")
-    embed = build_live_team_ranking_embed(
+    
+    # 3. invio DM al canale
+    team_messages: dict[int, discord.Message] = {}
+    mvp_messages: dict[int, discord.Message] = {}
+    live_ranking_channel_id = await get_live_ranking_channel_id(guild.id)
+    try:
+        live_ranking_channel = guild.get_channel(live_ranking_channel_id)
+        if live_ranking_channel is None:
+            live_ranking_channel = await guild.fetch_channel(live_ranking_channel_id)
+    except discord.NotFound:
+        raise ValueError("Live channel deleted")
+    except discord.Forbidden:
+        raise ValueError("No permission to access live channel")
+    team_embed = build_live_team_ranking_embed(
         event.name,
         lobby.name,
         ranking,
@@ -141,20 +157,7 @@ async def start_live(event_id: int, guild: discord.Guild, leader_ids: list[int],
         matches_number
     )
 
-    # 3. invio DM ai leader
-    team_messages: dict[int, discord.Message] = {}
-    mvp_messages: dict[int, discord.Message] = {}
-
-    for leader_id in leader_ids:
-        member = guild.get_member(leader_id)
-        if not member:
-            continue
-
-        try:
-            msg = await member.send(embed=embed)
-            team_messages[leader_id] = msg
-        except:
-            pass
+    team_msg = await live_ranking_channel.send(embed=team_embed)
     
     mvp_ranking = await compute_mvp_ranking(
         event_id,
@@ -164,53 +167,53 @@ async def start_live(event_id: int, guild: discord.Guild, leader_ids: list[int],
 
     mvp_embed = build_live_mvp_ranking_embed(event.name, lobby.name, mvp_ranking)
 
-    for user_id in leader_ids:
-        member = guild.get_member(user_id)
-        if not member:
-            continue
-
-        try:
-            msg = await member.send(embed=mvp_embed)
-            mvp_messages[user_id] = msg
-        except:
-            pass
+    mvp_msg = await live_ranking_channel.send(embed=mvp_embed)
     
 
-    # 4. crea task loop
-    team_task = asyncio.create_task(live_team_loop(event_id, lobby_id))
-    mvp_task = asyncio.create_task(live_mvp_loop(event_id, lobby_id))
-
-    # 5. salva tutto nello stato
     live_events.setdefault(event_id, {})[lobby_id] = {
         "event": event,
         "lobby": lobby,
-        "team_messages": team_messages,
-        "mvp_messages": mvp_messages,
-        "team_task": team_task,
-        "mvp_task": mvp_task
+        "team_message": team_msg,
+        "mvp_message": mvp_msg,
+        "team_task": None,
+        "mvp_task": None
     }
+
+    team_task = asyncio.create_task(live_team_loop(event_id, lobby_id))
+    mvp_task = asyncio.create_task(live_mvp_loop(event_id, lobby_id))
+
+    live_events[event_id][lobby_id]["team_task"] = team_task
+    live_events[event_id][lobby_id]["mvp_task"] = mvp_task
 
 async def stop_live(event_id: int, lobby_id: int | None = None):
     if event_id not in live_events:
         return
 
+    async def cancel_task(task: asyncio.Task | None):
+        if task is None:
+            return
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+
+    # stop all lobbies of event
     if lobby_id is None:
-        for lid, data in live_events[event_id].items():
-            if data.get("team_task"):
-                data["team_task"].cancel()
-            if data.get("mvp_task"):
-                data["mvp_task"].cancel()
+        for lid, data in list(live_events[event_id].items()):
+            await cancel_task(data.get("team_task"))
+            await cancel_task(data.get("mvp_task"))
 
         live_events.pop(event_id, None)
         return
 
+    # stop single lobby
     lobby_state = live_events[event_id].pop(lobby_id, None)
 
     if lobby_state:
-        if lobby_state.get("team_task"):
-            lobby_state["team_task"].cancel()
-        if lobby_state.get("mvp_task"):
-            lobby_state["mvp_task"].cancel()
+        await cancel_task(lobby_state.get("team_task"))
+        await cancel_task(lobby_state.get("mvp_task"))
 
-    if not live_events[event_id]:
+    # cleanup event if empty
+    if not live_events.get(event_id):
         live_events.pop(event_id, None)
