@@ -1,5 +1,7 @@
 import sqlite3
 import discord
+
+from models.server_config import ServerConfig
 from db.db import *
 
 async def check_server_registered(guild_id: int) -> bool:
@@ -22,6 +24,20 @@ async def create_server_config(guild_id: int, ranking_channel_id: int, admin_rol
 
     except sqlite3.IntegrityError:
         return False
+
+async def get_server_config(guild_id: int) -> ServerConfig | None:
+    server_config = await fetch_one(
+        "SELECT ranking_channel_id, admin_role_id, live_ranking_channel_id WHERE guild_id = ?",
+        (guild_id,)
+    )
+    if not server_config:
+        return None
+    return ServerConfig(
+        guild_id,
+        server_config[0],
+        server_config[1],
+        server_config[2]
+    )
 
 async def edit_server_config(
     guild_id: int,

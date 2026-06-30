@@ -45,6 +45,10 @@ class Events(commands.Cog):
             return
 
         await interaction.response.send_message(
+            embed=build_server_config_embed(
+                interaction.guild.name,
+                None, None, None
+            ),
             view=SetupView(),
             ephemeral=True
         )
@@ -60,8 +64,25 @@ class Events(commands.Cog):
                 ephemeral=True
             )
             return
-
+        config = await get_server_config(interaction.guild_id)
+        if config is None:
+            await interaction.response.send_message("C'è stato un problema!", ephemeral=True)
+            return
+        view = SetupView(edit_mode=True)
+        ranking_channel = interaction.guild.get_channel(config.ranking_channel_id)
+        view.ranking_channel = ranking_channel
+        admin_role = interaction.guild.get_role(config.admin_role_id)
+        view.admin_role = admin_role
+        live_ranking_channel = interaction.guild.get_channel(config.live_ranking_channel_id)
+        view.live_ranking_channel = live_ranking_channel
+        embed = build_server_config_embed(
+            interaction.guild.name,
+            ranking_channel,
+            admin_role,
+            live_ranking_channel
+        )
         await interaction.response.send_message(
+            embed=embed,
             view=SetupView(edit_mode=True),
             ephemeral=True
         )

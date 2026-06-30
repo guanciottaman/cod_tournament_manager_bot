@@ -60,6 +60,19 @@ def build_event_embed(
 
     return embed
 
+def build_server_config_embed(
+    guild_name: str,
+    ranking_channel: discord.TextChannel | None,
+    admin_role: discord.Role | None,
+    live_ranking_channel: discord.TextChannel | None
+) -> discord.Embed:
+    embed = discord.Embed(
+        title="Config server",
+        color=discord.Color.blue(),
+        description=f"**Server:** {guild_name}\n**Canale classifiche:** {ranking_channel.mention if ranking_channel is not None else 'Nessuno'}\n**Ruolo admin:** {admin_role.mention if admin_role is not None else 'Nessuno'}\n**Canale classifiche live:** {live_ranking_channel.mention if live_ranking_channel is not None else 'Nessuno'}"
+    )
+    return embed
+
 def build_results_embed(
     page: int,
     pages_number: int,

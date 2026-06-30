@@ -1,6 +1,7 @@
 import discord
 
 from services.server_service import *
+from ui.embeds.event_builders import build_server_config_embed
 
 
 class SetupView(discord.ui.View):
@@ -10,16 +11,6 @@ class SetupView(discord.ui.View):
         self.admin_role: discord.Role | None = None
         self.live_ranking_channel: discord.TextChannel | None = None
         self.edit_mode = edit_mode
-        self.confirm_button = discord.ui.Button(
-            label="Conferma",
-            style=discord.ButtonStyle.green,
-            row=2
-        )
-        self.confirm_button.callback = self.confirm_setup
-        self.add_item(self.confirm_button)
-
-        if self.edit_mode:
-            self.confirm_button.label = "Salva modifiche"
 
     @discord.ui.select(
         cls=discord.ui.ChannelSelect,
@@ -31,7 +22,14 @@ class SetupView(discord.ui.View):
     )
     async def select_ranking_channel(self, interaction: discord.Interaction, select: discord.ui.ChannelSelect):
         self.ranking_channel = select.values[0]
-        await interaction.response.defer()
+        await interaction.response.edit_message(
+            embed=build_server_config_embed(
+                interaction.guild.name,
+                self.ranking_channel,
+                self.admin_role,
+                self.live_ranking_channel
+            )
+        )
 
     
     @discord.ui.select(
@@ -43,7 +41,14 @@ class SetupView(discord.ui.View):
     )
     async def select_admin_role(self, interaction: discord.Interaction, select: discord.ui.RoleSelect):
         self.admin_role = select.values[0]
-        await interaction.response.defer()
+        await interaction.response.edit_message(
+            embed=build_server_config_embed(
+                interaction.guild.name,
+                self.ranking_channel,
+                self.admin_role,
+                self.live_ranking_channel
+            )
+        )
 
     @discord.ui.select(
         cls=discord.ui.ChannelSelect,
@@ -55,8 +60,20 @@ class SetupView(discord.ui.View):
     )
     async def select_live_ranking_channel(self, interaction: discord.Interaction, select: discord.ui.ChannelSelect):
         self.live_ranking_channel = select.values[0]
+        await interaction.response.edit_message(
+            embed=build_server_config_embed(
+                interaction.guild.name,
+                self.ranking_channel,
+                self.admin_role,
+                self.live_ranking_channel
+            )
+        )
 
-
+    @discord.ui.button(
+        label="Conferma",
+        style=discord.ButtonStyle.green,
+        row=2
+    )
     async def confirm_setup(self, interaction: discord.Interaction, button: discord.ui.Button):
         if not self.edit_mode:
             if not all([
@@ -80,7 +97,7 @@ class SetupView(discord.ui.View):
                 )
                 return
         else:
-            if not any([
+            if self.edit_mode and not any([
                 self.ranking_channel,
                 self.admin_role,
                 self.live_ranking_channel
