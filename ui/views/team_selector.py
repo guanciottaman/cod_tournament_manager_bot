@@ -147,7 +147,9 @@ class TeamsSelectorView(discord.ui.View):
             inserted_matches = await get_inserted_matches_count(event.event_id)
             matches_number = event.matches_number
 
-            emb_description = f"**Evento:** {event.name}\n**Leader:** {capoteam.mention if capoteam is not None else leader_discord_id}\nMatch inseriti: {inserted_matches}/{matches_number}\nK/D {team.kd:.2f}\n\n**Membri:**\n"
+            emb_description = f"**Evento:** {event.name}\n**Leader:** {capoteam.mention if capoteam is not None else leader_discord_id}\n**K/D** {team.kd:.2f}\n\n**Membri:**\n"
+            if inserted_matches and event.status == "running":
+                emb_description += f"**Match inseriti:** {inserted_matches}/{matches_number}\n"
 
             if team_members:
                 kds = await get_team_kds(team_id)
