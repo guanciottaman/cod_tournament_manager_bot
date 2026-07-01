@@ -60,7 +60,7 @@ async def termina_evento_callback(interaction: discord.Interaction, event: Event
             team_id = r["team_id"]
             team_name = r["name"]
             team_score = r["score"]
-            emb_description += f"{j+1}. {team_name}| ID {team_id} |  | {team_score} punti\n"
+            emb_description += f"{j+1}. {team_name}| ID {team_id} | {team_score} punti\n"
         mvp_lobby_ranking = await compute_mvp_ranking(event_id, "lobby", lobby_id=lobby.lobby_id)
         mvp_lobby_image = build_mvp_image(mvp_lobby_ranking, lobby_name=lobby.name)
         files.append(
