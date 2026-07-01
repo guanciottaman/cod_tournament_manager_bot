@@ -21,7 +21,8 @@ TOKEN = os.environ["TOKEN"]
 extensions = [
     "cogs.events",
     "cogs.teams",
-    "cogs.debug"
+    "cogs.debug",
+    "cogs.blacklist"
 ]
 
 intents = discord.Intents.default()

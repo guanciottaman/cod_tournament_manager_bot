@@ -67,3 +67,6 @@ class Blacklist(commands.Cog):
             f"Il server {guild_name} è stato rimosso dalla blacklist!",
             ephemeral=True
         )
+
+async def setup(bot: commands.Bot):
+    await bot.add_cog(Blacklist(bot))
