@@ -8,6 +8,7 @@ import asyncio
 import logging
 
 from db.db import *
+from services.server_service import is_blacklisted, init_blacklist_cache
 
 
 logging.basicConfig(level=logging.INFO)
@@ -40,10 +41,24 @@ class Bot(commands.Bot):
                 ephemeral=True
             )
 
+        if isinstance(error, app_commands.CheckFailure):
+            await interaction.response.send_message(
+                "Questo server non può usare questo bot.",
+                ephemeral=True
+            )
+            return
+
+    async def interaction_check(self, interaction: discord.Interaction):
+        if interaction.guild_id and is_blacklisted(interaction.guild_id):
+            return False
+        return True
+
     async def setup_hook(self):
+        await init_blacklist_cache()
         commands = await self.tree.sync()
         print(f"Sono stati caricati {len(commands)} comandi:\n/{'\n/'.join([cmd.name for cmd in commands])}")
         self.tree.on_error = self.error_handler
+        self.tree.interaction_check = self.interaction_check
         await self.init_db()
 
     async def init_db(self):
@@ -149,6 +164,15 @@ class Bot(commands.Bot):
                       
             UNIQUE(team_score_id, image_url)
         )""")
+        await execute("""
+            CREATE TABLE IF NOT EXISTS blacklisted_servers(
+                guild_id INTEGER PRIMARY KEY,
+                blacklisted_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                blacklisted_by INTEGER,
+                
+                FOREIGN KEY (guild_id) REFERENCES server_configs(guild_id) ON DELETE CASCADE
+            )
+        """)
         print("Tabella(e) create/controllate")
 
 
