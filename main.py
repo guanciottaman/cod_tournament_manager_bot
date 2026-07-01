@@ -54,12 +54,12 @@ class Bot(commands.Bot):
         return True
 
     async def setup_hook(self):
+        await self.init_db()
         await init_blacklist_cache()
         commands = await self.tree.sync()
         print(f"Sono stati caricati {len(commands)} comandi:\n/{'\n/'.join([cmd.name for cmd in commands])}")
         self.tree.on_error = self.error_handler
         self.tree.interaction_check = self.interaction_check
-        await self.init_db()
 
     async def init_db(self):
         await execute("""CREATE TABLE IF NOT EXISTS server_configs(
