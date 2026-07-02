@@ -327,7 +327,7 @@ async def has_duplicate_placement(team_score_id: int) -> bool:
         SELECT 1
         FROM team_scores ts
         JOIN teams t ON t.team_id = ts.team_id
-        WHERE ts.team_score_id = ?
+        WHERE ts.id = ?
         AND EXISTS (
             SELECT 1
             FROM team_scores ts2
@@ -336,7 +336,7 @@ async def has_duplicate_placement(team_score_id: int) -> bool:
             AND ts2.match_number = ts.match_number
             AND ts2.placement = ts.placement
             AND t2.lobby_id = t.lobby_id
-            AND ts2.team_score_id != ts.team_score_id
+            AND ts2.id != ts.id
             LIMIT 1
         )
     """, (team_score_id,))
