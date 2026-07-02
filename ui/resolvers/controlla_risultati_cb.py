@@ -21,7 +21,7 @@ async def controlla_risultati_callback(
         await interaction.response.send_message("Pagina non valida!", ephemeral=True)
         return
     warnings: list[str] = []
-    if await has_duplicate_placement(self.team_scores[self.page].team_score_id):
+    if await has_duplicate_placement(team_scores[0].team_score_id):
         warnings.append("Questo piazzamento è duplicato!")
     embed = build_results_embed(
         page-1,
