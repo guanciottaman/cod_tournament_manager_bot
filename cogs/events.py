@@ -26,6 +26,18 @@ from services.ranking_service import *
 from services.image_service import *
 from services.live_ranking_service import stop_live
 
+
+async def member_search(interaction: discord.Interaction, current: str):
+    members = interaction.guild.members
+
+    return [
+        app_commands.Choice(
+            name=m.display_name,
+            value=str(m.id)
+        )
+        for m in members
+        if current.lower() in m.display_name.lower()
+    ][:25]
     
 class Events(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
@@ -394,6 +406,7 @@ class Events(commands.Cog):
     
     @app_commands.command(name="add_event_host", description="Aggiungi un host dell'evento che potrà mandare i codici lobby")
     @app_commands.describe(member="Il membro da aggiungere")
+    @app_commands.autocomplete(member=member_search)
     async def add_event_host(self, interaction: discord.Interaction, member: discord.Member):
         if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario per aggiungere un host!", ephemeral=True)
