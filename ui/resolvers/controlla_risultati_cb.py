@@ -21,23 +21,24 @@ async def controlla_risultati_callback(
         await interaction.response.send_message("Pagina non valida!", ephemeral=True)
         return
     warnings: list[str] = []
-    if await has_duplicate_placement(team_scores[0].team_score_id):
+    current = team_scores[page - 1]
+    if await has_duplicate_placement(current.team_score_id):
         warnings.append("Questo piazzamento è duplicato!")
-    embed = build_results_embed(
+    embeds = build_results_embed(
         page-1,
         len(team_scores),
         team_scores[0].team_name,
         team_scores[0],
         warnings
     )
-    if embed is None:
+    if embeds is None:
         await interaction.response.send_message(
             "C'è stato un errore con il controllo dei risultati dell'embed",
             ephemeral=True
         )
         return
     await interaction.response.send_message(
-        embeds=embed,
+        embeds=embeds,
         view=ControllaRisultatiView(event_id, team_scores, status, page-1),
         ephemeral=True
     )
