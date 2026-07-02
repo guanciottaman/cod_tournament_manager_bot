@@ -84,7 +84,7 @@ async def compute_team_ranking(
     teams_params = [event_id]
     if scope == "lobby" and lobby_id is not None:
         teams_query += " AND lobby_id = ?"
-        params.append(lobby_id)
+        teams_params.append(lobby_id)
 
     teams = await fetch_all(teams_query, tuple(teams_params))
 
