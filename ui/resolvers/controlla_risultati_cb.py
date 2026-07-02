@@ -1,5 +1,7 @@
 import discord
 
+import traceback
+
 from models.event import Event
 from services.event_service import has_duplicate_placement
 from services.team_service import get_event_results
@@ -61,6 +63,7 @@ async def controlla_risultati_callback(
 
     except Exception as e:
         print("ERROR controlla_risultati:", e)
+        traceback.print_exc()
 
         if interaction.response.is_done():
             await interaction.followup.send(
