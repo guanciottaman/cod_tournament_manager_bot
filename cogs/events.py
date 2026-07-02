@@ -26,25 +26,38 @@ from services.ranking_service import *
 from services.image_service import *
 from services.live_ranking_service import stop_live
 
+member_cache: dict[int, list[discord.Member]] = {}
+
+async def build_member_cache(guild: discord.Guild):
+    member_cache[guild.id] = [
+        m async for m in guild.fetch_members(limit=None)
+    ]
+
 def score(m: discord.Member, query: str):
     dn = m.display_name.lower()
     un = m.name.lower()
 
+    if dn == query or un == query:
+        return 100
     if dn.startswith(query):
-        return 2
+        return 50
     if query in dn:
-        return 1
+        return 20
     if query in un:
-        return 0
+        return 10
+    return 0
 
-    return -1
 
 async def member_search(interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
     if not interaction.guild:
         return []
 
-    query = current.lower()
-    members = interaction.guild.members
+    query = " ".join(current.split()).lower()
+
+    members = member_cache.get(interaction.guild.id)
+
+    if not members:
+        members = interaction.guild.members
 
     results = [
         m for m in members
@@ -52,12 +65,7 @@ async def member_search(interaction: discord.Interaction, current: str) -> list[
         or query in m.name.lower()
     ]
 
-    results.sort(
-        key=lambda m: (
-            not m.display_name.lower().startswith(query),
-            m.display_name.lower()
-        )
-    )
+    results.sort(key=lambda m: score(m, query), reverse=True)
 
     return [
         app_commands.Choice(
@@ -71,6 +79,22 @@ class Events(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__()
         self.bot = bot
+
+    @commands.Cog.listener()
+    async def on_guild_join(self, guild: discord.Guild):
+        await build_member_cache(guild)
+
+    @commands.Cog.listener()
+    async def on_member_join(self, member: discord.Member):
+        member_cache.setdefault(member.guild.id, []).append(member)
+
+    @commands.Cog.listener()
+    async def on_member_remove(self, member: discord.Member):
+        if member.guild.id in member_cache:
+            member_cache[member.guild.id] = [
+                m for m in member_cache[member.guild.id]
+                if m.id != member.id
+            ]
 
     @app_commands.command(name="setup_server", description="Imposta il bot per questo server")
     @app_commands.checks.has_permissions(ban_members=True)

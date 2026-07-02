@@ -8,6 +8,7 @@ import asyncio
 import logging
 
 from db.db import *
+from cogs.events import build_member_cache
 from services.server_service import is_blacklisted, init_blacklist_cache
 
 
@@ -66,6 +67,8 @@ class Bot(commands.Bot):
         print(f"Sono stati caricati {len(commands)} comandi:\n/{'\n/'.join([cmd.name for cmd in commands])}")
         self.tree.on_error = self.error_handler
         self.tree.interaction_check = self.interaction_check
+        for guild in self.guilds:
+            await build_member_cache(guild)
 
     async def init_db(self):
         await execute("""CREATE TABLE IF NOT EXISTS server_configs(
