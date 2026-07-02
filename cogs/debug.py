@@ -241,9 +241,10 @@ class DebugCommands(commands.Cog):
         inserted = 0
         buffer = []
         for match_number in range(1, matches_number + 1):
-
             if match_number in existing_matches:
                 continue
+
+            inserted += 1
 
             match_results = await generate_match_results(
                 teams
@@ -283,7 +284,6 @@ class DebugCommands(commands.Cog):
                 )
             buffer.append(match_data)
 
-            inserted += 1
         debug_data = {
             "event_id": event_id,
             "matches": buffer
