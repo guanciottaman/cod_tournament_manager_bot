@@ -33,6 +33,6 @@ async def controlla_risultati_callback(
         return
     await interaction.response.send_message(
         embeds=embed,
-        view=ControllaRisultatiView(event_id, team_scores, page-1),
+        view=ControllaRisultatiView(event_id, team_scores, status, page-1),
         ephemeral=True
     )

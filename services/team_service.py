@@ -215,8 +215,8 @@ async def edit_results(
             WHERE team_score_id = ? AND member_id = ?
         """, (kills, team_score_id, player_id))
 
-async def get_event_results(event_id: int, status: str) -> list[TeamScore]:
-    team_rows = await fetch_all("""
+async def get_event_results(event_id: int, status: str, team: Team | None = None) -> list[TeamScore]:
+    query = """
         SELECT
             ts.id,
             ts.event_id,
@@ -230,8 +230,14 @@ async def get_event_results(event_id: int, status: str) -> list[TeamScore]:
         JOIN teams t ON t.team_id = ts.team_id
         WHERE ts.status = ?
         AND ts.event_id = ?
-        ORDER BY ts.team_id ASC, ts.created_at ASC
-    """, (status, event_id))
+    """
+    params = [status, event_id]
+    if team is not None:
+        query += " AND t.team_id = ?"
+        params.append(team.team_id)
+    query += " ORDER BY ts.team_id ASC, ts.created_at ASC"
+    
+    team_rows = await fetch_all(query, tuple(params))
 
     if not team_rows:
         return []

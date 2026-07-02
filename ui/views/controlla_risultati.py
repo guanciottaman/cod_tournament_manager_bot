@@ -3,18 +3,21 @@ import discord
 from ui.embeds.event_builders import build_results_embed
 from ui.modals.registra_risultati import RegistraRisultatiModal
 from models.team import TeamScore
-from services.team_service import set_result_status, get_players_names, get_leader_discord_id
+from services.event_service import get_leader_ids, get_team_from_leader
+from services.team_service import set_result_status, get_players_names, get_leader_discord_id, get_event_results
 
 class ControllaRisultatiView(discord.ui.View):
     def __init__(
             self,
             event_id: int, 
             team_scores: list[TeamScore],
+            status: str,
             page: int = 0
         ):
         super().__init__(timeout=None)
         self.event_id = event_id
         self.team_scores = team_scores
+        self.status = status
         self.page = page
         self.sync_buttons()
     
@@ -194,3 +197,87 @@ class ControllaRisultatiView(discord.ui.View):
     )
     async def next_page(self, interaction: discord.Interaction, button: discord.ui.Button):
         await self.next_page_(interaction)
+    
+    @discord.ui.button(
+        label="Filtra per capoteam",
+        style=discord.ButtonStyle.blurple,
+        row=2
+    )
+    async def filter_by_leader(self, interaction: discord.Interaction, button: discord.ui.Button):
+        leader_ids = await get_leader_ids(self.event_id)
+        if not leader_ids:
+            await interaction.response.send_message("Non ci sono capoteam in questo evento!", ephemeral=True)
+            return
+        leaders: list[discord.Member] = []
+        for l in leader_ids:
+            member = interaction.guild.get_member(l)
+            if member is None:
+                continue
+            leaders.append(member)
+        embed = discord.Embed(
+            title="Filtra per capoteam",
+            color=discord.Color.blue(),
+            description="Seleziona il capoteam di cui vuoi controllare i risultati"
+        )
+        
+        view = discord.ui.View()
+        member_select = discord.ui.Select(
+            placeholder="Seleziona il capoteam...",
+            min_values=1,
+            max_values=1,
+            options=[
+                discord.SelectOption(
+                    label=l.name,
+                    value=str(l.id)
+                ) for l in leaders
+            ]
+        )
+        async def member_select_callback(interaction: discord.Interaction):
+            team = await get_team_from_leader(self.event_id, int(member_select.values[0]))
+            if team is None:
+                await interaction.response.send_message(f"Il team del capoteam selezionato non esiste", ephemeral=True)
+                return
+            scores = await get_event_results(self.event_id, self.status, team)
+            if not scores:
+                await interaction.response.send_message(
+                    "Nessun risultato per questo team",
+                    ephemeral=True
+                )
+                return
+            self.team_scores = scores
+            self.page = 0
+            self.sync_buttons()
+            await interaction.response.edit_message(
+                embeds=build_results_embed(0, len(self.team_scores), team.name, self.team_scores[0]),
+                view=self
+            )
+        member_select.callback = member_select_callback
+        view.add_item(member_select)
+        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+
+    @discord.ui.button(
+        label="Resetta filtro",
+        style=discord.ButtonStyle.red,
+        row=2
+    )
+    async def reset_filter(self, interaction: discord.Interaction, button: discord.ui.Button):
+        scores = await get_event_results(self.event_id, self.status)
+        if not scores:
+            await interaction.response.send_message(
+                "Nessun risultato trovato",
+                ephemeral=True
+            )
+            return
+        self.team_scores = scores
+        self.page = 0
+        self.sync_buttons()
+
+        await interaction.response.edit_message(
+            embeds=build_results_embed(
+                0,
+                len(scores),
+                self.team_scores[0].team_name,
+                self.team_scores[0]
+            ),
+            view=self
+        )
