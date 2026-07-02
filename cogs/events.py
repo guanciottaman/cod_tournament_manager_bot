@@ -398,7 +398,7 @@ class Events(commands.Cog):
         if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario per aggiungere un host!", ephemeral=True)
             return
-        events: list[Event] = await get_events_for_guild(interaction.guild_id, ["ready", "setup"])
+        events: list[Event] = await get_events_for_guild(interaction.guild_id, ["ready", "setup", "running"])
         embed = discord.Embed(
             title="Aggiungi host evento",
             color=discord.Colour.blue(),
@@ -418,7 +418,7 @@ class Events(commands.Cog):
         if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario per rimuovere un host!", ephemeral=True)
             return
-        events: list[Event] = await get_events_for_guild(interaction.guild_id, ["ready", "setup"])
+        events: list[Event] = await get_events_for_guild(interaction.guild_id, ["ready", "setup", "running"])
         embed = discord.Embed(
             title="Rimuovi host evento",
             color=discord.Colour.red(),
