@@ -327,15 +327,18 @@ async def has_duplicate_placement(team_score_id: int) -> bool:
         SELECT 1
         FROM team_scores ts
         JOIN teams t ON t.team_id = ts.team_id
-        JOIN team_scores ts2
-            ON ts.event_id = ts2.event_id
-            AND ts.match_number = ts2.match_number
-            AND ts.placement = ts2.placement
-            AND ts2.team_id != ts.team_id
-        JOIN teams t2 ON t2.team_id = ts2.team_id
         WHERE ts.team_score_id = ?
-          AND t.lobby_id = t2.lobby_id
-        LIMIT 1
+          AND EXISTS (
+              SELECT 1
+              FROM team_scores ts2
+              JOIN teams t2 ON t2.team_id = ts2.team_id
+              WHERE ts2.event_id = ts.event_id
+                AND ts2.match_number = ts.match_number
+                AND ts2.placement = ts.placement
+                AND t2.lobby_id = t.lobby_id
+                AND ts2.team_id != ts.team_id
+              LIMIT 1
+          )
     """, (team_score_id,))
 
     return row is not None

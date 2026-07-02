@@ -1,6 +1,7 @@
 import discord
 
 from models.event import Event
+from services.event_service import has_duplicate_placement
 from services.team_service import get_event_results
 from ui.embeds.event_builders import build_results_embed
 from ui.views.controlla_risultati import ControllaRisultatiView
@@ -19,11 +20,15 @@ async def controlla_risultati_callback(
     if page < 1 or page > len(team_scores):
         await interaction.response.send_message("Pagina non valida!", ephemeral=True)
         return
+    warnings: list[str] = []
+    if await has_duplicate_placement(self.team_scores[self.page].team_score_id):
+        warnings.append("Questo piazzamento è duplicato!")
     embed = build_results_embed(
         page-1,
         len(team_scores),
         team_scores[0].team_name,
-        team_scores[0]
+        team_scores[0],
+        warnings
     )
     if embed is None:
         await interaction.response.send_message(

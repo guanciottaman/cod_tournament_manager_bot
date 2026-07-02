@@ -3,7 +3,7 @@ import discord
 from ui.embeds.event_builders import build_results_embed
 from ui.modals.registra_risultati import RegistraRisultatiModal
 from models.team import TeamScore
-from services.event_service import get_leader_ids, get_team_from_leader
+from services.event_service import get_leader_ids, get_team_from_leader, has_duplicate_placement
 from services.team_service import set_result_status, get_players_names, get_leader_discord_id, get_event_results
 
 class ControllaRisultatiView(discord.ui.View):
@@ -55,11 +55,15 @@ class ControllaRisultatiView(discord.ui.View):
                 embeds=[]
             )
             return
+        warnings: list[str] = []
+        if await has_duplicate_placement(self.team_scores[self.page].team_score_id):
+            warnings.append("Questo piazzamento è duplicato!")
         embeds = build_results_embed(
             self.page,
             len(self.team_scores),
             self.team_scores[self.page].team_name,
-            self.team_scores[self.page]
+            self.team_scores[self.page],
+            warnings
         )
         self.sync_buttons()
         await interaction.edit_original_response(embeds=embeds, view=self)
@@ -69,11 +73,15 @@ class ControllaRisultatiView(discord.ui.View):
             await interaction.response.defer()
             return
         self.page -= 1
+        warnings: list[str] = []
+        if await has_duplicate_placement(self.team_scores[self.page].team_score_id):
+            warnings.append("Questo piazzamento è duplicato!")
         embeds = build_results_embed(
             self.page,
             len(self.team_scores),
             self.team_scores[self.page].team_name,
-            self.team_scores[self.page]
+            self.team_scores[self.page],
+            warnings
         )
         await interaction.response.edit_message(embeds=embeds, view=self)
 
@@ -83,12 +91,15 @@ class ControllaRisultatiView(discord.ui.View):
             return
 
         self.page += 1
-
+        warnings: list[str] = []
+        if await has_duplicate_placement(self.team_scores[self.page].team_score_id):
+            warnings.append("Questo piazzamento è duplicato!")
         embed = build_results_embed(
             self.page,
             len(self.team_scores),
             self.team_scores[self.page].team_name,
-            self.team_scores[self.page]
+            self.team_scores[self.page],
+            warnings
         )
 
         await interaction.response.edit_message(embeds=embed, view=self)
@@ -247,8 +258,12 @@ class ControllaRisultatiView(discord.ui.View):
             self.team_scores = scores
             self.page = 0
             self.sync_buttons()
+            warnings: list[str] = []
+            if await has_duplicate_placement(self.team_scores[self.page].team_score_id):
+                warnings.append("Questo piazzamento è duplicato!")
+            embeds = build_results_embed(0, len(self.team_scores), team.name, self.team_scores[0], warnings)
             await interaction.response.edit_message(
-                embeds=build_results_embed(0, len(self.team_scores), team.name, self.team_scores[0]),
+                embeds=embeds,
                 view=self
             )
         member_select.callback = member_select_callback
@@ -271,13 +286,18 @@ class ControllaRisultatiView(discord.ui.View):
         self.team_scores = scores
         self.page = 0
         self.sync_buttons()
+        warnings: list[str] = []
+        if await has_duplicate_placement(self.team_scores[self.page].team_score_id):
+            warnings.append("Questo piazzamento è duplicato!")
+        embeds = build_results_embed(
+            0,
+            len(scores),
+            self.team_scores[0].team_name,
+            self.team_scores[0],
+            warnings
+        )
 
         await interaction.response.edit_message(
-            embeds=build_results_embed(
-                0,
-                len(scores),
-                self.team_scores[0].team_name,
-                self.team_scores[0]
-            ),
+            embeds=embeds,
             view=self
         )

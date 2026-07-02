@@ -407,7 +407,7 @@ class Events(commands.Cog):
     @app_commands.command(name="add_event_host", description="Aggiungi un host dell'evento che potrà mandare i codici lobby")
     @app_commands.describe(member="Il membro da aggiungere")
     @app_commands.autocomplete(member=member_search)
-    async def add_event_host(self, interaction: discord.Interaction, member: discord.Member):
+    async def add_event_host(self, interaction: discord.Interaction, member: str):
         if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario per aggiungere un host!", ephemeral=True)
             return
@@ -418,16 +418,18 @@ class Events(commands.Cog):
             description="Questa è una lista degli eventi in corso.\nScegli l'evento in cui vuoi aggiungere un host."
         )
         async def event_selector_callback(interaction: discord.Interaction, event: Event):
-            await add_event_host_db(event.event_id, member.id)
+            await add_event_host_db(event.event_id, int(member))
+            m = interaction.guild.get_member(int(member))
             await interaction.response.send_message(
-                f"Il membro {member.mention} è stato aggiunto agli host!",
+                f"Il membro {m.mention} è stato aggiunto agli host!",
                 ephemeral=True
             )
         await resolve_event(interaction, embed, events, event_selector_callback)
     
     @app_commands.command(name="remove_event_host", description="Rimuovi un host dell'evento che non potrà più mandare i codici lobby")
     @app_commands.describe(member="Il membro da rimuovere")
-    async def remove_event_host(self, interaction: discord.Interaction, member: discord.Member):
+    @app_commands.autocomplete(member=member_search)
+    async def remove_event_host(self, interaction: discord.Interaction, member: str):
         if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario per rimuovere un host!", ephemeral=True)
             return
@@ -438,9 +440,10 @@ class Events(commands.Cog):
             description="Questa è una lista degli eventi in corso.\nScegli l'evento in cui vuoi rimuovere un host."
         )
         async def event_selector_callback(interaction: discord.Interaction, event: Event):
-            await remove_event_host_db(event.event_id, member.id)
+            await remove_event_host_db(event.event_id, int(member))
+            m = interaction.guild.get_member(int(member))
             await interaction.response.send_message(
-                f"Il membro {member.mention} è stato rimosso dagli host!",
+                f"Il membro {m.mention} è stato rimosso dagli host!",
                 ephemeral=True
             )
         await resolve_event(interaction, embed, events, event_selector_callback)
