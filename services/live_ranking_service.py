@@ -138,9 +138,9 @@ async def start_live(event_id: int, guild: discord.Guild, lobby_id: int):
         raise ValueError("Matches number not found")
     
     # 3. invio DM al canale
-    team_messages: dict[int, discord.Message] = {}
-    mvp_messages: dict[int, discord.Message] = {}
     live_ranking_channel_id = await get_live_ranking_channel_id(guild.id)
+    if live_ranking_channel_id is None:
+        raise ValueError("Missing live channel")
     try:
         live_ranking_channel = guild.get_channel(live_ranking_channel_id)
         if live_ranking_channel is None:
@@ -149,6 +149,8 @@ async def start_live(event_id: int, guild: discord.Guild, lobby_id: int):
         raise ValueError("Live channel deleted")
     except discord.Forbidden:
         raise ValueError("No permission to access live channel")
+    except discord.HTTPException:
+        raise ValueError("Missing live channel")
     team_embed = build_live_team_ranking_embed(
         event.name,
         lobby.name,
