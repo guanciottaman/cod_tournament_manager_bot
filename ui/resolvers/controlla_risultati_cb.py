@@ -38,7 +38,7 @@ async def controlla_risultati_callback(
 
         warnings: list[str] = []
         if await has_duplicate_placement(current.team_score_id):
-            warnings.append("Questo piazzamento è duplicato!")
+            warnings.append("QUESTO PIAZZAMENTO È DUPLICATO!")
 
         embeds = build_results_embed(
             page - 1,

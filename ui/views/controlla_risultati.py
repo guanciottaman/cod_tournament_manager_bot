@@ -57,7 +57,7 @@ class ControllaRisultatiView(discord.ui.View):
             return
         warnings: list[str] = []
         if await has_duplicate_placement(self.team_scores[self.page].team_score_id):
-            warnings.append("Questo piazzamento è duplicato!")
+            warnings.append("QUESTO PIAZZAMENTO È DUPLICATO!")
         embeds = build_results_embed(
             self.page,
             len(self.team_scores),
@@ -81,7 +81,7 @@ class ControllaRisultatiView(discord.ui.View):
         self.page -= 1
         warnings: list[str] = []
         if await has_duplicate_placement(self.team_scores[self.page].team_score_id):
-            warnings.append("Questo piazzamento è duplicato!")
+            warnings.append("QUESTO PIAZZAMENTO È DUPLICATO!")
         embeds = build_results_embed(
             self.page,
             len(self.team_scores),
@@ -105,7 +105,7 @@ class ControllaRisultatiView(discord.ui.View):
         self.page += 1
         warnings: list[str] = []
         if await has_duplicate_placement(self.team_scores[self.page].team_score_id):
-            warnings.append("Questo piazzamento è duplicato!")
+            warnings.append("QUESTO PIAZZAMENTO È DUPLICATO!")
         embeds = build_results_embed(
             self.page,
             len(self.team_scores),
@@ -278,7 +278,7 @@ class ControllaRisultatiView(discord.ui.View):
             self.sync_buttons()
             warnings: list[str] = []
             if await has_duplicate_placement(self.team_scores[self.page].team_score_id):
-                warnings.append("Questo piazzamento è duplicato!")
+                warnings.append("QUESTO PIAZZAMENTO È DUPLICATO!")
             embeds = build_results_embed(0, len(self.team_scores), team.name, self.team_scores[0], warnings)
             await interaction.response.edit_message(
                 embeds=embeds,
@@ -306,7 +306,7 @@ class ControllaRisultatiView(discord.ui.View):
         self.sync_buttons()
         warnings: list[str] = []
         if await has_duplicate_placement(self.team_scores[self.page].team_score_id):
-            warnings.append("Questo piazzamento è duplicato!")
+            warnings.append("QUESTO PIAZZAMENTO È DUPLICATO!")
         embeds = build_results_embed(
             0,
             len(scores),

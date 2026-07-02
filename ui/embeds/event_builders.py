@@ -108,7 +108,7 @@ def build_results_embed(
     warnings = warnings or []
     for warning in warnings:
         embed.add_field(
-            name="⚠️Attenzione",
+            name="⚠️ATTENZIONE",
             value=warning
         )
     embed.set_image(url=team_score.screenshots[0])
