@@ -76,11 +76,17 @@ async def compute_team_ranking(
 
     rows = await fetch_all(query, tuple(params))
 
-    teams = await fetch_all("""
+    teams_query = """
         SELECT team_id, name
         FROM teams
         WHERE event_id = ?
-    """, (event_id,))
+    """
+    teams_params = [event_id]
+    if scope == "lobby" and lobby_id is not None:
+        teams_query += " AND lobby_id = ?"
+        params.append(lobby_id)
+
+    teams = await fetch_all(teams_query, tuple(teams_params))
 
     penalties = await fetch_all(
         """
