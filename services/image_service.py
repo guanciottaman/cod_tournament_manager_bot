@@ -81,13 +81,20 @@ async def build_leaderboard_image(ranking: list[dict[str, Any]], lobby_name: str
             if i < 3:
                 medal = medals[i]
                 img.paste(medal, (80, line_y), medal)
+            else:
+                draw.text(
+                    (80, line_y),
+                    str(i+1),
+                    font=name_font,
+                    fill=color
+                )
 
 
             draw.text(
                 (80 + row_height, line_y),
                 name,
                 font=name_font,
-                fill=color,
+                fill=color
             )
 
 
@@ -164,7 +171,7 @@ def build_mvp_image(
             if medal is not None:
                 img.paste(medal, (150, y-30), medal)
             else:
-                draw.text((150, y-30), str(i+1), font=name_font, fill=(10, 10, 10))
+                draw.text((170, y-30), str(i+1), font=name_font, fill=(10, 10, 10))
             draw.text(
                 (width // 2, y),
                 name,

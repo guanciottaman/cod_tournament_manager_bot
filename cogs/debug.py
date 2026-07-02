@@ -218,7 +218,7 @@ class DebugCommands(commands.Cog):
             await interaction.followup.send("Nessun team trovato", ephemeral=True)
             return
 
-        existing_matches = await get_inserted_match_numbers(event_id)
+        existing_matches = set(await get_inserted_match_numbers(event_id))
 
         matches_number = getattr(event, "matches_number", None)
         if not matches_number:
@@ -258,7 +258,7 @@ class DebugCommands(commands.Cog):
                 placement = r["placement"]
                 players = r["players"]
 
-                kills = sum(p[2] for p in players)
+                kills = sum(player.kills for player in players)
                 placement_pts = placement_dict.get(placement, 0)
                 kill_pts = kills * kill_points_value
                 total = placement_pts + kill_pts
