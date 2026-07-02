@@ -26,19 +26,47 @@ from services.ranking_service import *
 from services.image_service import *
 from services.live_ranking_service import stop_live
 
+def score(m: discord.Member, query: str):
+    dn = m.display_name.lower()
+    un = m.name.lower()
 
-async def member_search(interaction: discord.Interaction, current: str):
+    if dn.startswith(query):
+        return 2
+    if query in dn:
+        return 1
+    if query in un:
+        return 0
+
+    return -1
+
+async def member_search(interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
+    if not interaction.guild:
+        return []
+
+    query = current.lower()
     members = interaction.guild.members
+
+    results = [
+        m for m in members
+        if query in m.display_name.lower()
+        or query in m.name.lower()
+    ]
+
+    results.sort(
+        key=lambda m: (
+            not m.display_name.lower().startswith(query),
+            m.display_name.lower()
+        )
+    )
 
     return [
         app_commands.Choice(
             name=m.display_name,
             value=str(m.id)
         )
-        for m in members
-        if current.lower() in m.display_name.lower()
-    ][:25]
-    
+        for m in results[:25]
+    ]
+
 class Events(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__()
