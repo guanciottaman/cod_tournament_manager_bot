@@ -20,6 +20,7 @@ async def controlla_risultati_callback(
     if page < 1 or page > len(team_scores):
         await interaction.response.send_message("Pagina non valida!", ephemeral=True)
         return
+    await interaction.response.defer(ephemeral=True)
     warnings: list[str] = []
     current = team_scores[page - 1]
     if await has_duplicate_placement(current.team_score_id):
@@ -32,12 +33,12 @@ async def controlla_risultati_callback(
         warnings
     )
     if embeds is None:
-        await interaction.response.send_message(
+        await interaction.followup.send(
             "C'è stato un errore con il controllo dei risultati dell'embed",
             ephemeral=True
         )
         return
-    await interaction.response.send_message(
+    await interaction.followup.send(
         embeds=embeds,
         view=ControllaRisultatiView(event_id, team_scores, status, page-1),
         ephemeral=True
