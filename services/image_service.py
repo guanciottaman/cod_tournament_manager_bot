@@ -163,8 +163,10 @@ def build_mvp_image(
             medal = medals[i] if i < len(medals) else None
             if medal is not None:
                 img.paste(medal, (150, y-30), medal)
+            else:
+                draw.text((150, y-30), str(i+1), font=name_font, fill=(10, 10, 10))
             draw.text(
-                (width // 2, y+30),
+                (width // 2, y),
                 name,
                 font=name_font,
                 fill=MEDALS_COLORS[i] if i < 3 else (10, 10, 10),
