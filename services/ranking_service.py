@@ -112,13 +112,18 @@ async def compute_team_ranking(
 
     match_kills = defaultdict(int)
 
-    player_rows = await fetch_all("""
-        SELECT team_score_id, kills
-        FROM player_scores
-        WHERE team_score_id IN (
-            SELECT id FROM team_scores WHERE event_id = ?
-        )
-    """, (event_id,))
+    player_rows_query = """
+        SELECT ps.team_score_id, ps.kills
+        FROM player_scores ps
+        JOIN team_scores ts ON ts.id = ps.team_score_id
+        JOIN teams t ON t.team_id = ts.team_id
+        WHERE ts.event_id = ?
+    """
+    player_rows_params = [event_id]
+    if scope == "lobby" and lobby_id is not None:
+        player_rows_query += " AND t.lobby_id = ?"
+        player_rows_params.append(lobby_id)
+    player_rows = await fetch_all(player_rows_query, tuple(player_rows_params))
 
     for ts_id, kills in player_rows:
         match_kills[ts_id] += kills
