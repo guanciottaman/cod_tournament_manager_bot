@@ -170,9 +170,6 @@ class Events(commands.Cog):
     @app_commands.command(name="manda_codice_lobby", description="Manda il codice lobby ai capoteam di una certa lobby")
     @app_commands.describe(code="Il codice da mandare")
     async def manda_codice_lobby(self, interaction: discord.Interaction, code: str):
-        if not await check_admin_role(interaction):
-            await interaction.response.send_message("Non hai il ruolo necessario a mandare i codici lobby!", ephemeral=True)
-            return
         events = await get_events_for_guild(interaction.guild_id, ["running"])
         embed = discord.Embed(
             title="Manda codici lobby",
@@ -180,7 +177,10 @@ class Events(commands.Cog):
             description="I seguenti eventi sono in corso. Scegli quello che ti interessa."
         )
         async def wrapper(interaction: discord.Interaction, event: Event):
-            if not await is_event_host(event.event_id, interaction.user.id):
+            if not (
+                await is_event_host(event.event_id, interaction.user.id)
+                or await check_admin_role(interaction)
+            ):
                 await interaction.response.send_message("Solo gli host possono mandare i codici lobby!", ephemeral=True)
                 return
             lobbies = await get_lobbies(event.event_id)
