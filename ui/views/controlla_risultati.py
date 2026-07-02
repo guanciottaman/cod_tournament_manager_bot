@@ -65,6 +65,12 @@ class ControllaRisultatiView(discord.ui.View):
             self.team_scores[self.page],
             warnings
         )
+        if embeds is None:
+            await interaction.edit_original_response(
+                content="Errore generazione embed",
+                view=self
+            )
+            return
         self.sync_buttons()
         await interaction.edit_original_response(embeds=embeds, view=self)
     
@@ -83,6 +89,12 @@ class ControllaRisultatiView(discord.ui.View):
             self.team_scores[self.page],
             warnings
         )
+        if embeds is None:
+            await interaction.response.edit_message(
+                content="Errore generazione embed",
+                view=self
+            )
+            return
         await interaction.response.edit_message(embeds=embeds, view=self)
 
     async def next_page_(self, interaction: discord.Interaction):
@@ -94,15 +106,21 @@ class ControllaRisultatiView(discord.ui.View):
         warnings: list[str] = []
         if await has_duplicate_placement(self.team_scores[self.page].team_score_id):
             warnings.append("Questo piazzamento è duplicato!")
-        embed = build_results_embed(
+        embeds = build_results_embed(
             self.page,
             len(self.team_scores),
             self.team_scores[self.page].team_name,
             self.team_scores[self.page],
             warnings
         )
+        if embeds is None:
+            await interaction.response.edit_message(
+                content="Errore generazione embed",
+                view=self
+            )
+            return
 
-        await interaction.response.edit_message(embeds=embed, view=self)
+        await interaction.response.edit_message(embeds=embeds, view=self)
     
     async def _handle(self, interaction: discord.Interaction, status: str):
         rows = await set_result_status(self.team_scores[self.page].team_score_id, status, self.team_scores[self.page].status)

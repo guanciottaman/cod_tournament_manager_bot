@@ -28,8 +28,8 @@ async def controlla_risultati_callback(
     embeds = build_results_embed(
         page-1,
         len(team_scores),
-        team_scores[0].team_name,
-        team_scores[0],
+        current.team_name,
+        current,
         warnings
     )
     if embeds is None:
