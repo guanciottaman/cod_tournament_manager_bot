@@ -78,7 +78,7 @@ def build_results_embed(
     pages_number: int,
     team_name: str,
     team_score: TeamScore,
-    warnings: list[str] = []
+    warnings: list[str] | None = None
 ) -> list[discord.Embed] | None:
     embed = discord.Embed(
         title=f"Risultati evento team {team_name}"
@@ -93,18 +93,24 @@ def build_results_embed(
     elif team_score.status == "edited":
         embed.color = discord.Color.dark_gold()
     else:
-        return None
+        embed.description = "Stato non valido"
+        embed.color = discord.Color.greyple()
+        return [embed]
+
+    if len(team_score.screenshots) < 2:
+        embed.description = "⚠️ Screenshot mancanti"
+        embed.color = discord.Color.orange()
+        return [embed]
     player_scores = team_score.player_scores
     for score in player_scores:
         emb_description += f"**{score.member_name}:** {score.kills} kill\n"
     embed.description = emb_description
+    warnings = warnings or []
     for warning in warnings:
         embed.add_field(
             name="⚠️Attenzione",
             value=warning
         )
-    if len(team_score.screenshots) != 2:
-        return None
     embed.set_image(url=team_score.screenshots[0])
     embed2 = discord.Embed(color=embed.color)
     embed2.set_image(url=team_score.screenshots[1])
