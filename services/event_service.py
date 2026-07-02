@@ -58,7 +58,12 @@ async def get_placement_points(event_id: int) -> list[tuple[int, int]]:
     """, (event_id,))
     return rows or []
 
-
+async def get_drop_worst_match(event_id: int) -> bool:
+    row = await fetch_one(
+        "SELECT drop_worst_match FROM events_settings WHERE event_id = ?",
+        (event_id,)
+    )
+    return bool(row[0]) if row else False
 
 async def get_events_for_guild(
     guild_id: int,
@@ -284,5 +289,35 @@ async def has_free_slot(event_id: int) -> bool:
         AND lobby_id IS NULL
         LIMIT 1
     """, (event_id,))
+
+    return row is not None
+
+async def add_event_host_db(event_id: int, member_id: int):
+    await execute("""
+        INSERT OR IGNORE INTO event_hosts (event_id, member_id)
+        VALUES (?, ?)
+    """, (event_id, member_id))
+
+async def remove_event_host_db(event_id: int, member_id: int):
+    await execute("""
+        DELETE FROM event_hosts
+        WHERE event_id = ? AND member_id = ?
+    """, (event_id, member_id))
+
+async def get_event_hosts_db(event_id: int) -> list[int]:
+    rows = await fetch_all("""
+        SELECT member_id
+        FROM event_hosts
+        WHERE event_id = ?
+    """, (event_id,))
+
+    return [r[0] for r in rows]
+
+async def is_event_host(event_id: int, member_id: int) -> bool:
+    row = await fetch_one("""
+        SELECT 1
+        FROM event_hosts
+        WHERE event_id = ? AND member_id = ?
+    """, (event_id, member_id))
 
     return row is not None

@@ -107,7 +107,12 @@ def build_results_embed(
     embeds = [embed, embed2]
     return embeds
 
-def build_live_mvp_ranking_embed(event_name: str, lobby_name: str, mvp_ranking: list[dict[str, Any]]) -> discord.Embed:
+def build_live_mvp_ranking_embed(
+    event_name: str,
+    lobby_name: str,
+    mvp_ranking: list[dict[str, Any]],
+    drop_worst_match: bool
+) -> discord.Embed:
     embed = discord.Embed(
         title="Classifica Live MVP Evento",
         color=discord.Color.blurple(),
@@ -118,8 +123,10 @@ def build_live_mvp_ranking_embed(event_name: str, lobby_name: str, mvp_ranking: 
         kills = player.get("kills", 0)
 
         emb_description += f"**{i}. {name}** | {kills} kill\n"
+    if drop_worst_match:
+        emb_description += "\n*La partita peggiore viene scartata dal secondo match in poi*"
     embed.description = emb_description
-    embed.set_footer(text=f"Le classifiche verranno aggiornate ogni 35 minuti | {datetime.datetime.now(pytz.timezone('Europe/Rome')):%H:%M}")
+    embed.set_footer(text=f"Le classifiche verranno aggiornate ogni 5 secondi | {datetime.datetime.now(pytz.timezone('Europe/Rome')):%H:%M}")
     return embed
 
 def build_live_team_ranking_embed(
@@ -127,7 +134,8 @@ def build_live_team_ranking_embed(
     lobby_name: str,
     team_ranking: list[dict[str, Any]],
     inserted_matches: dict[int, int],
-    matches_number: int
+    matches_number: int,
+    drop_worst_match: bool
 ) -> discord.Embed:
     embed = discord.Embed(
         title="Classifica Live Evento",
@@ -141,6 +149,8 @@ def build_live_team_ranking_embed(
         inserted = inserted_matches.get(team["team_id"], 0)
 
         emb_description += f"**{i}. {name}** | {score} pts | {kills} kill ({inserted}/{matches_number} match inseriti)\n"
+    if drop_worst_match:
+        emb_description += "\n*La partita peggiore viene scartata dal secondo match in poi*"
     embed.description = emb_description
-    embed.set_footer(text=f"Le classifiche verranno aggiornate ogni 35 minuti | {datetime.datetime.now(pytz.timezone('Europe/Rome')):%H:%M}")
+    embed.set_footer(text=f"Le classifiche verranno aggiornate ogni 5 secondi | {datetime.datetime.now(pytz.timezone('Europe/Rome')):%H:%M}")
     return embed

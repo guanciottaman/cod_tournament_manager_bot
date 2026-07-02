@@ -36,18 +36,23 @@ class Bot(commands.Bot):
         print(f"Bot online come {self.user.display_name}")
     
     async def error_handler(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
-        if isinstance(error, app_commands.MissingPermissions):
-            await interaction.response.send_message(
-                "Non hai i permessi per farlo.",
-                ephemeral=True
-            )
+        msg = None
 
-        if isinstance(error, app_commands.CheckFailure):
-            await interaction.response.send_message(
-                "Questo server non può usare questo bot.",
-                ephemeral=True
-            )
-            return
+        if isinstance(error, app_commands.MissingPermissions):
+            msg = "Non hai i permessi per farlo."
+        elif isinstance(error, app_commands.CheckFailure):
+            msg = "Questo server non può usare questo bot."
+        if msg is not None:
+            if interaction.response.is_done():
+                await interaction.followup.send(
+                    msg,
+                    ephemeral=True
+                )
+            else:
+                await interaction.response.send_message(
+                    msg,
+                    ephemeral=True
+                )
 
     async def interaction_check(self, interaction: discord.Interaction):
         if interaction.guild_id and is_blacklisted(interaction.guild_id):
@@ -97,6 +102,17 @@ class Bot(commands.Bot):
                   
             FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE
         )""")
+        await execute("""
+            CREATE TABLE IF NOT EXISTS event_hosts(
+                member_id INTEGER,
+                event_id INTEGER,
+                role TEXT DEFAULT 'host',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+                FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE,
+                UNIQUE(event_id, member_id)
+            )
+        """)
         await execute("""CREATE TABLE IF NOT EXISTS lobbies (
             lobby_id INTEGER PRIMARY KEY AUTOINCREMENT,
             event_id INTEGER,

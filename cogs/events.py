@@ -180,6 +180,9 @@ class Events(commands.Cog):
             description="I seguenti eventi sono in corso. Scegli quello che ti interessa."
         )
         async def wrapper(interaction: discord.Interaction, event: Event):
+            if not await is_event_host(event.event_id, interaction.user.id):
+                await interaction.response.send_message("Solo gli host possono mandare i codici lobby!", ephemeral=True)
+                return
             lobbies = await get_lobbies(event.event_id)
             await send_lobby_codes_callback(interaction, event, lobbies, code)
         await resolve_event(interaction, embed, events, wrapper)
@@ -387,6 +390,74 @@ class Events(commands.Cog):
                     ephemeral=True
                 )
             await interaction.followup.send("Lobby mandate a capoteam e admin", ephemeral=True)
+        await resolve_event(interaction, embed, events, event_selector_callback)
+    
+    @app_commands.command(name="add_event_host", description="Aggiungi un host dell'evento che potrà mandare i codici lobby")
+    @app_commands.describe(member="Il membro da aggiungere")
+    async def add_event_host(self, interaction: discord.Interaction, member: discord.Member):
+        if not await check_admin_role(interaction):
+            await interaction.response.send_message("Non hai il ruolo necessario per aggiungere un host!", ephemeral=True)
+            return
+        events: list[Event] = await get_events_for_guild(interaction.guild_id, ["ready", "setup"])
+        embed = discord.Embed(
+            title="Aggiungi host evento",
+            color=discord.Colour.blue(),
+            description="Questa è una lista degli eventi in corso.\nScegli l'evento in cui vuoi aggiungere un host."
+        )
+        async def event_selector_callback(interaction: discord.Interaction, event: Event):
+            await add_event_host_db(event.event_id, member.id)
+            await interaction.response.send_message(
+                f"Il membro {member.mention} è stato aggiunto agli host!",
+                ephemeral=True
+            )
+        await resolve_event(interaction, embed, events, event_selector_callback)
+    
+    @app_commands.command(name="remove_event_host", description="Rimuovi un host dell'evento che non potrà più mandare i codici lobby")
+    @app_commands.describe(member="Il membro da rimuovere")
+    async def remove_event_host(self, interaction: discord.Interaction, member: discord.Member):
+        if not await check_admin_role(interaction):
+            await interaction.response.send_message("Non hai il ruolo necessario per rimuovere un host!", ephemeral=True)
+            return
+        events: list[Event] = await get_events_for_guild(interaction.guild_id, ["ready", "setup"])
+        embed = discord.Embed(
+            title="Rimuovi host evento",
+            color=discord.Colour.red(),
+            description="Questa è una lista degli eventi in corso.\nScegli l'evento in cui vuoi rimuovere un host."
+        )
+        async def event_selector_callback(interaction: discord.Interaction, event: Event):
+            await remove_event_host_db(event.event_id, member.id)
+            await interaction.response.send_message(
+                f"Il membro {member.mention} è stato rimosso dagli host!",
+                ephemeral=True
+            )
+        await resolve_event(interaction, embed, events, event_selector_callback)
+    
+    @app_commands.command(name="get_event_host", description="Controlla gli host dell'evento che possono mandare i codici lobby")
+    async def get_event_host(self, interaction: discord.Interaction):
+        if not await check_admin_role(interaction):
+            await interaction.response.send_message("Non hai il ruolo necessario per controllare gli host!", ephemeral=True)
+            return
+        events: list[Event] = await get_events_for_guild(interaction.guild_id, ["ready", "setup", "running"])
+        embed = discord.Embed(
+            title="Controlla host evento",
+            color=discord.Colour.blue(),
+            description="Questa è una lista degli eventi in corso.\nScegli l'evento in cui vuoi controllare gli host."
+        )
+        async def event_selector_callback(interaction: discord.Interaction, event: Event):
+            hosts = await get_event_hosts_db(event.event_id)
+            embed = discord.Embed(
+                title=f"Host {event.name}",
+                color=discord.Color.blue()
+            )
+            emb_description = "Ecco gli host dell'evento:\n"
+            for i, host in enumerate(hosts):
+                host_member = interaction.guild.get_member(host)
+                emb_description += f"{i+1}. {host_member.mention if host_member else host}\n"
+            embed.description = emb_description
+            await interaction.response.send_message(
+                embed=embed,
+                ephemeral=True
+            )
         await resolve_event(interaction, embed, events, event_selector_callback)
 
     @app_commands.command(name="controlla_risultati", description="Controlla i risultati dei team")

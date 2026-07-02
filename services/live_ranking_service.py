@@ -3,7 +3,7 @@ import discord
 
 from typing import Any
 
-from services.event_service import get_event_info, get_matches_number
+from services.event_service import get_event_info, get_matches_number, get_drop_worst_match
 from services.server_service import get_live_ranking_channel_id
 from services.team_service import get_inserted_matches_count
 from services.lobby_service import get_lobby
@@ -42,8 +42,13 @@ async def live_mvp_loop(event_id: int, lobby_id: int):
             except Exception as e:
                 print(e)
                 continue
-
-            embed = build_live_mvp_ranking_embed(event.name, lobby.name, ranking)
+            drop_worst_match = await get_drop_worst_match(event_id)
+            embed = build_live_mvp_ranking_embed(
+                event.name,
+                lobby.name,
+                ranking,
+                drop_worst_match
+            )
 
             msg = lobby_state["mvp_message"]
             try:
@@ -82,18 +87,19 @@ async def live_team_loop(event_id: int, lobby_id: int):
             except Exception as e:
                 print(e)
                 continue
-
             inserted_matches = await get_inserted_matches_count(event_id)
             matches_number = await get_matches_number(event_id)
             if matches_number is None:
                 raise ValueError("Matches number not found")
+            drop_worst_match = await get_drop_worst_match(event_id)
 
             embed = build_live_team_ranking_embed(
                 event.name,
                 lobby.name,
                 ranking,
                 inserted_matches,
-                matches_number
+                matches_number,
+                drop_worst_match
             )
 
             msg = lobby_state["team_message"]
@@ -151,12 +157,14 @@ async def start_live(event_id: int, guild: discord.Guild, lobby_id: int):
         raise ValueError("No permission to access live channel")
     except discord.HTTPException:
         raise ValueError("Missing live channel")
+    drop_worst_match = await get_drop_worst_match(event_id)
     team_embed = build_live_team_ranking_embed(
         event.name,
         lobby.name,
         ranking,
         inserted_matches,
-        matches_number
+        matches_number,
+        drop_worst_match
     )
 
     team_msg = await live_ranking_channel.send(embed=team_embed)
@@ -167,7 +175,12 @@ async def start_live(event_id: int, guild: discord.Guild, lobby_id: int):
         lobby_id=lobby_id
     )
 
-    mvp_embed = build_live_mvp_ranking_embed(event.name, lobby.name, mvp_ranking)
+    mvp_embed = build_live_mvp_ranking_embed(
+        event.name,
+        lobby.name,
+        mvp_ranking,
+        drop_worst_match
+    )
 
     mvp_msg = await live_ranking_channel.send(embed=mvp_embed)
     
