@@ -176,6 +176,7 @@ def build_mvp_image(
                 (width // 2, y),
                 name,
                 font=name_font,
+                anchor="mm",
                 fill=MEDALS_COLORS[i] if i < 3 else (10, 10, 10),
             )
             draw.text(
