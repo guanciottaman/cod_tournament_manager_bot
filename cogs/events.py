@@ -80,6 +80,19 @@ class Events(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__()
         self.bot = bot
+    
+    async def lock_channel_for_leaders(self, channel: discord.TextChannel, guild: discord.Guild, leader_ids: list[int]):
+        await channel.set_permissions(guild.default_role, view_channel=False)
+
+        for leader_id in leader_ids:
+            member = guild.get_member(leader_id)
+            if member:
+                await channel.set_permissions(
+                    member,
+                    view_channel=True,
+                    send_messages=False,
+                    read_message_history=True
+                )
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild: discord.Guild):
@@ -578,12 +591,12 @@ class Events(commands.Cog):
                         color=discord.Color.blue()
                     )
                     emb_description = "Seleziona i canali dove mandare i codici lobby.\nCanali attuali:\n"
-                    current_channels = await get_lobby_codes_channels(event.event_id)
-                    if current_channels is not None:
-                        for channel_id, lobby_name in zip(current_channels.values(), [l.name for l in lobbies]):
-                            channel = interaction.guild.get_channel(channel_id)
-                            emb_description += f"LOBBY {lobby_name} -> {channel.mention}"
+                    for channel_id, lobby_name in zip(channels.values(), [l.name for l in lobbies]):
+                        channel = interaction.guild.get_channel(channel_id)
+                        emb_description += f"LOBBY {lobby_name} -> {channel.mention}"
                     embed.description = emb_description
+                    leader_ids = await get_leader_ids(event.event_id, lobby.lobby_id)
+                    await self.lock_channel_for_leaders(channel, interaction.guild, leader_ids)
                     await interaction.response.edit_message(
                         embed=embed,
                         view=view
