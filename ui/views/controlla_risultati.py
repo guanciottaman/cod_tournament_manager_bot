@@ -19,8 +19,17 @@ class ControllaRisultatiView(discord.ui.View):
         self.team_scores = team_scores
         self.status = status
         self.page = page
+        self.leader_page = 0
+        self.leaders_per_page = 25
+        self.leaders: list[discord.Member] = []
+        self.leader_view = None
         self.sync_buttons()
     
+    def get_leader_page(self):
+        start = self.leader_page * self.leaders_per_page
+        end = start + self.leaders_per_page
+        return self.leaders[start:end]
+
     def sync_buttons(self):
         if not self.team_scores:
             return
@@ -46,6 +55,81 @@ class ControllaRisultatiView(discord.ui.View):
                     item.disabled = not reject
                 elif item.label == "Modifica":
                     item.disabled = not edit
+    
+    def build_leader_select(self) -> discord.ui.Select[str]:
+        page_leaders = self.get_leader_page()
+
+        options = [
+            discord.SelectOption(
+                label=l.display_name[:100],
+                value=str(l.id)
+            )
+            for l in page_leaders
+        ]
+
+        select = discord.ui.Select[str](
+            placeholder="Seleziona capoteam...",
+            min_values=1,
+            max_values=1,
+            options=options
+        )
+
+        return select
+
+    async def show_leader_page(self, interaction: discord.Interaction, edit: bool = True):
+        embed = discord.Embed(
+            title=f"Filtra capoteam (pagina {self.leader_page + 1})",
+            color=discord.Color.blue()
+        )
+
+        self.leader_view = discord.ui.View()
+
+        select = self.build_leader_select()
+
+        async def callback(interaction: discord.Interaction):
+            selected = int(select.values[0])
+            team = await get_team_from_leader(self.event_id, selected)
+            scores = await get_event_results(self.event_id, self.status, team)
+
+            self.team_scores = scores
+            self.page = 0
+            self.sync_buttons()
+
+            await self.refresh(interaction)
+
+        select.callback = callback
+
+        prev_btn = discord.ui.Button(label="⬅️")
+        next_btn = discord.ui.Button(label="➡️")
+
+        async def prev_callback(interaction: discord.Interaction):
+            if self.leader_page > 0:
+                self.leader_page -= 1
+                await self.show_leader_page(interaction)
+            else:
+                await interaction.response.defer()
+        async def next_callback(interaction: discord.Interaction):
+            max_page = (len(self.leaders) - 1) // self.leaders_per_page
+            if self.leader_page < max_page:
+                self.leader_page += 1
+                await self.show_leader_page(interaction)
+            else:
+                await interaction.response.defer()
+        prev_btn.callback = prev_callback
+        next_btn.callback = next_callback
+        self.leader_view.add_item(select)
+        self.leader_view.add_item(prev_btn)
+        self.leader_view.add_item(next_btn)
+        if edit:
+            await interaction.response.edit_message(
+                embed=embed,
+                view=self.leader_view
+            )
+        else:
+            await interaction.response.send_message(
+                embed=embed,
+                view=self.leader_view
+            )
 
     async def refresh(self, interaction: discord.Interaction):
         if not self.team_scores:
@@ -234,59 +318,16 @@ class ControllaRisultatiView(discord.ui.View):
     )
     async def filter_by_leader(self, interaction: discord.Interaction, button: discord.ui.Button):
         leader_ids = await get_leader_ids(self.event_id)
-        if not leader_ids:
-            await interaction.response.send_message("Non ci sono capoteam in questo evento!", ephemeral=True)
-            return
+
         leaders: list[discord.Member] = []
         for l in leader_ids:
             member = interaction.guild.get_member(l)
-            if member is None:
-                continue
-            leaders.append(member)
-        embed = discord.Embed(
-            title="Filtra per capoteam",
-            color=discord.Color.blue(),
-            description="Seleziona il capoteam di cui vuoi controllare i risultati"
-        )
-        
-        view = discord.ui.View()
-        member_select = discord.ui.Select(
-            placeholder="Seleziona il capoteam...",
-            min_values=1,
-            max_values=1,
-            options=[
-                discord.SelectOption(
-                    label=l.name,
-                    value=str(l.id)
-                ) for l in leaders
-            ]
-        )
-        async def member_select_callback(interaction: discord.Interaction):
-            team = await get_team_from_leader(self.event_id, int(member_select.values[0]))
-            if team is None:
-                await interaction.response.send_message(f"Il team del capoteam selezionato non esiste", ephemeral=True)
-                return
-            scores = await get_event_results(self.event_id, self.status, team)
-            if not scores:
-                await interaction.response.send_message(
-                    "Nessun risultato per questo team",
-                    ephemeral=True
-                )
-                return
-            self.team_scores = scores
-            self.page = 0
-            self.sync_buttons()
-            warnings: list[str] = []
-            if await has_duplicate_placement(self.team_scores[self.page].team_score_id):
-                warnings.append("QUESTO PIAZZAMENTO È DUPLICATO!")
-            embeds = build_results_embed(0, len(self.team_scores), team.name, self.team_scores[0], warnings)
-            await interaction.response.edit_message(
-                embeds=embeds,
-                view=self
-            )
-        member_select.callback = member_select_callback
-        view.add_item(member_select)
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
+            if member:
+                leaders.append(member)
+
+        self.leaders = leaders
+        self.leader_page = 0
+        await self.show_leader_page(interaction, edit=False)
 
     @discord.ui.button(
         label="Resetta filtro",
