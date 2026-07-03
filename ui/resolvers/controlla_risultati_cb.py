@@ -3,7 +3,7 @@ import discord
 import traceback
 
 from models.event import Event
-from services.event_service import has_duplicate_placement
+from services.event_service import get_duplicate_team_score
 from services.team_service import get_event_results
 from ui.embeds.event_builders import build_results_embed
 from ui.views.controlla_risultati import ControllaRisultatiView
@@ -33,12 +33,17 @@ async def controlla_risultati_callback(
             return
 
         await interaction.response.defer(ephemeral=True)
+        view = ControllaRisultatiView(event_id, team_scores, status, page - 1)
 
         current = team_scores[page - 1]
 
         warnings: list[str] = []
-        if await has_duplicate_placement(current.team_score_id):
+        duplicate_team_score_id = await get_duplicate_team_score(current.team_score_id)
+        if duplicate_team_score_id is not None:
             warnings.append("QUESTO PIAZZAMENTO È DUPLICATO!")
+            view.go_to_duplicate_btn.disabled = False
+        else:
+            view.go_to_duplicate_btn.disabled = True
 
         embeds = build_results_embed(
             page - 1,
@@ -57,7 +62,7 @@ async def controlla_risultati_callback(
 
         await interaction.followup.send(
             embeds=embeds,
-            view=ControllaRisultatiView(event_id, team_scores, status, page - 1),
+            view=view,
             ephemeral=True
         )
 
