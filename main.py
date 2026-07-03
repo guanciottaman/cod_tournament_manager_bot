@@ -75,7 +75,8 @@ class Bot(commands.Bot):
             guild_id INTEGER PRIMARY KEY,
             ranking_channel_id INTEGER,
             admin_role_id INTEGER,
-            live_ranking_channel_id INTEGER
+            live_ranking_channel_id INTEGER,
+            lobbies_channel_id INTEGER
         )""")
         await execute("""CREATE TABLE IF NOT EXISTS events(
             event_id INTEGER PRIMARY KEY AUTOINCREMENT,

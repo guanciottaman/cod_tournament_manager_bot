@@ -16,13 +16,19 @@ async def check_server_registered(guild_id: int) -> bool:
 
     return exists is not None
 
-async def create_server_config(guild_id: int, ranking_channel_id: int, admin_role_id: int, live_ranking_channel_id: int) -> bool:
+async def create_server_config(
+    guild_id: int,
+    ranking_channel_id: int,
+    admin_role_id: int,
+    live_ranking_channel_id: int,
+    lobbies_channel_id: int
+) -> bool:
     try:
         await execute("""
             INSERT INTO server_configs
-            (guild_id, ranking_channel_id, admin_role_id, live_ranking_channel_id)
-            VALUES (?, ?, ?, ?)
-        """, (guild_id, ranking_channel_id, admin_role_id, live_ranking_channel_id))
+            (guild_id, ranking_channel_id, admin_role_id, live_ranking_channel_id, lobbies_channel_id)
+            VALUES (?, ?, ?, ?, ?)
+        """, (guild_id, ranking_channel_id, admin_role_id, live_ranking_channel_id, lobbies_channel_id))
 
         return True
 
@@ -31,7 +37,7 @@ async def create_server_config(guild_id: int, ranking_channel_id: int, admin_rol
 
 async def get_server_config(guild_id: int) -> ServerConfig | None:
     server_config = await fetch_one(
-        "SELECT ranking_channel_id, admin_role_id, live_ranking_channel_id FROM server_configs WHERE guild_id = ?",
+        "SELECT ranking_channel_id, admin_role_id, live_ranking_channel_id, lobbies_channel_id FROM server_configs WHERE guild_id = ?",
         (guild_id,)
     )
     if not server_config:
@@ -40,14 +46,16 @@ async def get_server_config(guild_id: int) -> ServerConfig | None:
         guild_id,
         server_config[0],
         server_config[1],
-        server_config[2]
+        server_config[2],
+        server_config[3]
     )
 
 async def edit_server_config(
     guild_id: int,
     ranking_channel_id: int | None = None,
     admin_role_id: int | None = None,
-    live_ranking_channel_id: int | None = None
+    live_ranking_channel_id: int | None = None,
+    lobbies_channel_id: int | None = None
 ) -> None:
     updates: list[str] = []
     params: list[int] = []
@@ -63,6 +71,10 @@ async def edit_server_config(
     if live_ranking_channel_id is not None:
         updates.append("live_ranking_channel_id = ?")
         params.append(live_ranking_channel_id)
+    
+    if lobbies_channel_id is not None:
+        updates.append("lobbies_channel_id = ?")
+        params.append(lobbies_channel_id)
 
     if not updates:
         return
@@ -108,6 +120,16 @@ async def get_ranking_channel_id(guild_id: int) -> int | None:
 async def get_live_ranking_channel_id(guild_id: int) -> int | None:
     row = await fetch_one(
         "SELECT live_ranking_channel_id FROM server_configs WHERE guild_id = ?",
+        (guild_id,)
+    )
+    if row:
+        return row[0]
+    else:
+        return None
+
+async def get_lobbies_channel_id(guild_id: int) -> int | None:
+    row = await fetch_one(
+        "SELECT lobbies_channel_id FROM server_configs WHERE guild_id = ?",
         (guild_id,)
     )
     if row:
