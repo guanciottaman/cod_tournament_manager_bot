@@ -4,6 +4,7 @@ from discord import app_commands
 
 from typing import Literal
 
+from models.lobby import Lobby
 from ui.embeds.event_builders import *
 from ui.embeds.lobby_builders import build_info_lobby_embed
 from ui.modals.nome_evento import NomeEventoModal
@@ -540,6 +541,81 @@ class Events(commands.Cog):
             await controlla_risultati_callback(interaction, event, status, page)
         
         await resolve_event(interaction, embed, events, wrapper)
+    
+    @app_commands.command(name="set_lobbies_codes_channels", description="Imposta i canali dove mandare i codici lobby per un certo evento")
+    async def set_lobbies_codes_channels(self, interaction: discord.Interaction):
+        if not await check_admin_role(interaction):
+            await interaction.response.send_message("Non hai il ruolo necessario per impostare i canali dove mandare i codici lobby!", ephemeral=True)
+            return
+        events: list[Event] = await get_events_for_guild(interaction.guild_id, ["setup", "running"])
+        embed = discord.Embed(
+            title="Imposta canali codici lobby",
+            color=discord.Colour.blue(),
+            description="Questa è una lista degli eventi in corso.\nScegli l'evento di cui vuoi impostare i canali codici lobby."
+        )
+        async def event_selector_callback(interaction: discord.Interaction, event: Event):
+            lobbies = await get_lobbies(event.event_id)
+            embed = discord.Embed(
+                title="Seleziona canali",
+                color=discord.Color.blue()
+            )
+            emb_description = "Seleziona i canali dove mandare i codici lobby.\nCanali attuali:\n"
+            current_channels = await get_lobby_codes_channels(event.event_id)
+            if current_channels is not None:
+                for channel_id, lobby_name in zip(current_channels.values(), [l.name for l in lobbies]):
+                    channel = interaction.guild.get_channel(channel_id)
+                    emb_description += f"LOBBY {lobby_name} -> {channel.mention}"
+            embed.description = emb_description
+            channels: dict[int, int] = dict()
+            view = discord.ui.View()
+
+            def make_callback(lobby: Lobby, select: discord.ui.ChannelSelect):
+                async def select_callback(interaction: discord.Interaction):
+                    channel: discord.abc.GuildChannel = select.values[0]
+                    channels[lobby.lobby_id] = channel.id
+                    embed = discord.Embed(
+                        title="Seleziona canali",
+                        color=discord.Color.blue()
+                    )
+                    emb_description = "Seleziona i canali dove mandare i codici lobby.\nCanali attuali:\n"
+                    current_channels = await get_lobby_codes_channels(event.event_id)
+                    if current_channels is not None:
+                        for channel_id, lobby_name in zip(current_channels.values(), [l.name for l in lobbies]):
+                            channel = interaction.guild.get_channel(channel_id)
+                            emb_description += f"LOBBY {lobby_name} -> {channel.mention}"
+                    embed.description = emb_description
+                    await interaction.response.edit_message(
+                        embed=embed,
+                        view=view
+                    )
+                return select_callback
+            
+            for lobby in lobbies:
+                select = discord.ui.ChannelSelect(
+                    placeholder=f"Seleziona il canale per la lobby {lobby.name}",
+                    min_values=1,
+                    max_values=1
+                )
+                select.callback = make_callback(lobby, select)
+                view.add_item(select)
+            confirm_btn = discord.ui.Button(
+                style=discord.ButtonStyle.green,
+                label="Conferma"
+            )
+            async def confirm_callback(interaction: discord.Interaction):
+                if len(lobbies) != len(channels):
+                    await interaction.response.send_message("Non hai impostato tutti i canali!", ephemeral=True)
+                    return
+                await set_lobby_codes_channels(event.event_id, channels)
+                await interaction.response.send_message("Hai impostato correttamente i canali!", ephemeral=True)
+            confirm_btn.callback = confirm_callback
+            view.add_item(confirm_btn)
+            await interaction.response.send_message(
+                embed=embed,
+                view=view,
+                ephemeral=True
+            )
+        await resolve_event(interaction, embed, events, event_selector_callback)
 
     @app_commands.command(name="termina_evento", description="Termina un evento")
     async def termina_evento(self, interaction: discord.Interaction):

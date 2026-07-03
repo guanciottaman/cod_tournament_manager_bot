@@ -1,6 +1,6 @@
 import discord
 
-from services.event_service import get_leader_ids
+from services.event_service import get_leader_ids, get_lobby_codes_channel
 from models.event import Event
 from models.lobby import Lobby
 
@@ -42,33 +42,13 @@ async def send_lobby_codes_callback(
             return
 
         guild = interaction.guild
-
-        failed = 0
-        user_ids = set(leader_ids)
-
-        for user_id in user_ids:
-            if user_id == interaction.client.user.id:
-                continue
-
-            member = guild.get_member(user_id)
-
-            if member is None:
-                try:
-                    member = await guild.fetch_member(user_id)
-                except (discord.NotFound, discord.Forbidden, discord.HTTPException):
-                    failed += 1
-                    continue
-
-            try:
-                await member.send(embed=embed)
-            except (discord.Forbidden, discord.HTTPException):
-                failed += 1
-
-        if failed:
-            await interaction.followup.send(
-                f"Lobby inviate, ma {failed} utenti non hanno ricevuto il DM",
-                ephemeral=True
-            )
+        lobby_codes_channel_id = await get_lobby_codes_channel(event_id, lobby_id)
+        if lobby_codes_channel_id is None:
+            await interaction.followup.send("Non è stato impostato un canale per questa lobby!", ephemeral=True)
+            return
+        lobby_codes_channel = guild.get_channel(lobby_codes_channel_id)
+        await lobby_codes_channel.send(embed=embed)
+        
     select.callback = select_callback
     view.add_item(select)
     embed = discord.Embed(

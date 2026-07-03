@@ -342,3 +342,33 @@ async def has_duplicate_placement(team_score_id: int) -> bool:
     """, (team_score_id,))
 
     return row is not None
+
+async def get_lobby_codes_channel(event_id: int, lobby_id: int) -> int | None:
+    row = await fetch_one(
+        "SELECT channel_id FROM lobby_codes_channels WHERE event_id = ? AND lobby_id = ?",
+        (event_id, lobby_id)
+    )
+    if row is None:
+        return None
+    else:
+        return row[0]
+
+async def get_lobby_codes_channels(event_id: int) -> dict[int, int] | None:
+    rows = await fetch_all(
+        "SELECT channel_id, lobby_id FROM lobby_codes_channels WHERE event_id = ?",
+        (event_id,)
+    )
+    if not rows:
+        return None
+    else:
+        return {row[1]: row[0] for row in rows}
+
+async def set_lobby_codes_channels(event_id: int, lobby_channels: dict[int, int]):
+    for lobby_id, channel_id in lobby_channels.items():
+        try:
+            await execute(
+                "INSERT INTO lobby_codes_channels (channel_id, event_id, lobby_id) VALUES (?, ?, ?)",
+                (channel_id, event_id, lobby_id)
+            )
+        except aiosqlite.IntegrityError:
+            raise ValueError("Lobby channel already exists")

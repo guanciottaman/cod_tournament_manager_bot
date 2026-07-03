@@ -117,7 +117,18 @@ class Bot(commands.Bot):
                 UNIQUE(event_id, member_id)
             )
         """)
-        await execute("""CREATE TABLE IF NOT EXISTS lobbies (
+        await execute("""
+            CREATE TABLE IF NOT EXISTS lobby_codes_channels(
+                channel_id INTEGER,
+                event_id INTEGER,
+                lobby_id INTEGER,
+                
+                FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE,
+                UNIQUE(event_id, lobby_id)
+            )
+        """)
+        await execute("""
+            CREATE TABLE IF NOT EXISTS lobbies (
             lobby_id INTEGER PRIMARY KEY AUTOINCREMENT,
             event_id INTEGER,
             name TEXT,
