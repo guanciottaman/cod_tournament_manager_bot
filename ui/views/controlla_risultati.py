@@ -45,6 +45,7 @@ class ControllaRisultatiView(discord.ui.View):
         if team_score is None:
             await interaction.response.defer()
             return
+        await interaction.response.defer()
 
         self.page = self.team_scores.index(team_score)
         await self.refresh(interaction)
