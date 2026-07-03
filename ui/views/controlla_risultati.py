@@ -207,7 +207,7 @@ class ControllaRisultatiView(discord.ui.View):
             return
         self.page -= 1
         warnings: list[str] = []
-        duplicate_team_score_id = await get_duplicate_team_score(current.team_score_id)
+        duplicate_team_score_id = await get_duplicate_team_score(self.team_scores[self.page].team_score_id)
         if duplicate_team_score_id is not None:
             warnings.append("QUESTO PIAZZAMENTO È DUPLICATO!")
             self.go_to_duplicate_btn.disabled = False
@@ -236,7 +236,7 @@ class ControllaRisultatiView(discord.ui.View):
 
         self.page += 1
         warnings: list[str] = []
-        duplicate_team_score_id = await get_duplicate_team_score(current.team_score_id)
+        duplicate_team_score_id = await get_duplicate_team_score(self.team_scores[self.page].team_score_id)
         if duplicate_team_score_id is not None:
             warnings.append("QUESTO PIAZZAMENTO È DUPLICATO!")
             self.go_to_duplicate_btn.disabled = False
@@ -399,7 +399,7 @@ class ControllaRisultatiView(discord.ui.View):
         self.page = 0
         self.sync_buttons()
         warnings: list[str] = []
-        duplicate_team_score_id = await get_duplicate_team_score(current.team_score_id)
+        duplicate_team_score_id = await get_duplicate_team_score(self.team_scores[self.page].team_score_id)
         if duplicate_team_score_id is not None:
             warnings.append("QUESTO PIAZZAMENTO È DUPLICATO!")
             self.go_to_duplicate_btn.disabled = False
