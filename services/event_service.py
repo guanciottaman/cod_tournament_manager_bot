@@ -322,26 +322,24 @@ async def is_event_host(event_id: int, member_id: int) -> bool:
 
     return row is not None
 
-async def has_duplicate_placement(team_score_id: int) -> bool:
+async def get_duplicate_team_score(team_score_id: int) -> int | None:
     row = await fetch_one("""
-        SELECT 1
+        SELECT ts2.id
         FROM team_scores ts
         JOIN teams t ON t.team_id = ts.team_id
-        WHERE ts.id = ?
-        AND EXISTS (
-            SELECT 1
-            FROM team_scores ts2
-            JOIN teams t2 ON t2.team_id = ts2.team_id
-            WHERE ts2.event_id = ts.event_id
+        JOIN team_scores ts2
+            ON ts2.event_id = ts.event_id
             AND ts2.match_number = ts.match_number
             AND ts2.placement = ts.placement
-            AND t2.lobby_id = t.lobby_id
             AND ts2.id != ts.id
-            LIMIT 1
-        )
+        JOIN teams t2
+            ON t2.team_id = ts2.team_id
+            AND t2.lobby_id = t.lobby_id
+        WHERE ts.id = ?
+        LIMIT 1
     """, (team_score_id,))
 
-    return row is not None
+    return row[0] if row else None
 
 async def get_lobby_codes_channel(event_id: int, lobby_id: int) -> int | None:
     row = await fetch_one(

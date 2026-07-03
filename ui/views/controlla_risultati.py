@@ -3,7 +3,7 @@ import discord
 from ui.embeds.event_builders import build_results_embed
 from ui.modals.registra_risultati import RegistraRisultatiModal
 from models.team import TeamScore
-from services.event_service import get_leader_ids, get_team_from_leader, has_duplicate_placement
+from services.event_service import get_leader_ids, get_team_from_leader, get_duplicate_team_score
 from services.team_service import set_result_status, get_players_names, get_leader_discord_id, get_event_results
 
 class ControllaRisultatiView(discord.ui.View):
@@ -23,7 +23,31 @@ class ControllaRisultatiView(discord.ui.View):
         self.leaders_per_page = 25
         self.leaders: list[discord.Member] = []
         self.leader_view = None
-        self.sync_buttons()
+        self.go_to_duplicate_btn = discord.ui.Button(
+            label="Vai al duplicato",
+            style=discord.ButtonStyle.grey
+        )
+        self.go_to_duplicate_btn.callback = self.go_to_duplicate
+        self.add_item(self.go_to_duplicate_btn)
+    
+    async def go_to_duplicate(self, interaction: discord.Interaction):
+        duplicate_id = await get_duplicate_team_score(self.team_scores[self.page].team_score_id)
+
+        if duplicate_id is None:
+            await interaction.response.defer()
+            return
+
+        team_score = next(
+            (ts for ts in self.team_scores if ts.team_score_id == duplicate_id),
+            None
+        )
+
+        if team_score is None:
+            await interaction.response.defer()
+            return
+
+        self.page = self.team_scores.index(team_score)
+        await self.refresh(interaction)
     
     def get_leader_page(self):
         start = self.leader_page * self.leaders_per_page
@@ -92,6 +116,7 @@ class ControllaRisultatiView(discord.ui.View):
                 await interaction.response.edit_message(content="Non ci sono leader reali disponibili")
             else:
                 await interaction.response.send_message(content="Non ci sono leader reali disponibili", ephemeral=True)
+            return
 
         async def callback(interaction_: discord.Interaction):
             selected = int(select.values[0])
@@ -149,8 +174,17 @@ class ControllaRisultatiView(discord.ui.View):
             )
             return
         warnings: list[str] = []
-        if await has_duplicate_placement(self.team_scores[self.page].team_score_id):
+        duplicate_placement_id = await get_duplicate_team_score(self.team_scores[self.page].team_score_id)
+        if duplicate_placement_id is not None:
             warnings.append("QUESTO PIAZZAMENTO È DUPLICATO!")
+            team_score = next(
+                (ts for ts in self.team_scores if ts.team_score_id == duplicate_placement_id),
+                None
+            )
+            if team_score is not None:
+                self.go_to_duplicate_btn.disabled = False
+        else:
+            self.go_to_duplicate_btn.disabled = True
         embeds = build_results_embed(
             self.page,
             len(self.team_scores),
