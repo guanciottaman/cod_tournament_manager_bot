@@ -93,7 +93,7 @@ class ControllaRisultatiView(discord.ui.View):
             else:
                 await interaction.response.send_message(content="Non ci sono leader reali disponibili", ephemeral=True)
 
-        async def callback(interaction: discord.Interaction):
+        async def callback(interaction_: discord.Interaction):
             selected = int(select.values[0])
             team = await get_team_from_leader(self.event_id, selected)
             scores = await get_event_results(self.event_id, self.status, team)
@@ -101,6 +101,7 @@ class ControllaRisultatiView(discord.ui.View):
             self.team_scores = scores
             self.page = 0
             self.sync_buttons()
+            await interaction_.response.defer()
 
             await self.refresh(interaction)
 
