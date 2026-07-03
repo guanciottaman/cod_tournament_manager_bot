@@ -91,7 +91,7 @@ class ControllaRisultatiView(discord.ui.View):
             if edit:
                 await interaction.response.edit_message(content="Non ci sono leader reali disponibili")
             else:
-                await interaction.response.send_message(content="Non ci sono leader reali disponibili")
+                await interaction.response.send_message(content="Non ci sono leader reali disponibili", ephemeral=True)
 
         async def callback(interaction: discord.Interaction):
             selected = int(select.values[0])
@@ -135,7 +135,8 @@ class ControllaRisultatiView(discord.ui.View):
         else:
             await interaction.response.send_message(
                 embed=embed,
-                view=self.leader_view
+                view=self.leader_view,
+                ephemeral=True
             )
 
     async def refresh(self, interaction: discord.Interaction):
