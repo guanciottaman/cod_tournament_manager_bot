@@ -577,7 +577,7 @@ class Events(commands.Cog):
             if current_channels is not None:
                 for channel_id, lobby_name in zip(current_channels.values(), [l.name for l in lobbies]):
                     channel = interaction.guild.get_channel(channel_id)
-                    emb_description += f"LOBBY {lobby_name} -> {channel.mention}"
+                    emb_description += f"LOBBY {lobby_name} | {channel.mention}\n"
             embed.description = emb_description
             channels: dict[int, int] = dict()
             view = discord.ui.View()
@@ -593,7 +593,7 @@ class Events(commands.Cog):
                     emb_description = "Seleziona i canali dove mandare i codici lobby.\nCanali attuali:\n"
                     for channel_id, lobby_name in zip(channels.values(), [l.name for l in lobbies]):
                         channel = interaction.guild.get_channel(channel_id)
-                        emb_description += f"LOBBY {lobby_name} -> {channel.mention}"
+                        emb_description += f"LOBBY {lobby_name} | {channel.mention}\n"
                     embed.description = emb_description
                     leader_ids = await get_leader_ids(event.event_id, lobby.lobby_id)
                     await self.lock_channel_for_leaders(channel, interaction.guild, leader_ids)
