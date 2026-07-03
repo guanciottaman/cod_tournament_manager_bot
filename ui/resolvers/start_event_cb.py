@@ -24,9 +24,7 @@ async def start_event_callback(interaction: discord.Interaction, event: Event):
         )
         for lobby in lobbies:
             try:
-                asyncio.create_task(
-                    start_live(event.event_id, interaction.guild, lobby.lobby_id)
-                )
+                await start_live(event.event_id, interaction.guild, lobby.lobby_id)
             except Exception as e:
                 print(f"start_live error lobby {lobby.lobby_id}: {e}")
     start_event_btn.callback = confirm_start
