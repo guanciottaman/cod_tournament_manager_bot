@@ -56,8 +56,10 @@ class ControllaRisultatiView(discord.ui.View):
                 elif item.label == "Modifica":
                     item.disabled = not edit
     
-    def build_leader_select(self) -> discord.ui.Select[str]:
+    def build_leader_select(self) -> discord.ui.Select[str] | None:
         page_leaders = self.get_leader_page()
+        if not page_leaders:
+            return None
 
         options = [
             discord.SelectOption(
@@ -85,6 +87,11 @@ class ControllaRisultatiView(discord.ui.View):
         self.leader_view = discord.ui.View()
 
         select = self.build_leader_select()
+        if select is None:
+            if edit:
+                await interaction.response.edit_message(content="Non ci sono leader reali disponibili")
+            else:
+                await interaction.response.send_message(content="Non ci sono leader reali disponibili")
 
         async def callback(interaction: discord.Interaction):
             selected = int(select.values[0])
