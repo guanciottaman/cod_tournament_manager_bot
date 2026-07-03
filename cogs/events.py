@@ -154,7 +154,6 @@ class Events(commands.Cog):
             view.lobbies_channel = lobbies_channel
         else:
             lobbies_channel = None
-        if config.lobbies
         embed = build_server_config_embed(
             interaction.guild.name,
             ranking_channel,
