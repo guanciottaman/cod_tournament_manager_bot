@@ -4,10 +4,21 @@ import asyncio
 from models.event import Event
 from ui.embeds.lobby_builders import build_event_start_summary
 from services.lobby_service import get_lobbies
-from services.event_service import set_event_status
+from services.event_service import set_event_status, check_event_config_complete
 from services.live_ranking_service import start_live
 
 async def start_event_callback(interaction: discord.Interaction, event: Event):
+    missing = await check_event_config_complete(event.event_id, interaction.guild_id)
+    if missing:
+        embed = discord.Embed(
+            title="Configurazione incompleta",
+            color=discord.Color.red()
+        )
+        emb_description = "Le seguenti impostazioni non sono state impostate correttamente:\n"
+        for m in missing:
+            emb_description += f"- {m}\n"
+        await interaction.response.send_message(embed=embed, ephemeral=True)
+        return
     lobbies = await get_lobbies(event.event_id)
     embed = await build_event_start_summary(lobbies)
     embed.title = "Avvia evento"

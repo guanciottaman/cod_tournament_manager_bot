@@ -1,3 +1,5 @@
+import discord
+
 import datetime
 
 from models.event import Event
@@ -370,3 +372,100 @@ async def set_lobby_codes_channels(event_id: int, lobby_channels: dict[int, int]
             )
         except aiosqlite.IntegrityError:
             raise ValueError("Lobby channel already exists")
+
+async def create_lobbies_roles(event_id: int, guild: discord.Guild):
+    rows = await fetch_all(
+        "SELECT lobby_id, name FROM lobbies WHERE event_id = ?",
+        (event_id,)
+    )
+    if not rows:
+        return
+    for lobby_id, name in rows:
+        try:
+            role = await guild.create_role(
+                name=f"LOBBY {name}",
+                reason=f"Ruolo creato per l'evento {event_id}"
+            )
+        except discord.Forbidden:
+            raise PermissionError("Il bot non può creare ruoli.")
+        except discord.HTTPException as e:
+            raise RuntimeError(f"Errore durante la creazione del ruolo: {e}")
+        try:
+            await execute(
+                    "INSERT INTO lobbies_roles (role_id, event_id, lobby_id) VALUES (?, ?, ?)",
+                    (role.id, event_id, lobby_id)
+                )
+        except aiosqlite.IntegrityError:
+            await role.delete(reason="Rollback")
+            raise ValueError("Lobby role already exists")
+
+async def get_lobby_role(event_id: int, lobby_id: int) -> int | None:
+    row = await fetch_one(
+        "SELECT role_id FROM lobbies_roles WHERE event_id = ? AND lobby_id = ?",
+        (event_id, lobby_id)
+    )
+    return row[0] if row else None
+
+async def get_lobby_roles(event_id: int) -> list[int] | None:
+    rows = await fetch_all(
+        "SELECT role_id FROM lobbies_roles WHERE event_id = ?",
+        (event_id,)
+    )
+    if not rows:
+        return None
+    return [r[0] for r in rows]
+
+async def delete_lobbies_roles(event_id: int, guild: discord.Guild):
+    rows = await fetch_all(
+        "SELECT role_id FROM lobbies_roles WHERE event_id = ?",
+        (event_id,)
+    )
+    if not rows:
+        return
+    for (role_id,) in rows:
+        role = guild.get_role(role_id)
+        if role is None:
+            continue
+        try:
+            await role.delete(reason=f"Evento {event_id} eliminato")
+        except (discord.Forbidden, discord.HTTPException):
+            pass
+
+async def assing_lobby_roles(event_id: int, lobby_id: int, guild: discord.Guild):
+    role_id = await get_lobby_role(event_id, lobby_id)
+    if role_id is None:
+        raise ValueError("role not set")
+    role = guild.get_role(role_id)
+    if role is None:
+        raise ValueError("role doesn't exist")
+    leaders = await get_leader_ids(event_id, lobby_id)
+    for l_id in leaders:
+        leader = guild.get_member(l_id)
+        if leader is None:
+            continue
+        if role in leader.roles:
+            continue
+        await leader.add_roles(role)
+
+async def check_event_config_complete(event_id: int, guild_id: int) -> list[str]:
+    missing: list[str] = []
+    row = await fetch_one(
+        "SELECT ranking_channel_id, admin_role_id, live_ranking_channel_id, lobbies_channel_id FROM server_configs WHERE guild_id = ?",
+        (guild_id,)
+    )
+    if row is None:
+        missing.extend(["Canale classifiche", "Ruolo admin", "Canale classifiche live", "Canale lobby"])
+    else:
+        for rc_id, ar_id, lrc_id, lc_id in row:
+            if rc_id is None:
+                missing.append("Canale classifiche")
+            if ar_id is None:
+                missing.append("Ruolo admin")
+            if lrc_id is None:
+                missing.append("Canale classifiche live")
+            if lc_id is None:
+                missing.append("Canale lobby")
+    lobby_codes_channels = await get_lobby_codes_channels(event_id)
+    if lobby_codes_channels is None:
+        missing.append("Canali codici lobby")
+    return missing

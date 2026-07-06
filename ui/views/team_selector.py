@@ -8,7 +8,7 @@ from models.lobby import Lobby
 from services.team_service import *
 from services.event_service import *
 from services.lobby_service import get_lobbies, switch_team_lobby
-from services.server_service import get_admin_role_id
+from services.server_service import get_lobbies_channel_id
 from ui.modals.penalize_team import PenalizzaTeam
 from ui.modals.registra_team import RegistraTeamModal
 from ui.embeds.lobby_builders import build_info_lobby_embed
@@ -55,34 +55,24 @@ class TeamsSelectorView(discord.ui.View):
         lobbies = await get_lobbies(self.event_id)
         embed = build_info_lobby_embed(self.event.name, lobbies, show_kd=False)
         embed.title = "AGGIORNAMENTO TEAM LOBBY"
-        failed = 0
 
         guild = interaction.guild
         if guild is None:
             return
 
-        admin_role_id = await get_admin_role_id(interaction.guild_id)
-        admin_role = guild.get_role(admin_role_id)
+        lobbies_channel_id = await get_lobbies_channel_id(guild.id)
+        if lobbies_channel_id is None:
+            await interaction.followup.send("Non hai impostato il canale delle lobby!", ephemeral=True)
+            return
+        lobbies_channel = guild.get_channel(lobbies_channel_id)
+        if lobbies_channel is None:
+            await interaction.followup.send("Non ho trovato il canale nel server!", ephemeral=True)
+            return
+        try:
+            await lobbies_channel.send(embed=embed)
+        except (discord.Forbidden, discord.HTTPException):
+            await interaction.followup.send("C'è stato un problema nel mandare l'aggiornamento!", ephemeral=True)
 
-        admins = set(m.id for m in admin_role.members if m.id != interaction.client.user.id) if admin_role else set()
-        leader_ids = await get_leader_ids(self.event_id)
-        leaders = set(leader_ids)
-        for user_id in (leaders | admins):
-            member = guild.get_member(user_id)
-            if member is None:
-                failed += 1
-                continue
-
-            try:
-                await member.send(embed=embed)
-            except (discord.Forbidden, discord.HTTPException):
-                failed += 1
-
-        if failed:
-            await interaction.followup.send(
-                f"DM falliti: {failed}",
-                ephemeral=True
-            )
 
     def get_leader_name(self, interaction: discord.Interaction, leader_id: int) -> str:
         member = interaction.guild.get_member(leader_id)

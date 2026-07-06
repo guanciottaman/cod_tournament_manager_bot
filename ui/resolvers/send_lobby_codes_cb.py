@@ -47,7 +47,11 @@ async def send_lobby_codes_callback(
             await interaction.followup.send("Non è stato impostato un canale per questa lobby!", ephemeral=True)
             return
         lobby_codes_channel = guild.get_channel(lobby_codes_channel_id)
-        await lobby_codes_channel.send(embed=embed)
+        try:
+            await lobby_codes_channel.send(embed=embed)
+            await interaction.followup.send(f"Codice mandato in {lobby_codes_channel.mention}", ephemeral=True)
+        except discord.Forbidden:
+            await interaction.followup.send("Mancano i permessi per il canale!", ephemeral=True)
         
     select.callback = select_callback
     view.add_item(select)

@@ -129,12 +129,22 @@ class Bot(commands.Bot):
         """)
         await execute("""
             CREATE TABLE IF NOT EXISTS lobbies (
-            lobby_id INTEGER PRIMARY KEY AUTOINCREMENT,
-            event_id INTEGER,
-            name TEXT,
+                lobby_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event_id INTEGER,
+                name TEXT,
 
-            FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE
+                FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE
         )""")
+        await execute("""
+            CREATE TABLE IF NOT EXISTS lobbies_roles(
+                role_id INTEGER PRIMARY KEY,
+                lobby_id INTEGER NOT NULL,
+                event_id INTEGER NOT NULL,
+
+                FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE,
+                FOREIGN KEY (lobby_id) REFERENCES lobbies(lobby_id) ON DELETE CASCADE
+            )
+        """)
         await execute("""CREATE TABLE IF NOT EXISTS teams(
             team_id INTEGER PRIMARY KEY AUTOINCREMENT,
             event_id INTEGER,
