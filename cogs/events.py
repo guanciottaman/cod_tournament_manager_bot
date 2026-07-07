@@ -576,10 +576,10 @@ class Events(commands.Cog):
             channels: dict[int, int] = dict()
             view = discord.ui.View()
 
-            def make_callback(lobby: Lobby, select: discord.ui.ChannelSelect):
+            def make_callback(current_lobby: Lobby, select: discord.ui.ChannelSelect):
                 async def select_callback(interaction: discord.Interaction):
                     channel: discord.abc.GuildChannel = select.values[0]
-                    channels[lobby.lobby_id] = channel.id
+                    channels[current_lobby.lobby_id] = channel.id
                     embed = discord.Embed(
                         title="Seleziona canali",
                         color=discord.Color.blue()
