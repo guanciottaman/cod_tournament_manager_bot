@@ -68,7 +68,7 @@ async def assign_free_slot(
     team_name: str,
     leader_discord_id: int,
     players_names: list[str]
-) -> tuple[int, list[int]] | None:
+) -> tuple[int, int, list[int]] | None:
     team_id = await fetch_one("""
         SELECT team_id 
         FROM teams 
@@ -86,6 +86,7 @@ async def assign_free_slot(
 
     if not row or row[0] is None:
         return None
+    
     await execute("""
         UPDATE teams SET 
             lobby_id = previous_lobby_id,
@@ -96,6 +97,13 @@ async def assign_free_slot(
         """,
         (team_name, leader_discord_id, team_id, event_id)
     )
+    row = await fetch_one(
+        "SELECT lobby_id FROM teams WHERE team_id = ?",
+        (team_id,)
+    )
+    if row is None:
+        return None
+    lobby_id = row[0]
     await execute("DELETE FROM team_members WHERE team_id = ?", (team_id,))
     member_ids: list[int] = []
     for n in players_names:
@@ -106,7 +114,7 @@ async def assign_free_slot(
         member_id = c.lastrowid
         member_ids.append(member_id)
 
-    return (team_id, member_ids)
+    return (team_id, lobby_id, member_ids)
 
 async def edit_teams(team_id: int, players_names: list[str], team_name: str | None = None) -> list[int]:
     if team_name is not None:

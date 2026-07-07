@@ -80,19 +80,6 @@ class Events(commands.Cog):
     def __init__(self, bot: commands.Bot) -> None:
         super().__init__()
         self.bot = bot
-    
-    async def lock_channel_for_leaders(self, channel: discord.TextChannel, guild: discord.Guild, leader_ids: list[int]):
-        await channel.set_permissions(guild.default_role, view_channel=False)
-
-        for leader_id in leader_ids:
-            member = guild.get_member(leader_id)
-            if member:
-                await channel.set_permissions(
-                    member,
-                    view_channel=True,
-                    send_messages=False,
-                    read_message_history=True
-                )
 
     @commands.Cog.listener()
     async def on_guild_join(self, guild: discord.Guild):
@@ -555,7 +542,10 @@ class Events(commands.Cog):
         
         await resolve_event(interaction, embed, events, wrapper)
     
-    @app_commands.command(name="set_lobbies_codes_channels", description="Imposta i canali dove mandare i codici lobby per un certo evento")
+    @app_commands.command(
+        name="set_lobbies_codes_channels",
+        description="Imposta i canali dove mandare i codici lobby per un certo evento"
+    )
     async def set_lobbies_codes_channels(self, interaction: discord.Interaction):
         if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario per impostare i canali dove mandare i codici lobby!", ephemeral=True)
@@ -575,9 +565,13 @@ class Events(commands.Cog):
             emb_description = "Seleziona i canali dove mandare i codici lobby.\nCanali attuali:\n"
             current_channels = await get_lobby_codes_channels(event.event_id)
             if current_channels is not None:
-                for channel_id, lobby_name in zip(current_channels.values(), [l.name for l in lobbies]):
-                    channel = interaction.guild.get_channel(channel_id)
-                    emb_description += f"LOBBY {lobby_name} | {channel.mention}\n"
+                for lobby in lobbies:
+                    channel_id = current_channels.get(lobby.lobby_id)
+
+                    if channel_id:
+                        channel = interaction.guild.get_channel(channel_id)
+                        if channel:
+                            emb_description += f"LOBBY {lobby.name} | {channel.mention}\n"
             embed.description = emb_description
             channels: dict[int, int] = dict()
             view = discord.ui.View()
@@ -591,12 +585,13 @@ class Events(commands.Cog):
                         color=discord.Color.blue()
                     )
                     emb_description = "Seleziona i canali dove mandare i codici lobby.\nCanali attuali:\n"
-                    for channel_id, lobby_name in zip(channels.values(), [l.name for l in lobbies]):
-                        channel = interaction.guild.get_channel(channel_id)
-                        emb_description += f"LOBBY {lobby_name} | {channel.mention}\n"
+                    for lobby in lobbies:
+                        channel_id = channels.get(lobby.lobby_id)
+
+                        if channel_id:
+                            channel = interaction.guild.get_channel(channel_id)
+                            emb_description += f"LOBBY {lobby.name} | {channel.mention}\n"
                     embed.description = emb_description
-                    leader_ids = await get_leader_ids(event.event_id, lobby.lobby_id)
-                    await self.lock_channel_for_leaders(channel, interaction.guild, leader_ids)
                     await interaction.response.edit_message(
                         embed=embed,
                         view=view
@@ -606,6 +601,7 @@ class Events(commands.Cog):
             for lobby in lobbies:
                 select = discord.ui.ChannelSelect(
                     placeholder=f"Seleziona il canale per la lobby {lobby.name}",
+                    channel_types=[discord.ChannelType.text],
                     min_values=1,
                     max_values=1
                 )
@@ -619,6 +615,22 @@ class Events(commands.Cog):
                 if len(lobbies) != len(channels):
                     await interaction.response.send_message("Non hai impostato tutti i canali!", ephemeral=True)
                     return
+                for lobby_id, channel_id in channels.items():
+                    role_id = await get_lobby_role(event.event_id, lobby_id)
+
+                    if role_id is None:
+                        raise ValueError("role doesn't exist")
+
+                    channel = interaction.guild.get_channel(channel_id)
+                    role = interaction.guild.get_role(role_id)
+
+                    if channel is None:
+                        raise ValueError("channel doesn't exist")
+
+                    if role is None:
+                        raise ValueError("role doesn't exist")
+
+                    await lock_channel_for_lobby(channel, role)
                 await set_lobby_codes_channels(event.event_id, channels)
                 await interaction.response.send_message("Hai impostato correttamente i canali!", ephemeral=True)
             confirm_btn.callback = confirm_callback

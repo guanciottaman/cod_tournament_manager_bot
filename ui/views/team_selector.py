@@ -151,6 +151,7 @@ class TeamsSelectorView(discord.ui.View):
             if self.mode == "info":
                 await interaction.response.send_message(embed=embed, ephemeral=True)
             elif self.mode == "switch":
+                old_lobby_id = team.lobby
                 view = discord.ui.View()
                 sposta_team_btn = discord.ui.Button(label="Sposta team", style=discord.ButtonStyle.blurple)
                 async def switch_team_callback(interaction: discord.Interaction):
@@ -165,8 +166,11 @@ class TeamsSelectorView(discord.ui.View):
                         placeholder="Lobby in cui spostare il team...",
                         options=[
                             discord.SelectOption(
-                                label=lobby.name, value=str(lobby.lobby_id)
-                            ) for lobby in lobbies if team not in lobby.teams
+                                label=lobby.name,
+                                value=str(lobby.lobby_id)
+                            )
+                            for lobby in lobbies
+                            if lobby.lobby_id != team.lobby
                         ],
                         min_values=1,
                         max_values=1
@@ -186,6 +190,26 @@ class TeamsSelectorView(discord.ui.View):
                             )
                             return
                         await switch_team_lobby(team.team_id, lobby.lobby_id)
+
+                        try:
+                            await remove_user_lobby_role(
+                                self.event_id,
+                                old_lobby_id,
+                                team.leader_discord_id,
+                                interaction.guild
+                            )
+
+                            await assign_user_lobby_role(
+                                self.event_id,
+                                lobby.lobby_id,
+                                team.leader_discord_id,
+                                interaction.guild
+                            )
+                        except Exception as e:
+                            await interaction.followup.send(
+                                f"Team spostato, ma errore aggiornamento ruoli: {e}",
+                                ephemeral=True
+                            )
                         await interaction.response.send_message(
                             f"Il team {team.name} è stato spostato nella lobby {lobby.name}",
                             ephemeral=True

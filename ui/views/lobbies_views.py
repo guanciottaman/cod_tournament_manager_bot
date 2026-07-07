@@ -4,7 +4,7 @@ from ui.embeds.lobby_builders import *
 from ui.modals.lobbies_names import LobbiesNamesModal
 from services.lobby_service import *
 from services.team_service import get_teams
-from services.event_service import set_event_status, create_lobbies_roles
+from services.event_service import set_event_status, create_lobbies_roles, assign_lobby_roles
 
 
 class LobbyConfigView(discord.ui.View):
@@ -129,9 +129,11 @@ class LobbyConfigView(discord.ui.View):
         await apply_lobbies(self.lobby_ids, lobbies_structure)
         lobbies = await get_lobbies(self.event_id)
 
-        await set_event_status(self.event_id, "setup")
-
         await create_lobbies_roles(self.event_id, interaction.guild)
+        for lobby in lobbies:
+            await assign_lobby_roles(self.event_id, lobby.lobby_id, interaction.guild)
+
+        await set_event_status(self.event_id, "setup")
 
         embed = await build_event_start_summary(lobbies)
 

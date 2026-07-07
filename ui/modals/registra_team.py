@@ -5,7 +5,7 @@ import re
 from services.team_service import *
 from ui.embeds.lobby_builders import build_info_lobby_embed
 from services.lobby_service import get_lobbies
-from services.event_service import get_event_info
+from services.event_service import get_event_info, assign_user_lobby_role
 from services.server_service import get_admin_role_id
 
 async def notify_admins(interaction: discord.Interaction, team_name: str, members: list[tuple[str, float | None]]):
@@ -229,12 +229,8 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
                     if team_tuple is None:
                         await interaction.response.send_message("C'è stato un problema!", ephemeral=True)
                         return
-                    lobbies = await get_lobbies(self.event_id)
-                    event = await get_event_info(self.event_id, interaction.guild_id)
-                    if event is None:
-                        return
-                    embed = build_info_lobby_embed(event.name, lobbies, show_kd=False)
-                    await interaction.user.send(embed=embed)
+                    _, lobby_id, _ = team_tuple
+                    await assign_user_lobby_role(self.event_id, lobby_id, interaction.user.id, interaction.guild)
                 else:
                     await insert_teams(self.event_id, nome_team, interaction.user.id, names)
             except ValueError:
@@ -311,7 +307,8 @@ class TeamKDModal(discord.ui.Modal, title="Inserisci KD team"):
                 if team_tuple is None:
                     await interaction.response.send_message("Nessuno slot disponibile", ephemeral=True)
                     return
-                team_id, member_ids = team_tuple
+                team_id, lobby_id, member_ids = team_tuple
+                await assign_user_lobby_role(self.event_id, lobby_id, interaction.user.id, interaction.guild)
                 players_kd_dict = dict(zip(member_ids, kd_values))
 
                 await update_team_kd(team_id, players_kd_dict)

@@ -378,26 +378,31 @@ async def create_lobbies_roles(event_id: int, guild: discord.Guild):
         "SELECT lobby_id, name FROM lobbies WHERE event_id = ?",
         (event_id,)
     )
-    if not rows:
-        return
-    for lobby_id, name in rows:
-        try:
+
+    created_roles: list[discord.Role] = []
+
+    try:
+        for lobby_id, name in rows:
             role = await guild.create_role(
                 name=f"LOBBY {name}",
                 reason=f"Ruolo creato per l'evento {event_id}"
             )
-        except discord.Forbidden:
-            raise PermissionError("Il bot non può creare ruoli.")
-        except discord.HTTPException as e:
-            raise RuntimeError(f"Errore durante la creazione del ruolo: {e}")
-        try:
+
+            created_roles.append(role)
+
             await execute(
-                    "INSERT INTO lobbies_roles (role_id, event_id, lobby_id) VALUES (?, ?, ?)",
-                    (role.id, event_id, lobby_id)
-                )
-        except aiosqlite.IntegrityError:
-            await role.delete(reason="Rollback")
-            raise ValueError("Lobby role already exists")
+                """
+                INSERT INTO lobbies_roles 
+                (role_id, event_id, lobby_id)
+                VALUES (?, ?, ?)
+                """,
+                (role.id, event_id, lobby_id)
+            )
+
+    except Exception:
+        for role in created_roles:
+            await role.delete(reason="Rollback creazione lobby roles")
+        raise
 
 async def get_lobby_role(event_id: int, lobby_id: int) -> int | None:
     row = await fetch_one(
@@ -431,7 +436,7 @@ async def delete_lobbies_roles(event_id: int, guild: discord.Guild):
         except (discord.Forbidden, discord.HTTPException):
             pass
 
-async def assing_lobby_roles(event_id: int, lobby_id: int, guild: discord.Guild):
+async def assign_lobby_roles(event_id: int, lobby_id: int, guild: discord.Guild):
     role_id = await get_lobby_role(event_id, lobby_id)
     if role_id is None:
         raise ValueError("role not set")
@@ -445,7 +450,86 @@ async def assing_lobby_roles(event_id: int, lobby_id: int, guild: discord.Guild)
             continue
         if role in leader.roles:
             continue
-        await leader.add_roles(role)
+        try:
+            await leader.add_roles(role)
+        except discord.Forbidden:
+            raise PermissionError("bot has not permission to assign roles")
+        except discord.HTTPException:
+            continue
+
+async def lock_channel_for_lobby(
+    channel: discord.TextChannel,
+    role: discord.Role
+):
+    await channel.set_permissions(
+        channel.guild.default_role,
+        view_channel=False
+    )
+
+    await channel.set_permissions(
+        role,
+        view_channel=True,
+        send_messages=False,
+        read_message_history=True
+    )
+
+
+async def assign_user_lobby_role(
+    event_id: int,
+    lobby_id: int,
+    user_id: int,
+    guild: discord.Guild
+):
+    role_id = await get_lobby_role(event_id, lobby_id)
+
+    if role_id is None:
+        raise ValueError("Lobby role not found")
+
+    role = guild.get_role(role_id)
+
+    if role is None:
+        raise ValueError("Discord role does not exist")
+
+    member = guild.get_member(user_id)
+
+    if member is None:
+        raise ValueError("User is not in the guild")
+
+    if role in member.roles:
+        return
+
+    await member.add_roles(
+        role,
+        reason=f"Assegnazione ruolo lobby {lobby_id} evento {event_id}"
+    )
+
+
+async def remove_user_lobby_role(
+    event_id: int,
+    lobby_id: int,
+    user_id: int,
+    guild: discord.Guild
+):
+    role_id = await get_lobby_role(event_id, lobby_id)
+
+    if role_id is None:
+        return
+
+    role = guild.get_role(role_id)
+
+    if role is None:
+        return
+
+    member = guild.get_member(user_id)
+
+    if member is None:
+        return
+
+    if role in member.roles:
+        await member.remove_roles(
+            role,
+            reason=f"Rimozione ruolo lobby {lobby_id} evento {event_id}"
+        )
 
 async def check_event_config_complete(event_id: int, guild_id: int) -> list[str]:
     missing: list[str] = []
