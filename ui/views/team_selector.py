@@ -267,6 +267,7 @@ class TeamsSelectorView(discord.ui.View):
                     style=discord.ButtonStyle.red
                 )
                 async def delete_team_callback(interaction: discord.Interaction):
+                    await remove_user_lobby_role(event.event_id, team.lobby, team.leader_discord_id, interaction.guild)
                     await delete_team(team_id, event.status)
                     await interaction.response.send_message("Team eliminato con successo!", ephemeral=True)
                 delete_btn.callback = delete_team_callback
