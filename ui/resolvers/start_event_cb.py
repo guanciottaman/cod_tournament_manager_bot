@@ -1,5 +1,4 @@
 import discord
-import asyncio
 
 from models.event import Event
 from ui.embeds.lobby_builders import build_event_start_summary

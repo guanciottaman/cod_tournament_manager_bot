@@ -533,23 +533,38 @@ async def remove_user_lobby_role(
 
 async def check_event_config_complete(event_id: int, guild_id: int) -> list[str]:
     missing: list[str] = []
+
     row = await fetch_one(
-        "SELECT ranking_channel_id, admin_role_id, live_ranking_channel_id, lobbies_channel_id FROM server_configs WHERE guild_id = ?",
+        """
+        SELECT ranking_channel_id, admin_role_id, live_ranking_channel_id, lobbies_channel_id
+        FROM server_configs
+        WHERE guild_id = ?
+        """,
         (guild_id,)
     )
+
     if row is None:
-        missing.extend(["Canale classifiche", "Ruolo admin", "Canale classifiche live", "Canale lobby"])
+        missing.extend([
+            "Canale classifiche",
+            "Ruolo admin",
+            "Canale classifiche live",
+            "Canale lobby"
+        ])
     else:
-        for rc_id, ar_id, lrc_id, lc_id in row:
-            if rc_id is None:
-                missing.append("Canale classifiche")
-            if ar_id is None:
-                missing.append("Ruolo admin")
-            if lrc_id is None:
-                missing.append("Canale classifiche live")
-            if lc_id is None:
-                missing.append("Canale lobby")
+        rc_id, ar_id, lrc_id, lc_id = row
+
+        if rc_id is None:
+            missing.append("Canale classifiche")
+        if ar_id is None:
+            missing.append("Ruolo admin")
+        if lrc_id is None:
+            missing.append("Canale classifiche live")
+        if lc_id is None:
+            missing.append("Canale lobby")
+
     lobby_codes_channels = await get_lobby_codes_channels(event_id)
+
     if lobby_codes_channels is None:
         missing.append("Canali codici lobby")
+
     return missing
