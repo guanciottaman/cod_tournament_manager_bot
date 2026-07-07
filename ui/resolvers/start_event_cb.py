@@ -16,6 +16,7 @@ async def start_event_callback(interaction: discord.Interaction, event: Event):
         emb_description = "Le seguenti impostazioni non sono state impostate correttamente:\n"
         for m in missing:
             emb_description += f"- {m}\n"
+        embed.description = emb_description
         await interaction.response.send_message(embed=embed, ephemeral=True)
         return
     lobbies = await get_lobbies(event.event_id)

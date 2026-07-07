@@ -536,9 +536,9 @@ async def check_event_config_complete(event_id: int, guild_id: int) -> list[str]
 
     row = await fetch_one(
         """
-        SELECT ranking_channel_id, admin_role_id, live_ranking_channel_id, lobbies_channel_id
-        FROM server_configs
-        WHERE guild_id = ?
+            SELECT ranking_channel_id, admin_role_id, live_ranking_channel_id, lobbies_channel_id
+            FROM server_configs
+            WHERE guild_id = ?
         """,
         (guild_id,)
     )
