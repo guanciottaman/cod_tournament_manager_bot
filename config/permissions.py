@@ -1,7 +1,6 @@
 BASE_SEND_PERMS = {
     "view_channel": "Visualizzare il canale",
-    "send_messages": "Inviare messaggi",
-    "embed_links": "Inviare embed",
+    "send_messages": "Inviare messaggi"
 }
 
 READ_HISTORY_PERMS = {
