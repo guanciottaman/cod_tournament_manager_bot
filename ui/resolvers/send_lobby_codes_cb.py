@@ -47,11 +47,35 @@ async def send_lobby_codes_callback(
             await interaction.followup.send("Non è stato impostato un canale per questa lobby!", ephemeral=True)
             return
         lobby_codes_channel = guild.get_channel(lobby_codes_channel_id)
-        try:
-            await lobby_codes_channel.send(embed=embed)
-            await interaction.followup.send(f"Codice mandato in {lobby_codes_channel.mention}", ephemeral=True)
-        except discord.Forbidden:
-            await interaction.followup.send("Mancano i permessi per il canale!", ephemeral=True)
+        if lobby_codes_channel is None:
+            await interaction.followup.send("Il canale non esiste!", ephemeral=True)
+            return
+        view = discord.ui.View()
+        yes_btn = discord.ui.Button(
+            style=discord.ButtonStyle.green,
+            label="Conferma"
+        )
+        cancel_btn = discord.ui.Button(
+            style=discord.ButtonStyle.gray,
+            label="Annulla"
+        )
+        async def yes_callback(interaction: discord.Interaction):
+            try:
+                await lobby_codes_channel.send(embed=embed)
+                await interaction.response.send_message(f"Codice mandato in {lobby_codes_channel.mention}", ephemeral=True)
+            except discord.Forbidden:
+                await interaction.response.send_message("Mancano i permessi per il canale!", ephemeral=True)
+        yes_btn.callback = yes_callback
+        view.add_item(yes_btn)
+        async def cancel_callback(interaction: discord.Interaction):
+            await interaction.response.send_message("Hai annullato l'invio del codice.", ephemeral=True)
+        cancel_btn.callback = cancel_callback
+        view.add_item(cancel_btn)
+        await interaction.followup.send(
+            f"Stai per mandare il codice **{code}** nel canale {lobby_codes_channel.mention}",
+            view=view,
+            ephemeral=True
+        )
         
     select.callback = select_callback
     view.add_item(select)

@@ -50,11 +50,12 @@ class TeamsSelectorView(discord.ui.View):
             self.lobby_ids.sort()
         self.add_item(self.build_select())
 
-    async def notify_users(self, interaction: discord.Interaction):
+    async def notify_users(self, interaction: discord.Interaction, team_name: str, new_lobby_name: str):
         await interaction.response.defer(thinking=True, ephemeral=True)
         lobbies = await get_lobbies(self.event_id)
         embed = build_info_lobby_embed(self.event.name, lobbies, show_kd=False)
         embed.title = "AGGIORNAMENTO TEAM LOBBY"
+        embed.set_footer(text=f"Il team {team_name} è stato spostato nella LOBBY {new_lobby_name}")
 
         guild = interaction.guild
         if guild is None:
