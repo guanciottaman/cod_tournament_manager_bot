@@ -110,6 +110,8 @@ class LobbyConfigView(discord.ui.View):
                 ephemeral=True
             )
             return
+        
+        await interaction.edit_original_response(content="Creazione lobby...")
 
         teams = await get_teams(self.event_id)
         lobbies_structure = generate_lobbies(
@@ -120,9 +122,8 @@ class LobbyConfigView(discord.ui.View):
         for lobby in lobbies_structure:
             lobby.sort(key=lambda t: t.kd or 0, reverse=True)
         if not lobbies_structure:
-            await interaction.followup.send(
-                "Errore creazione lobby",
-                ephemeral=True
+            await interaction.edit_original_response(
+                content="Errore creazione lobby"
             )
             return
         
@@ -140,9 +141,8 @@ class LobbyConfigView(discord.ui.View):
         permissions = me.guild_permissions
 
         if not permissions.manage_roles:
-            await interaction.followup.send(
-                "Non posso creare i ruoli in questo server. Ho bisogno del permesso 'Gestire i ruoli'",
-                ephemeral=True
+            await interaction.edit_original_response(
+                content="Non posso creare i ruoli in questo server. Ho bisogno del permesso 'Gestire i ruoli'"
             )
             return
         await create_lobbies_roles(self.event_id, interaction.guild)
