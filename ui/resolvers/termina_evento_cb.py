@@ -14,6 +14,10 @@ MEDALS: dict[int, str] = {
     3: "🥉"
 }
 
+def format_rank(rank_number: int) -> str:
+    rank = MEDALS.get(rank_number, f"{rank_number}°")
+    return f"{rank:<4}" if rank_number <= 3 else f"{rank:<5}"
+
 def build_ranking_description(rows: list[dict[str, Any]], is_mvp: bool = False) -> str:
     description = "```text\n"
 
@@ -22,22 +26,20 @@ def build_ranking_description(rows: list[dict[str, Any]], is_mvp: bool = False) 
         description += "-" * 37 + "\n"
 
         for i, row in enumerate(rows):
-            rank = MEDALS.get(i + 1, f"{i+1}°")
             player = clean_player_name(row.get("player", "Unknown"))[:24]
             kills = row.get("kills", 0)
 
-            description += f"{rank:<6}{player:<25}{kills:>6}\n"
+            description += f"{format_rank(i+1)}{player:<25}{kills:>6}\n"
 
     else:
         description += f"{'RANK':<6}{'TEAM':<25}{'PUNTI':>6}\n"
         description += "-" * 37 + "\n"
 
         for i, row in enumerate(rows):
-            rank = MEDALS.get(i + 1, f"{i+1}°")
             team = row["name"][:24]
             score = row["score"]
 
-            description += f"{rank:<6}{team:<25}{score:>6}\n"
+            description += f"{format_rank(i+1)}{team:<25}{score:>6}\n"
 
     description += "```"
 
