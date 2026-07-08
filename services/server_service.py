@@ -217,3 +217,48 @@ async def unblacklist_guild(guild_id: int):
     )
 
     blacklist_cache.pop(guild_id, None)
+
+async def check_bot_permissions(guild: discord.Guild) -> list[str]:
+    me = guild.get_member(guild.me.id)
+    
+
+    required = {
+        "view_channel": "Visualizzare i canali",
+        "send_messages": "Inviare messaggi",
+        "embed_links": "Inviare embed",
+        "read_message_history": "Leggere la cronologia messaggi",
+        "manage_roles": "Gestire i ruoli",
+        "manage_channels": "Gestire i canali",
+        "use_application_commands": "Usare gli slash command",
+    }
+    if me is None:
+        return list(required.values())
+
+    missing: list[str] = []
+
+    perms = me.guild_permissions
+
+    for attr, label in required.items():
+        if not getattr(perms, attr):
+            missing.append(label)
+
+    return missing
+
+async def check_channel_permissions(
+    channel: discord.abc.GuildChannel,
+    guild: discord.Guild,
+    required: dict[str, str]
+) -> list[str]:
+    me = guild.me
+    if not me:
+        return ["Non puoi usarmi dai DM"]
+
+    perms = channel.permissions_for(me)
+
+    missing: list[str] = []
+
+    for attr, label in required.items():
+        if not getattr(perms, attr):
+            missing.append(label)
+
+    return missing

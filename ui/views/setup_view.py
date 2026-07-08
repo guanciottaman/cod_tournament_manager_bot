@@ -2,6 +2,7 @@ import discord
 
 from services.server_service import *
 from ui.embeds.event_builders import build_server_config_embed
+from config.permissions import RANKING_CHANNEL_PERMS, READ_HISTORY_PERMS
 
 
 class SetupView(discord.ui.View):
@@ -23,6 +24,28 @@ class SetupView(discord.ui.View):
     )
     async def select_ranking_channel(self, interaction: discord.Interaction, select: discord.ui.ChannelSelect):
         self.ranking_channel = select.values[0]
+        if self.ranking_channel is None:
+            await interaction.response.send_message("Canale non trovato!", ephemeral=True)
+            return
+        if interaction.guild is None:
+            await interaction.response.send_message("Non puoi usarmi dai DM", ephemeral=True)
+            return
+        missing = await check_channel_permissions(self.ranking_channel, interaction.guild, RANKING_CHANNEL_PERMS)
+        if missing:
+            embed = discord.Embed(
+                title="Permessi mancanti",
+                color=discord.Color.red(),
+                description=(
+                    f"Mancano i seguenti permessi per il canale {self.ranking_channel.mention}:\n"
+                    + "\n".join(f"- {perm}" for perm in missing)
+                )
+            )
+
+            await interaction.response.send_message(
+                embed=embed,
+                ephemeral=True
+            )
+            return
         await interaction.response.edit_message(
             embed=build_server_config_embed(
                 interaction.guild.name,
@@ -43,6 +66,9 @@ class SetupView(discord.ui.View):
     )
     async def select_admin_role(self, interaction: discord.Interaction, select: discord.ui.RoleSelect):
         self.admin_role = select.values[0]
+        if interaction.guild is None:
+            await interaction.response.send_message("Non puoi usarmi dai DM", ephemeral=True)
+            return
         await interaction.response.edit_message(
             embed=build_server_config_embed(
                 interaction.guild.name,
@@ -63,6 +89,32 @@ class SetupView(discord.ui.View):
     )
     async def select_live_ranking_channel(self, interaction: discord.Interaction, select: discord.ui.ChannelSelect):
         self.live_ranking_channel = select.values[0]
+        if self.live_ranking_channel is None:
+            await interaction.response.send_message("Canale non trovato!", ephemeral=True)
+            return
+        if interaction.guild is None:
+            await interaction.response.send_message("Non puoi usarmi dai DM", ephemeral=True)
+            return
+        missing = await check_channel_permissions(
+            self.live_ranking_channel,
+            interaction.guild,
+            RANKING_CHANNEL_PERMS | READ_HISTORY_PERMS
+        )
+        if missing:
+            embed = discord.Embed(
+                title="Permessi mancanti",
+                color=discord.Color.red(),
+                description=(
+                    f"Mancano i seguenti permessi per il canale {self.ranking_channel.mention}:\n"
+                    + "\n".join(f"- {perm}" for perm in missing)
+                )
+            )
+
+            await interaction.response.send_message(
+                embed=embed,
+                ephemeral=True
+            )
+            return
         await interaction.response.edit_message(
             embed=build_server_config_embed(
                 interaction.guild.name,
@@ -83,6 +135,28 @@ class SetupView(discord.ui.View):
     )
     async def select_lobbies_channel(self, interaction: discord.Interaction, select: discord.ui.ChannelSelect):
         self.lobbies_channel = select.values[0]
+        if self.lobbies_channel is None:
+            await interaction.response.send_message("Canale non trovato!", ephemeral=True)
+            return
+        if interaction.guild is None:
+            await interaction.response.send_message("Non puoi usarmi dai DM", ephemeral=True)
+            return
+        missing = await check_channel_permissions(self.lobbies_channel, interaction.guild, RANKING_CHANNEL_PERMS)
+        if missing:
+            embed = discord.Embed(
+                title="Permessi mancanti",
+                color=discord.Color.red(),
+                description=(
+                    f"Mancano i seguenti permessi per il canale {self.ranking_channel.mention}:\n"
+                    + "\n".join(f"- {perm}" for perm in missing)
+                )
+            )
+
+            await interaction.response.send_message(
+                embed=embed,
+                ephemeral=True
+            )
+            return
         await interaction.response.edit_message(
             embed=build_server_config_embed(
                 interaction.guild.name,
@@ -99,6 +173,18 @@ class SetupView(discord.ui.View):
         row=4
     )
     async def confirm_setup(self, interaction: discord.Interaction, button: discord.ui.Button):
+        missing = await check_bot_permissions(interaction.guild)
+        if missing:
+            embed = discord.Embed(
+                title="Permessi mancanti",
+                color=discord.Color.red()
+            )
+            emb_description = "Al bot mancano i seguenti permessi:\n"
+            for m in missing:
+                emb_description += f"- {m}\n"
+            embed.description = emb_description
+            await interaction.response.send_message(embed=embed, ephemeral=True)
+            return
         if not self.edit_mode:
             if not all([
                 self.ranking_channel,
@@ -107,6 +193,9 @@ class SetupView(discord.ui.View):
                 self.lobbies_channel
             ]):
                 await interaction.response.send_message("Tutte le opzioni devono essere inserite!", ephemeral=True)
+                return
+            if interaction.guild_id is None:
+                await interaction.response.send_message("Non puoi usarmi dai DM", ephemeral=True)
                 return
             success = await create_server_config(
                 interaction.guild_id,
@@ -133,6 +222,9 @@ class SetupView(discord.ui.View):
                     "Non hai modificato nessun valore.",
                     ephemeral=True
                 )
+                return
+            if interaction.guild_id is None:
+                await interaction.response.send_message("Non puoi usarmi dai DM", ephemeral=True)
                 return
             await edit_server_config(
                 interaction.guild_id,
@@ -163,6 +255,9 @@ class DeleteServerView(discord.ui.View):
         style=discord.ButtonStyle.danger
     )
     async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.guild_id is None:
+            await interaction.response.send_message("Non puoi usarmi dai DM", ephemeral=True)
+            return
         await delete_server_config(interaction.guild_id)
         await interaction.response.edit_message(
             content="Server rimosso dal sistema con successo.",

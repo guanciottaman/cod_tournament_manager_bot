@@ -398,7 +398,8 @@ async def create_lobbies_roles(event_id: int, guild: discord.Guild):
                 """,
                 (role.id, event_id, lobby_id)
             )
-
+    except discord.Forbidden:
+        raise PermissionError("Missing manage roles permission")
     except Exception:
         for role in created_roles:
             await role.delete(reason="Rollback creazione lobby roles")
