@@ -55,7 +55,7 @@ class TeamsSelectorView(discord.ui.View):
         lobbies = await get_lobbies(self.event_id)
         embed = build_info_lobby_embed(self.event.name, lobbies, show_kd=False)
         embed.title = "AGGIORNAMENTO TEAM LOBBY (Controllate il vostro SLOT)"
-        embed.set_footer(text=f"Il team {team_name} è stato spostato nella LOBBY {new_lobby_name}")
+        embed.set_footer(text=f"ATTENZIONE: Il team {team_name} è stato spostato nella LOBBY {new_lobby_name}")
 
         guild = interaction.guild
         if guild is None:
