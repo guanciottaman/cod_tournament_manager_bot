@@ -225,7 +225,7 @@ class TeamsSelectorView(discord.ui.View):
                             style=discord.ButtonStyle.red
                         )
                         async def yes_callback(interaction: discord.Interaction):
-                            await self.notify_users(interaction)
+                            await self.notify_users(interaction, team.name, lobby.name)
                         sposta_team_yes.callback = yes_callback
                         async def no_callback(interaction: discord.Interaction):
                             await interaction.response.send_message("Non è stato mandato nessun dm.", ephemeral=True)
