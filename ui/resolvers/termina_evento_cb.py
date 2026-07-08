@@ -62,7 +62,7 @@ async def termina_evento_callback(
         for j, r in enumerate(lobby_ranking):
             team_name = r["name"]
             team_score = r["score"]
-            lobby_team_emb_description += f"{f'{j+1}°' if j+1>3 else MEDALS[j+1]} {team_name}| {team_score} punti\n"
+            lobby_team_emb_description += f"{f'{j+1}°' if j+1>3 else MEDALS[j+1]} {team_name} | {team_score} punti\n"
         lobby_team_embed.description = lobby_team_emb_description
         embeds.append(lobby_team_embed)
         mvp_lobby_embed = discord.Embed(
