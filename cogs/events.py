@@ -439,7 +439,7 @@ class Events(commands.Cog):
 
             lobbies_channel_id = await get_lobbies_channel_id(guild.id)
             if lobbies_channel_id is None:
-                await interaction.response.send_message("Non hai impostato un canale dove mandare le lobby!", ephemeral=True)
+                await interaction.followup.send("Non hai impostato un canale dove mandare le lobby!", ephemeral=True)
                 return
             lobbies_channel = guild.get_channel(lobbies_channel_id)
             if lobbies_channel is None:
