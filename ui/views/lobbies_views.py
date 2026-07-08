@@ -130,7 +130,7 @@ class LobbyConfigView(discord.ui.View):
         lobbies = await get_lobbies(self.event_id)
         guild = interaction.guild
         if guild is None:
-            await interaction.response.send_message("Non puoi eseguirlo da un DM", ephemeral=True)
+            await interaction.followup.send("Non puoi eseguirlo da un DM", ephemeral=True)
             return
 
         me = guild.get_member(interaction.client.user.id)
@@ -140,7 +140,7 @@ class LobbyConfigView(discord.ui.View):
         permissions = me.guild_permissions
 
         if not permissions.manage_roles:
-            await interaction.response.send_message(
+            await interaction.followup.send(
                 "Non posso creare i ruoli in questo server. Ho bisogno del permesso 'Gestire i ruoli'",
                 ephemeral=True
             )
