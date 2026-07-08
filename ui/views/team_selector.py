@@ -71,6 +71,7 @@ class TeamsSelectorView(discord.ui.View):
             return
         try:
             await lobbies_channel.send(embed=embed)
+            await interaction.followup.send(f"Aggiornamento mandato su {lobbies_channel.mention}")
         except (discord.Forbidden, discord.HTTPException):
             await interaction.followup.send("C'è stato un problema nel mandare l'aggiornamento!", ephemeral=True)
 
