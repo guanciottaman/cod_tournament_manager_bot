@@ -23,20 +23,20 @@ def build_ranking_description(rows: list[dict[str, Any]], is_mvp: bool = False) 
 
     if is_mvp:
         description += f"{'RANK':<6}{'PLAYER':<20}{'KILL':>6}\n"
-        description += "-" * 37 + "\n"
+        description += "-" * 32 + "\n"
 
         for i, row in enumerate(rows):
-            player = clean_player_name(row.get("player", "Unknown"))[:24]
+            player = clean_player_name(row.get("player", "Unknown"))[:25]
             kills = row.get("kills", 0)
 
             description += f"{format_rank(i+1)}{player:<25}{kills:>6}\n"
 
     else:
         description += f"{'RANK':<6}{'TEAM':<20}{'PUNTI':>6}\n"
-        description += "-" * 37 + "\n"
+        description += "-" * 32 + "\n"
 
         for i, row in enumerate(rows):
-            team = row["name"][:24]
+            team = row["name"][:25]
             score = row["score"]
 
             description += f"{format_rank(i+1)}{team:<20}{score:>6}\n"
