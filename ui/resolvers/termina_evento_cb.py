@@ -14,43 +14,41 @@ MEDALS: dict[int, str] = {
     3: "🥉"
 }
 
+def build_ranking_description(rows: list[dict[str, Any]], is_mvp: bool = False) -> str:
+    description = "```text\n"
+
+    if is_mvp:
+        description += f"{'RANK':<6}{'PLAYER':<25}{'KILL':>6}\n"
+        description += "-" * 37 + "\n"
+
+        for i, row in enumerate(rows):
+            rank = MEDALS.get(i + 1, f"{i+1}°")
+            player = clean_player_name(row.get("player", "Unknown"))[:24]
+            kills = row.get("kills", 0)
+
+            description += f"{rank:<6}{player:<25}{kills:>6}\n"
+
+    else:
+        description += f"{'RANK':<6}{'TEAM':<25}{'PUNTI':>6}\n"
+        description += "-" * 37 + "\n"
+
+        for i, row in enumerate(rows):
+            rank = MEDALS.get(i + 1, f"{i+1}°")
+            team = row["name"][:24]
+            score = row["score"]
+
+            description += f"{rank:<6}{team:<25}{score:>6}\n"
+
+    description += "```"
+
+    return description
+
 def build_ranking_embed(title: str, rows: list[dict[str, Any]], is_mvp: bool = False):
-    embed = discord.Embed(
+    return discord.Embed(
         title=title,
+        description=build_ranking_description(rows, is_mvp),
         color=discord.Color.blurple()
     )
-
-    rank = ""
-    names = ""
-    values = ""
-
-    for i, row in enumerate(rows):
-        rank += f"{MEDALS.get(i + 1, f'{i+1}°')}\n"
-
-        if is_mvp:
-            names += f"{clean_player_name(row.get('player', 'Unknown'))}\n"
-            values += f"{row.get('kills', 0)} kill\n"
-        else:
-            names += f"{row['name']}\n"
-            values += f"{row['score']} punti\n"
-
-    embed.add_field(
-        name="RANK",
-        value=rank or "-",
-        inline=True
-    )
-    embed.add_field(
-        name="TEAM" if not is_mvp else "PLAYER",
-        value=names or "-",
-        inline=True
-    )
-    embed.add_field(
-        name="PUNTEGGIO" if not is_mvp else "KILL",
-        value=values or "-",
-        inline=True
-    )
-
-    return embed
 
 async def termina_evento_callback(
     interaction: discord.Interaction,
