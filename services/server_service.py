@@ -225,6 +225,7 @@ async def check_bot_permissions(guild: discord.Guild) -> list[str]:
     required = {
         "view_channel": "Visualizzare i canali",
         "send_messages": "Inviare messaggi",
+        "embed_links": "Incorporare i link",
         "read_message_history": "Leggere la cronologia messaggi",
         "manage_roles": "Gestire i ruoli",
         "manage_channels": "Gestire i canali",
