@@ -29,7 +29,7 @@ def build_ranking_description(rows: list[dict[str, Any]], is_mvp: bool = False) 
             player = clean_player_name(row.get("player", "Unknown"))[:25]
             kills = row.get("kills", 0)
 
-            description += f"{format_rank(i+1)}{player:<25}{kills:>6}\n"
+            description += f"{format_rank(i+1)}{player:<20}{kills:>6}\n"
 
     else:
         description += f"{'RANK':<6}{'TEAM':<20}{'PUNTI':>6}\n"
