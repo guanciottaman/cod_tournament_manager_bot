@@ -9,6 +9,7 @@ READ_HISTORY_PERMS = {
 
 MANAGE_CHANNEL_PERMS = {
     "manage_channels": "Gestire i canali",
+    "manage_permissions": "Gestire i permessi"
 }
 
 LOBBY_CODES_CHANNEL_PERMS = (
