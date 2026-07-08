@@ -36,10 +36,9 @@ async def termina_evento_callback(
     )
     emb_description = "**RANK | TEAM | PUNTEGGIO**\n"
     for i, r in enumerate(teams_ranking_global):
-        team_id = r["team_id"]
         team_name = r["name"]
         team_score = r["score"]
-        emb_description += f"{i+1 if i+1>3 else MEDALS[i+1]}. {team_name} | {team_score} punti\n"
+        emb_description += f"{f'{i+1}°' if i+1>3 else MEDALS[i+1]} {team_name} | {team_score} punti\n"
     general_embed.description = emb_description
     embeds.append(general_embed)
     mvp_general_embed = discord.Embed(
@@ -61,10 +60,9 @@ async def termina_evento_callback(
         lobby_team_emb_description = "**RANK | TEAM | PUNTEGGIO**\n"
         lobby_ranking: list[dict[str, Any]] = await compute_team_ranking(event_id, "lobby", lobby_id=lobby.lobby_id)
         for j, r in enumerate(lobby_ranking):
-            team_id = r["team_id"]
             team_name = r["name"]
             team_score = r["score"]
-            lobby_team_emb_description += f"{j+1 if j+1>3 else MEDALS[j+1]}. {team_name}| ID {team_id} | {team_score} punti\n"
+            lobby_team_emb_description += f"{f'{j+1}°' if j+1>3 else MEDALS[j+1]} {team_name}| {team_score} punti\n"
         lobby_team_embed.description = lobby_team_emb_description
         embeds.append(lobby_team_embed)
         mvp_lobby_embed = discord.Embed(
@@ -77,7 +75,7 @@ async def termina_evento_callback(
         for j, r in enumerate(mvp_lobby_ranking):
             player_name = r["player"]
             player_kills = r["kills"]
-            mvp_lobby_emb_description += f"{j+1 if j+1>3 else MEDALS[j+1]}. {player_name} | {player_kills} kill\n"
+            mvp_lobby_emb_description += f"{f'{j+1}°' if j+1>3 else MEDALS[j+1]} {player_name} | {player_kills} kill\n"
         mvp_lobby_embed.description = mvp_lobby_emb_description
         embeds.append(mvp_lobby_embed)
     try:
