@@ -4,7 +4,6 @@ from discord import app_commands
 
 from typing import Literal
 
-from models.lobby import Lobby
 from ui.embeds.event_builders import *
 from ui.embeds.lobby_builders import build_info_lobby_embed
 from ui.modals.nome_evento import NomeEventoModal
@@ -18,6 +17,7 @@ from ui.resolvers.delete_team_cb import delete_team_callback, delete_team_callba
 from ui.resolvers.termina_evento_cb import termina_evento_callback
 from ui.resolvers.info_lobby_cb import info_lobbies_callback
 from ui.resolvers.send_lobby_codes_cb import send_lobby_codes_callback
+from ui.resolvers.set_lobbies_codes_cb import set_lobby_codes_callback
 from services.event_service import *
 from services.event_flow import resolve_event
 from services.server_service import *
@@ -557,7 +557,7 @@ class Events(commands.Cog):
             description="Questa è una lista degli eventi in corso.\nScegli l'evento di cui vuoi impostare i canali codici lobby."
         )
         
-        await resolve_event(interaction, embed, events, event_selector_callback)
+        await resolve_event(interaction, embed, events, set_lobby_codes_callback)
 
     @app_commands.command(name="termina_evento", description="Termina un evento")
     async def termina_evento(self, interaction: discord.Interaction):
