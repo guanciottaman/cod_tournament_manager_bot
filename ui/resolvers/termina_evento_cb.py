@@ -15,7 +15,7 @@ MEDALS: dict[int, str] = {
 }
 
 def format_rank(rank_number: int) -> str:
-    rank = MEDALS.get(rank_number, f"{rank_number}°")
+    rank = MEDALS.get(rank_number, f"{rank_number}{'' if len(str(rank_number)) > 1 else ' '}°")
     return f"{rank:<4}" if rank_number <= 3 else f"{rank:<5}"
 
 def build_ranking_description(rows: list[dict[str, Any]], is_mvp: bool = False) -> str:
@@ -31,7 +31,7 @@ def build_ranking_description(rows: list[dict[str, Any]], is_mvp: bool = False) 
             description += f"{format_rank(i+1)}{player:<16}{kills:>6}\n"
 
     else:
-        description += f"{'RANK':<6}{'TEAM':<20}{'PUNTI':>6}\n
+        description += f"{'RANK':<6}{'TEAM':<20}{'PUNTI':>6}\n"
 
         for i, row in enumerate(rows):
             team = row["name"][:25]
