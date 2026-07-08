@@ -21,40 +21,25 @@ def format_rank(rank_number: int) -> str:
 def build_ranking_description(rows: list[dict[str, Any]], is_mvp: bool = False) -> str:
     description = "```text\n"
 
-    if not rows:
-        return description + "Nessun risultato\n```"
-
     if is_mvp:
-        names = [
-            clean_player_name(row.get("player", "Unknown"))
-            for row in rows
-        ]
-        name_width = min(max(len(name) for name in names), 22)
-
-        description += f"{'RANK':<5}{'PLAYER':<{name_width}}{'KILL':>6}\n"
-        description += "-" * (5 + name_width + 6) + "\n"
+        description += f"{'RANK':<6}{'PLAYER':<20}{'KILL':>6}\n"
+        description += "-" * 37 + "\n"
 
         for i, row in enumerate(rows):
-            player = clean_player_name(row.get("player", "Unknown"))[:name_width]
+            player = clean_player_name(row.get("player", "Unknown"))[:24]
             kills = row.get("kills", 0)
 
-            description += f"{format_rank(i+1):<5}{player:<{name_width}}{kills:>6}\n"
+            description += f"{format_rank(i+1)}{player:<25}{kills:>6}\n"
 
     else:
-        names = [
-            row["name"]
-            for row in rows
-        ]
-        name_width = min(max(len(name) for name in names), 22)
-
-        description += f"{'RANK':<5}{'TEAM':<{name_width}}{'PUNTI':>6}\n"
-        description += "-" * (5 + name_width + 6) + "\n"
+        description += f"{'RANK':<6}{'TEAM':<20}{'PUNTI':>6}\n"
+        description += "-" * 37 + "\n"
 
         for i, row in enumerate(rows):
-            team = row["name"][:name_width]
+            team = row["name"][:24]
             score = row["score"]
 
-            description += f"{format_rank(i+1):<5}{team:<{name_width}}{score:>6}\n"
+            description += f"{format_rank(i+1)}{team:<20}{score:>6}\n"
 
     description += "```"
 
