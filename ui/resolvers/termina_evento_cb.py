@@ -22,7 +22,7 @@ def build_ranking_description(rows: list[dict[str, Any]], is_mvp: bool = False) 
     description = ""
 
     if is_mvp:
-        description += f"**RANK | PLAYER | KILL**"
+        description += f"**RANK | PLAYER | KILL**\n"
 
         for i, row in enumerate(rows):
             player = clean_player_name(row.get("player", "Unknown"))[:25]
@@ -43,8 +43,6 @@ def build_ranking_description(rows: list[dict[str, Any]], is_mvp: bool = False) 
             description += (
                 f"{format_rank(i+1)} **{team}** | {score} pts | {kills} kill\n"
             )
-
-    description += "```"
     return description
 
 def build_ranking_embed(title: str, rows: list[dict[str, Any]], is_mvp: bool = False):
