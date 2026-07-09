@@ -18,8 +18,8 @@ def format_rank(rank_number: int) -> str:
     rank = MEDALS.get(rank_number, f"{rank_number}{'' if len(str(rank_number)) > 1 else ' '}°")
     return f"{rank:<4}" if rank_number <= 3 else f"{rank:<5}"
 
-def build_ranking_description(rows: list[dict[str, Any]], is_mvp: bool = False) -> str:
-    description = ""
+def build_ranking_description(title: str, rows: list[dict[str, Any]], is_mvp: bool = False) -> str:
+    description = f"**{title}**\n"
 
     if is_mvp:
         description += f"**RANK | PLAYER | KILL**\n"
@@ -48,7 +48,7 @@ def build_ranking_description(rows: list[dict[str, Any]], is_mvp: bool = False) 
 def build_ranking_embed(title: str, rows: list[dict[str, Any]], is_mvp: bool = False):
     return discord.Embed(
         title=title,
-        description=build_ranking_description(rows, is_mvp),
+        description=build_ranking_description(title, rows, is_mvp),
         color=discord.Color.blurple()
     )
 
