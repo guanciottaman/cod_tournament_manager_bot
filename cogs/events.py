@@ -443,6 +443,7 @@ class Events(commands.Cog):
                 return
             lobbies_channel = guild.get_channel(lobbies_channel_id)
             if lobbies_channel is None:
+                await interaction.followup.send("Canale non trovato", ephemeral=True)
                 return
             await lobbies_channel.send(embed=embed)
             await interaction.followup.send(f"Lobby mandate nel canale {lobbies_channel.mention}", ephemeral=True)
