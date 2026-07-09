@@ -18,35 +18,30 @@ def format_rank(rank_number: int) -> str:
     rank = MEDALS.get(rank_number, f"{rank_number}{'' if len(str(rank_number)) > 1 else ' '}°")
     return f"{rank:<4}" if rank_number <= 3 else f"{rank:<5}"
 
-def build_ranking_description(title: str, rows: list[dict[str, Any]], is_mvp: bool = False) -> str:
-    description = f"```text\n{title}\n"
+def build_ranking_description(rows: list[dict[str, Any]], is_mvp: bool = False) -> str:
+    description = ""
 
     if is_mvp:
-        description += f"{'RANK':<6}{'PLAYER':<25}{'KILL':>6}\n"
+        description += f"**RANK | PLAYER | KILL**"
 
         for i, row in enumerate(rows):
             player = clean_player_name(row.get("player", "Unknown"))[:25]
             kills = row.get("kills", 0)
 
             description += (
-                f"{format_rank(i+1)}"
-                f"{player:<25}"
-                f"{kills:>6}\n"
+                f"{format_rank(i+1)} **{player}** | {kills} kill\n"
             )
 
     else:
-        description += f"{'RANK':<6}{'TEAM':<25}{'PUNTI':>6}{'KILL':>6}\n"
+        description += f"**RANK | TEAM | PUNTI | KILL**\n"
 
         for i, row in enumerate(rows):
-            team = row["name"][:25]
+            team = row["name"]
             score = row["score"]
             kills = row["kills"]
 
             description += (
-                f"{format_rank(i+1)}"
-                f"{team:<25}"
-                f"{score:>6}"
-                f"{kills:>6}\n"
+                f"{format_rank(i+1)} **{team}** | {score} pts | {kills} kill\n"
             )
 
     description += "```"
@@ -55,7 +50,7 @@ def build_ranking_description(title: str, rows: list[dict[str, Any]], is_mvp: bo
 def build_ranking_embed(title: str, rows: list[dict[str, Any]], is_mvp: bool = False):
     return discord.Embed(
         title=title,
-        description=build_ranking_description(title, rows, is_mvp),
+        description=build_ranking_description(rows, is_mvp),
         color=discord.Color.blurple()
     )
 
