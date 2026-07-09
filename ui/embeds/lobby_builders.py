@@ -80,7 +80,7 @@ def build_info_lobby_embed(
     for lobby in lobbies:
         emb_description += f"**LOBBY {lobby.name} ({len(lobby.teams)} Team)**\n\n**SLOT | TEAM**\n"
         for i, team in enumerate(lobby.teams):
-            emb_description += f"{i}. {team.name}"
+            emb_description += f"{i+1}. {team.name}"
             if show_kd:
                 emb_description += f" | K/D {team.kd:.2f}"
             if show_matches and inserted_matches_count is not None and matches_number is not None:
