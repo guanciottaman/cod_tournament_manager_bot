@@ -47,7 +47,7 @@ class Teams(commands.Cog):
 
     @app_commands.command(name="modifica_team", description="Modifica il tuo team")
     async def modifica_team(self, interaction: discord.Interaction):
-        events = await get_events_for_guild(interaction.guild_id, ["ready", "setup"])
+        events = await get_events_for_guild(interaction.guild_id, ["ready", "setup", "running"])
         embed = discord.Embed(
             title="Scegli l'evento a cui ti sei iscritto",
             color=discord.Colour.red(),
@@ -55,6 +55,7 @@ class Teams(commands.Cog):
         )
         async def event_selector_callback(interaction: discord.Interaction, event: Event):
             event_id = event.event_id
+            
             lobby_mode = event.lobby_mode
             members_number = event.players_per_team
             is_kd_mode = True if lobby_mode in ("kd", "kd_balanced") else False
@@ -63,6 +64,13 @@ class Teams(commands.Cog):
                 if team_id is None:
                     await interaction.response.send_message(
                         "Non hai registrato nessun team per questo evento!\nUsa /registra_team per farlo.",
+                        ephemeral=True
+                    )
+                    return
+                inserted_matches = await get_inserted_matches_count_per_team(event_id, team_id)
+                if event.status == "running" and inserted_matches:
+                    await interaction.response.send_message(
+                        "Non puoi modificare il tuo team se hai già inserito risultati!",
                         ephemeral=True
                     )
                     return

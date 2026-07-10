@@ -247,6 +247,13 @@ class TeamsSelectorView(discord.ui.View):
             elif self.mode == "penalize":
                 await interaction.response.send_modal(PenalizzaTeam(self.event_id, team_id))
             elif self.mode == "edit":
+                inserted_matches = await get_inserted_matches_count_per_team(self.event_id, team_id)
+                if event.status == "running" and inserted_matches:
+                    await interaction.response.send_message(
+                        "Non puoi modificare il team se ha già inserito risultati!",
+                        ephemeral=True
+                    )
+                    return
                 players_names = await get_players_names(team_id)
                 await interaction.response.send_modal(
                     RegistraTeamModal(

@@ -352,6 +352,15 @@ async def get_inserted_matches_count(event_id: int) -> dict[int, int]:
 
     return {r[0]: r[1] for r in rows}
 
+async def get_inserted_matches_count_per_team(event_id: int, team_id: int) -> int:
+    row = await fetch_one("""
+        SELECT COUNT(DISTINCT match_number)
+        FROM team_scores
+        WHERE event_id = ? AND team_id = ?
+    """, (event_id, team_id))
+
+    return row[0] if row else 0
+
 async def get_leader_discord_id(team_id: int) -> int | None:
     row = await fetch_one(
         "SELECT leader_discord_id FROM teams WHERE team_id = ?",
