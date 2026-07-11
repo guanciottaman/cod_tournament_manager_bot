@@ -29,9 +29,16 @@ extensions = [
 intents = discord.Intents.default()
 intents.members = True
 
+class CustomTree(app_commands.CommandTree):
+    async def interaction_check(self, interaction: discord.Interaction):
+        if interaction.guild_id and is_blacklisted(interaction.guild_id):
+            raise app_commands.CheckFailure()
+
+        return True
+
 class Bot(commands.Bot):
     def __init__(self):
-        super().__init__(command_prefix="!", intents=intents)
+        super().__init__(command_prefix="!", intents=intents, tree_cls=CustomTree)
 
     async def on_ready(self):
         print(f"Bot online come {self.user.display_name}")
@@ -55,18 +62,12 @@ class Bot(commands.Bot):
                     ephemeral=True
                 )
 
-    async def interaction_check(self, interaction: discord.Interaction):
-        if interaction.guild_id and is_blacklisted(interaction.guild_id):
-            return False
-        return True
-
     async def setup_hook(self):
         await self.init_db()
         await init_blacklist_cache()
         commands = await self.tree.sync()
         print(f"Sono stati caricati {len(commands)} comandi:\n/{'\n/'.join([cmd.name for cmd in commands])}")
         self.tree.on_error = self.error_handler
-        self.tree.interaction_check = self.interaction_check
         for guild in self.guilds:
             await build_member_cache(guild)
 
