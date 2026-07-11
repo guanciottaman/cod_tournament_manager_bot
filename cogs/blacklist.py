@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 
 from services.server_service import *
 
-@app_commands.guilds(discord.Object(id=1493505736523907102))
+@app_commands.guilds(discord.Object(id=1493505736523907102), discord.Object(id=1043217543604748290))
 class Blacklist(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
