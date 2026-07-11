@@ -67,7 +67,7 @@ class SetupView(discord.ui.View):
     )
     async def select_admin_role(self, interaction: discord.Interaction, select: discord.ui.RoleSelect):
         selected = select.values[0]
-        self.admin_role = interaction.guild.get_channel(selected.id)
+        self.admin_role = interaction.guild.get_role(selected.id)
         if interaction.guild is None:
             await interaction.response.send_message("Non puoi usarmi dai DM", ephemeral=True)
             return
