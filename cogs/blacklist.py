@@ -41,9 +41,13 @@ class Blacklist(commands.Cog):
     @app_commands.command(name="blacklist_add", description="Metti un server in blacklist")
     @app_commands.describe(server_id="Server da blacklistare")
     @app_commands.checks.has_permissions(ban_members=True)
-    async def blacklist_add(self, interaction: discord.Interaction, server_id: int):
-        await blacklist_guild(server_id, interaction.user.id)
-        guild = await self.bot.fetch_guild(server_id)
+    async def blacklist_add(self, interaction: discord.Interaction, server_id: str):
+        if not server_id.isdigit():
+            await interaction.response.send_message("L'id del server deve essere numerico!", ephemeral=True)
+            return
+        guild_id = int(server_id)
+        await blacklist_guild(guild_id, interaction.user.id)
+        guild = await self.bot.fetch_guild(guild_id)
         if guild:
             guild_name = guild.name
         else:
@@ -56,9 +60,13 @@ class Blacklist(commands.Cog):
     @app_commands.command(name="blacklist_remove", description="Togli un server dalla blacklist")
     @app_commands.describe(server_id="Server da rimuovere dalla blacklist")
     @app_commands.checks.has_permissions(ban_members=True)
-    async def blacklist_remove(self, interaction: discord.Interaction, server_id: int):
-        await unblacklist_guild(server_id)
-        guild = await self.bot.fetch_guild(server_id)
+    async def blacklist_remove(self, interaction: discord.Interaction, server_id: str):
+        if not server_id.isdigit():
+            await interaction.response.send_message("L'id del server deve essere numerico!", ephemeral=True)
+            return
+        guild_id = int(server_id)
+        await unblacklist_guild(guild_id)
+        guild = await self.bot.fetch_guild(guild_id)
         if guild:
             guild_name = guild.name
         else:
