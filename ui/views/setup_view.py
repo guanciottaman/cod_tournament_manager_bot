@@ -23,7 +23,8 @@ class SetupView(discord.ui.View):
         row=0
     )
     async def select_ranking_channel(self, interaction: discord.Interaction, select: discord.ui.ChannelSelect):
-        self.ranking_channel = select.values[0]
+        selected = select.values[0]
+        self.ranking_channel = interaction.guild.get_channel(selected.id)
         if self.ranking_channel is None:
             await interaction.response.send_message("Canale non trovato!", ephemeral=True)
             return
@@ -65,7 +66,8 @@ class SetupView(discord.ui.View):
         row=1
     )
     async def select_admin_role(self, interaction: discord.Interaction, select: discord.ui.RoleSelect):
-        self.admin_role = select.values[0]
+        selected = select.values[0]
+        self.admin_role = interaction.guild.get_channel(selected.id)
         if interaction.guild is None:
             await interaction.response.send_message("Non puoi usarmi dai DM", ephemeral=True)
             return
@@ -88,7 +90,8 @@ class SetupView(discord.ui.View):
         row=2
     )
     async def select_live_ranking_channel(self, interaction: discord.Interaction, select: discord.ui.ChannelSelect):
-        self.live_ranking_channel = select.values[0]
+        selected = select.values[0]
+        self.live_ranking_channel = interaction.guild.get_channel(selected.id)
         if self.live_ranking_channel is None:
             await interaction.response.send_message("Canale non trovato!", ephemeral=True)
             return
@@ -134,7 +137,8 @@ class SetupView(discord.ui.View):
         row=3
     )
     async def select_lobbies_channel(self, interaction: discord.Interaction, select: discord.ui.ChannelSelect):
-        self.lobbies_channel = select.values[0]
+        selected = select.values[0]
+        self.lobbies_channel = interaction.guild.get_channel(selected.id)
         if self.lobbies_channel is None:
             await interaction.response.send_message("Canale non trovato!", ephemeral=True)
             return
