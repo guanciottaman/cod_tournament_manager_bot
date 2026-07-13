@@ -42,8 +42,9 @@ class Blacklist(commands.Cog):
     @app_commands.describe(server_id="Server da blacklistare")
     @app_commands.checks.has_permissions(ban_members=True)
     async def blacklist_add(self, interaction: discord.Interaction, server_id: str):
+        await interaction.response.defer(ephemeral=True)
         if not server_id.isdigit():
-            await interaction.response.send_message("L'id del server deve essere numerico!", ephemeral=True)
+            await interaction.followup.send("L'id del server deve essere numerico!", ephemeral=True)
             return
         guild_id = int(server_id)
         await blacklist_guild(guild_id, interaction.user.id)
@@ -52,7 +53,7 @@ class Blacklist(commands.Cog):
             guild_name = guild.name
         else:
             guild_name = "Nome sconosciuto"
-        await interaction.response.send_message(
+        await interaction.followup.send(
             f"Il server {guild_name} è stato blacklistato!",
             ephemeral=True
         )
@@ -61,8 +62,9 @@ class Blacklist(commands.Cog):
     @app_commands.describe(server_id="Server da rimuovere dalla blacklist")
     @app_commands.checks.has_permissions(ban_members=True)
     async def blacklist_remove(self, interaction: discord.Interaction, server_id: str):
+        await interaction.response.defer(ephemeral=True)
         if not server_id.isdigit():
-            await interaction.response.send_message("L'id del server deve essere numerico!", ephemeral=True)
+            await interaction.followup.send("L'id del server deve essere numerico!", ephemeral=True)
             return
         guild_id = int(server_id)
         await unblacklist_guild(guild_id)
@@ -71,7 +73,7 @@ class Blacklist(commands.Cog):
             guild_name = guild.name
         else:
             guild_name = "Nome sconosciuto"
-        await interaction.response.send_message(
+        await interaction.followup.send(
             f"Il server {guild_name} è stato rimosso dalla blacklist!",
             ephemeral=True
         )
