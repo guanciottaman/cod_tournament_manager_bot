@@ -19,6 +19,11 @@ load_dotenv(".env")
 
 TOKEN = os.environ["TOKEN"]
 
+DEV_GUILDS = [
+    discord.Object(id=1493505736523907102),
+    discord.Object(id=1043217543604748290)
+]
+
 extensions = [
     "cogs.events",
     "cogs.teams",
@@ -65,9 +70,19 @@ class Bot(commands.Bot):
     async def setup_hook(self):
         await self.init_db()
         await init_blacklist_cache()
-        commands = await self.tree.sync()
-        print(f"Sono stati caricati {len(commands)} comandi:\n/{'\n/'.join([cmd.name for cmd in commands])}")
+
+        # elimina eventuali vecchi comandi globali rimasti
+        self.tree.clear_commands(guild=None)
+        await self.tree.sync()
+
+        for guild in DEV_GUILDS:
+            commands = await self.tree.sync(guild=guild)
+            print(
+                f"Sincronizzati {len(commands)} comandi su {guild.id}"
+            )
+
         self.tree.on_error = self.error_handler
+
         for guild in self.guilds:
             await build_member_cache(guild)
 
