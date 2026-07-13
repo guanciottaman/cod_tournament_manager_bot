@@ -50,6 +50,9 @@ class Blacklist(commands.Cog):
             await interaction.followup.send("L'id del server deve essere numerico!", ephemeral=True)
             return
         guild_id = int(server_id)
+        if is_blacklisted(guild_id):
+            await interaction.followup.send("Questo server è già blacklistato!", ephemeral=True)
+            return
         await blacklist_guild(guild_id, interaction.user.id)
         try:
             guild = await self.bot.fetch_guild(guild_id)
