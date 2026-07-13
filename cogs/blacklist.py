@@ -89,6 +89,33 @@ class Blacklist(commands.Cog):
             f"Il server {guild_name} ({guild_id}) è stato rimosso dalla blacklist!",
             ephemeral=True
         )
+    
+
+    @app_commands.command(
+        name="lista_server",
+        description="Mostra i server in cui è presente il bot"
+    )
+    @app_commands.checks.has_permissions(ban_members=True)
+    async def lista_server(self, interaction: discord.Interaction):
+        embed = discord.Embed(
+            title="Server del bot",
+            color=discord.Color.blue()
+        )
+
+        description = ""
+
+        for guild in sorted(self.bot.guilds, key=lambda g: g.name.lower()):
+            description += (
+                f"**{guild.name}**\n"
+                f"ID: `{guild.id}` | Membri: {guild.member_count}\n\n"
+            )
+
+        embed.description = description or "Il bot non è in nessun server."
+
+        await interaction.response.send_message(
+            embed=embed,
+            ephemeral=True
+        )
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Blacklist(bot))
