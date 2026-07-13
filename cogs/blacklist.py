@@ -12,6 +12,7 @@ class Blacklist(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
+    @app_commands.guilds(discord.Object(id=1493505736523907102), discord.Object(id=1043217543604748290))
     @app_commands.command(name="blacklist", description="Controlla la blacklist")
     @app_commands.checks.has_permissions(ban_members=True)
     async def blacklist(self, interaction: discord.Interaction):
@@ -43,7 +44,7 @@ class Blacklist(commands.Cog):
         embed.description = emb_description
         await interaction.followup.send(embed=embed, ephemeral=True)
 
-
+    @app_commands.guilds(discord.Object(id=1493505736523907102), discord.Object(id=1043217543604748290))
     @app_commands.command(name="blacklist_add", description="Metti un server in blacklist")
     @app_commands.describe(server_id="Server da blacklistare")
     @app_commands.checks.has_permissions(ban_members=True)
@@ -73,6 +74,7 @@ class Blacklist(commands.Cog):
             ephemeral=True
         )
     
+    @app_commands.guilds(discord.Object(id=1493505736523907102), discord.Object(id=1043217543604748290))
     @app_commands.command(name="blacklist_remove", description="Togli un server dalla blacklist")
     @app_commands.describe(server_id="Server da rimuovere dalla blacklist")
     @app_commands.checks.has_permissions(ban_members=True)
@@ -99,7 +101,7 @@ class Blacklist(commands.Cog):
             ephemeral=True
         )
     
-
+    @app_commands.guilds(discord.Object(id=1493505736523907102), discord.Object(id=1043217543604748290))
     @app_commands.command(
         name="lista_server",
         description="Mostra i server in cui è presente il bot"
