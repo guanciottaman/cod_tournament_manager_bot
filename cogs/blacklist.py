@@ -16,6 +16,9 @@ class Blacklist(commands.Cog):
     @app_commands.checks.has_permissions(ban_members=True)
     async def blacklist(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
+        if interaction.guild.id not in (1493505736523907102, 1043217543604748290):
+            await interaction.followup.send("Questo comando è riservato.", ephemeral=True)
+            return
         rome = ZoneInfo("Europe/Rome")
         embed = discord.Embed(
             title="Blacklist servers",
@@ -46,6 +49,9 @@ class Blacklist(commands.Cog):
     @app_commands.checks.has_permissions(ban_members=True)
     async def blacklist_add(self, interaction: discord.Interaction, server_id: str):
         await interaction.response.defer(ephemeral=True)
+        if interaction.guild.id not in (1493505736523907102, 1043217543604748290):
+            await interaction.followup.send("Questo comando è riservato.", ephemeral=True)
+            return
         if not server_id.isdigit():
             await interaction.followup.send("L'id del server deve essere numerico!", ephemeral=True)
             return
@@ -72,6 +78,9 @@ class Blacklist(commands.Cog):
     @app_commands.checks.has_permissions(ban_members=True)
     async def blacklist_remove(self, interaction: discord.Interaction, server_id: str):
         await interaction.response.defer(ephemeral=True)
+        if interaction.guild.id not in (1493505736523907102, 1043217543604748290):
+            await interaction.followup.send("Questo comando è riservato.", ephemeral=True)
+            return
         if not server_id.isdigit():
             await interaction.followup.send("L'id del server deve essere numerico!", ephemeral=True)
             return
@@ -97,6 +106,9 @@ class Blacklist(commands.Cog):
     )
     @app_commands.checks.has_permissions(ban_members=True)
     async def lista_server(self, interaction: discord.Interaction):
+        if interaction.guild.id not in (1493505736523907102, 1043217543604748290):
+            await interaction.response.send_message("Questo comando è riservato.", ephemeral=True)
+            return
         embed = discord.Embed(
             title="Server del bot",
             color=discord.Color.blue()
