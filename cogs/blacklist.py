@@ -18,7 +18,7 @@ class Blacklist(commands.Cog):
         await interaction.response.defer(ephemeral=True)
         rome = ZoneInfo("Europe/Rome")
         embed = discord.Embed(
-            title="Blaclist servers",
+            title="Blacklist servers",
             color=discord.Color.red()
         )
         emb_description = "Questi sono i server che non possono usare il bot:\n"
