@@ -36,7 +36,7 @@ class Blacklist(commands.Cog):
             dt = dt.replace(tzinfo=ZoneInfo("UTC")).astimezone(rome)
             blacklisted_at = dt.strftime("%d/%m/%Y %H:%M")
             blacklisted_by = interaction.guild.get_member(b["blacklisted_by"])
-            emb_description += f"{guild_name} | {blacklisted_at} | {blacklisted_by.mention}\n"
+            emb_description += f"{guild_name} | {b_id} | {blacklisted_at} | {blacklisted_by.mention}\n"
         embed.description = emb_description
         await interaction.followup.send(embed=embed, ephemeral=True)
 
@@ -63,7 +63,7 @@ class Blacklist(commands.Cog):
         else:
             guild_name = "Nome sconosciuto"
         await interaction.followup.send(
-            f"Il server {guild_name} è stato blacklistato!",
+            f"Il server {guild_name} ({guild_id}) è stato blacklistato!",
             ephemeral=True
         )
     
@@ -86,7 +86,7 @@ class Blacklist(commands.Cog):
         else:
             guild_name = "Nome sconosciuto"
         await interaction.followup.send(
-            f"Il server {guild_name} è stato rimosso dalla blacklist!",
+            f"Il server {guild_name} ({guild_id}) è stato rimosso dalla blacklist!",
             ephemeral=True
         )
 
