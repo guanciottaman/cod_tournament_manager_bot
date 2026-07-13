@@ -51,7 +51,10 @@ class Blacklist(commands.Cog):
             return
         guild_id = int(server_id)
         await blacklist_guild(guild_id, interaction.user.id)
-        guild = await self.bot.fetch_guild(guild_id)
+        try:
+            guild = await self.bot.fetch_guild(guild_id)
+        except (discord.HTTPException, discord.NotFound, discord.Forbidden):
+            guild = None
         if guild:
             guild_name = guild.name
         else:
@@ -71,7 +74,10 @@ class Blacklist(commands.Cog):
             return
         guild_id = int(server_id)
         await unblacklist_guild(guild_id)
-        guild = await self.bot.fetch_guild(guild_id)
+        try:
+            guild = await self.bot.fetch_guild(guild_id)
+        except (discord.HTTPException, discord.NotFound, discord.Forbidden):
+            guild = None
         if guild:
             guild_name = guild.name
         else:
