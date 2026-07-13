@@ -24,7 +24,10 @@ class Blacklist(commands.Cog):
         emb_description = "Questi sono i server che non possono usare il bot:\n"
         blacklist = await get_blacklist()
         for b_id, b in blacklist.items():
-            guild = await self.bot.fetch_guild(b_id)
+            try:
+                guild = await self.bot.fetch_guild(b_id)
+            except (discord.HTTPException, discord.NotFound, discord.Forbidden):
+                guild = None
             if guild:
                 guild_name = guild.name
             else:
