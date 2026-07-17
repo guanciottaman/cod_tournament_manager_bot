@@ -99,14 +99,17 @@ async def get_events_for_guild(
         LEFT JOIN events_settings s ON s.event_id = e.event_id
         WHERE e.guild_id = $1
     """
+
     params: list[Any] = [guild_id]
 
     if statuses:
-        query += f" AND e.status = ANY($2)"
-        params.extend(statuses)
+        query += " AND e.status = ANY($2)"
+        params.append(statuses)
 
     query += " ORDER BY e.event_id DESC"
+
     rows = await fetch_all(query, tuple(params))
+
     return [
         Event(
             event_id=row["event_id"],
