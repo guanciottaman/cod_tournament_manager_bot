@@ -21,24 +21,23 @@ async def get_team_match_data(
 
     if include_pending:
         statuses.append("pending")
-    placeholders = ",".join(["?"] * len(statuses))
     query = f"""
         SELECT 
             ts.team_id,
-            t.name,
+            t.name AS team_name,
             ts.placement,
             ps.member_name,
             ps.kills
         FROM team_scores ts
         JOIN teams t ON t.team_id = ts.team_id
         JOIN player_scores ps ON ps.team_score_id = ts.id
-        WHERE ts.event_id = ? AND ts.status IN ({placeholders})
+        WHERE ts.event_id = $1 AND ts.status = ANY($2)
     """
 
-    params = [event_id] + statuses
+    params = [event_id, statuses]
 
     if scope == "lobby" and lobby_id is not None:
-        query += " AND t.lobby_id = ?"
+        query += f" AND t.lobby_id = ${len(params) + 2}"
         params.append(lobby_id)
 
     return await fetch_all(query, tuple(params))
@@ -54,24 +53,23 @@ async def compute_team_ranking(
     if include_pending:
         statuses.append("pending")
     # 1. match base data
-    placeholders = ",".join(["?"] * len(statuses))
 
-    query = f"""
+    query = """
         SELECT 
-            ts.id,
+            ts.id AS team_score_id,
             ts.team_id,
-            t.name,
+            t.name AS team_name,
             ts.placement
-            FROM team_scores ts
-            JOIN teams t ON t.team_id = ts.team_id
-            WHERE ts.event_id = ?
-        AND ts.status IN ({placeholders})
+        FROM team_scores ts
+        JOIN teams t ON t.team_id = ts.team_id
+        WHERE ts.event_id = $1
+        AND ts.status = ANY($2)
     """
 
-    params = [event_id] + statuses
+    params = [event_id, statuses]
 
     if scope == "lobby" and lobby_id is not None:
-        query += " AND t.lobby_id = ?"
+        query += " AND t.lobby_id = $3"
         params.append(lobby_id)
 
     rows = await fetch_all(query, tuple(params))
@@ -79,42 +77,42 @@ async def compute_team_ranking(
     teams_query = """
         SELECT team_id, name
         FROM teams
-        WHERE event_id = ?
+        WHERE event_id = $1
     """
     teams_params = [event_id]
     if scope == "lobby" and lobby_id is not None:
-        teams_query += " AND lobby_id = ?"
+        teams_query += " AND lobby_id = $2"
         teams_params.append(lobby_id)
 
     teams = await fetch_all(teams_query, tuple(teams_params))
 
     penalties = await fetch_all(
         """
-            SELECT team_id, COALESCE(penalty_points, 0)
+            SELECT team_id, COALESCE(penalty_points, 0) AS penalty_points
             FROM teams
-            WHERE event_id = ?
+            WHERE event_id = $1
         """,
         (event_id,)
     )
     team_penalties = {
-        pen[0]: pen[1] for pen in penalties
+        pen["team_id"]: pen["penalty_points"] for pen in penalties
     }
 
     settings = await fetch_one("""
         SELECT kill_points, drop_worst_match 
         FROM events_settings 
-        WHERE event_id = ?
+        WHERE event_id = $1
     """, (event_id,))
 
-    kill_points, drop_worst_match = settings if settings else (1, False)
+    kill_points, drop_worst_match = (settings["kill_points"], settings["drop_worst_match"]) if settings else (1, False)
 
     placement_map = await fetch_all("""
         SELECT position, points
         FROM placement_points
-        WHERE event_id = ?
+        WHERE event_id = $1
     """, (event_id,))
 
-    placement_dict = {p: pts for p, pts in placement_map}
+    placement_dict = {row["position"]: row["points"] for row in placement_map}
 
     match_kills = defaultdict(int)
 
@@ -123,55 +121,52 @@ async def compute_team_ranking(
         FROM player_scores ps
         JOIN team_scores ts ON ts.id = ps.team_score_id
         JOIN teams t ON t.team_id = ts.team_id
-        WHERE ts.event_id = ?
+        WHERE ts.event_id = $1
     """
     player_rows_params = [event_id]
     if scope == "lobby" and lobby_id is not None:
-        player_rows_query += " AND t.lobby_id = ?"
+        player_rows_query += " AND t.lobby_id = $2"
         player_rows_params.append(lobby_id)
     player_rows = await fetch_all(player_rows_query, tuple(player_rows_params))
 
-    for ts_id, kills in player_rows:
-        match_kills[ts_id] += kills
+    for row in player_rows:
+        match_kills[row["team_score_id"]] += row["kills"]
 
     # 5. build per-team ranking
     team_matches: dict[int, list[dict[str, int]]] = defaultdict(list)
     
-    team_names: dict[int, str] = {}
 
-    for team_id, name in teams:
-        team_names[team_id] = name
-        team_matches[team_id] = []
+    for row in teams:
+        team_matches[row["team_id"]] = []
 
-    for ts_id, team_id, team_name, placement in rows:
-        team_names[team_id] = team_name
+    for row in rows:
 
-        kills = match_kills.get(ts_id, 0)
+        kills = match_kills.get(row["team_score_id"], 0)
 
         match_score = (
             (kills * kill_points)
-            + placement_dict.get(placement, 0)
+            + placement_dict.get(row["placement"], 0)
         )
 
-        team_matches[team_id].append({
+        team_matches[row["team_id"]].append({
             "score": match_score,
             "kills": kills
         })
 
     final = []
 
-    for team_id, name in teams:
-        matches = team_matches.get(team_id, [])
+    for row in teams:
+        matches = team_matches.get(row["team_id"], [])
 
         if drop_worst_match and len(matches) > 1:
             matches = sorted(matches, key=lambda m: m["score"])[1:]
 
-        score = sum(m["score"] for m in matches) - team_penalties.get(team_id, 0)
+        score = sum(m["score"] for m in matches) - team_penalties.get(row["team_id"], 0)
         kills = sum(m["kills"] for m in matches)
 
         final.append({
-            "team_id": team_id,
-            "name": name,
+            "team_id": row["team_id"],
+            "name": row["name"],
             "score": score,
             "kills": kills
         })
@@ -188,23 +183,23 @@ async def compute_mvp_ranking(
 
     row = await fetch_one("""
         SELECT drop_worst_match 
-        FROM events_settings WHERE event_id = ?
+        FROM events_settings WHERE event_id = $1
     """, (event_id,))
 
-    drop_worst_match = bool(row[0]) if row else False
+    drop_worst_match = bool(row["drop_worst_match"]) if row else False
 
     # struttura: player -> list of match contributions
     player_matches: dict[str, list[int]] = defaultdict(list)
 
-    for _, team_name, _, player_name, kills in rows:
-        clan = extract_clan(team_name)
+    for row in rows:
+        clan = extract_clan(row["team_name"])
 
         formatted_player = (
-            f"{clean_player_name(player_name)} ({clan})"
-            if clan else clean_player_name(player_name)
+            f"{clean_player_name(row['member_name'])} ({clan})"
+            if clan else clean_player_name(row["member_name"])
         )
 
-        player_matches[formatted_player].append(kills)
+        player_matches[formatted_player].append(row["kills"])
 
     final_players = []
 

@@ -30,8 +30,20 @@ async def set_lobby_codes_callback(interaction: discord.Interaction, event: Even
 
     def make_callback(current_lobby: Lobby, select: discord.ui.ChannelSelect):
         async def select_callback(interaction: discord.Interaction):
-            channel: discord.abc.GuildChannel = select.values[0]
+            selected_channel = select.values[0]
+            if interaction.guild is None:
+                return
+            channel = interaction.guild.get_channel(selected_channel.id)
+
+            if channel is None:
+                await interaction.response.send_message(
+                    "Canale non trovato",
+                    ephemeral=True
+                )
+                return
+
             channels[current_lobby.lobby_id] = channel.id
+            
             embed = discord.Embed(
                 title="Seleziona canali",
                 color=discord.Color.blue()

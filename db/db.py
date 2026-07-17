@@ -1,22 +1,32 @@
-import aiosqlite
+import asyncpg
+from asyncpg import Pool
 
-DB_PATH = "db.sqlite3"
+from config.config import DB_USER, DB_PASSWORD, DB, DB_HOST
+
+pool: Pool | None = None
+
+async def init_db():
+    global pool
+
+    pool = await asyncpg.create_pool(
+        user=DB_USER,
+        password=DB_PASSWORD,
+        database=DB,
+        host=DB_HOST,
+        min_size=2,
+        max_size=10
+    )
 
 async def fetch_one(query: str, params: tuple = tuple()):
-    async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute("PRAGMA foreign_keys = ON")
-        async with db.execute(query, params) as cursor:
-            return await cursor.fetchone()
+    async with pool.acquire() as conn:
+        return await conn.fetchrow(query, *params)
+
 
 async def fetch_all(query: str, params: tuple = tuple()):
-    async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute("PRAGMA foreign_keys = ON")
-        async with db.execute(query, params) as cursor:
-            return await cursor.fetchall()
+    async with pool.acquire() as conn:
+        return await conn.fetch(query, *params)
+
 
 async def execute(query: str, params: tuple = tuple()):
-    async with aiosqlite.connect(DB_PATH) as db:
-        await db.execute("PRAGMA foreign_keys = ON")
-        cursor = await db.execute(query, params)
-        await db.commit()
-        return cursor
+    async with pool.acquire() as conn:
+        return await conn.execute(query, *params)

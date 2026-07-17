@@ -94,7 +94,7 @@ class CreaEventoView(discord.ui.View):
         ]
     )
     async def set_drop_worst_match_select(self, interaction: discord.Interaction, select: discord.ui.Select):
-        await set_drop_worst_match(self.event_id, int(select.values[0]))
+        await set_drop_worst_match(self.event_id, bool(select.values[0]))
         event = await get_event_info(self.event_id, interaction.guild_id)
         placement_points = await get_placement_points(self.event_id)
         teams = await get_teams_by_event(self.event_id)

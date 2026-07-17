@@ -79,7 +79,9 @@ async def generate_match_results(
     if not team_ids:
         return []
 
-    placeholders = ",".join(["?"] * len(team_ids))
+    placeholders = ",".join(
+        [f"${i}" for i in range(1, len(team_ids) + 1)]
+    )
 
     rows = await fetch_all(f"""
         SELECT team_id, member_id, member_name
@@ -226,7 +228,7 @@ class DebugCommands(commands.Cog):
         settings = await fetch_one("""
             SELECT kill_points
             FROM events_settings
-            WHERE event_id = ?
+            WHERE event_id = $1
         """, (event_id,))
 
         kill_points_value = settings[0] if settings else 1
@@ -234,7 +236,7 @@ class DebugCommands(commands.Cog):
         placement_rows = await fetch_all("""
             SELECT position, points
             FROM placement_points
-            WHERE event_id = ?
+            WHERE event_id = $1
         """, (event_id,))
 
         placement_dict = {p: pts for p, pts in placement_rows}
@@ -314,7 +316,7 @@ class DebugCommands(commands.Cog):
         results = await fetch_all("""
             SELECT id
             FROM team_scores
-            WHERE event_id = ?
+            WHERE event_id = $1
             AND status = 'pending'
         """, (event_id,))
 

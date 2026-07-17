@@ -85,29 +85,31 @@ def generate_lobbies(
     return lobbies
 
 async def create_lobbies_db(event_id: int, names: list[str]) -> list[int]:
-    await execute("DELETE FROM lobbies WHERE event_id = ?", (event_id,))
+    await execute(
+        "DELETE FROM lobbies WHERE event_id = $1",
+        (event_id,)
+    )
 
-    lobby_ids: list[int] = []
+    rows = await fetch_all(
+        """
+        INSERT INTO lobbies (event_id, name)
+        SELECT $1, unnest($2::text[])
+        RETURNING lobby_id
+        """,
+        (event_id, names)
+    )
 
-    for name in names:
-        c = await execute(
-            "INSERT INTO lobbies (event_id, name) VALUES (?, ?)",
-            (event_id, name)
-        )
-        lobby_id = c.lastrowid
-        lobby_ids.append(lobby_id)
-
-    return lobby_ids
+    return [row["lobby_id"] for row in rows]
 
 async def update_lobbies_db(event_id: int, lobby_ids: list[int], names: list[str]):
     for lobby_id, name in zip(lobby_ids, names):
         await execute(
-            "UPDATE lobbies SET name = ? WHERE lobby_id = ?",
-            (name, lobby_id)
+            "UPDATE lobbies SET name = $1 WHERE event_id = $2 AND lobby_id = $3",
+            (name, event_id, lobby_id)
         )
 
 async def delete_lobbies(event_id: int):
-    await execute("DELETE FROM lobbies WHERE event_id = ?", (event_id,))
+    await execute("DELETE FROM lobbies WHERE event_id = $1", (event_id,))
 
 async def rebuild_lobbies(event_id: int, lobbies_number: int):
     names = await get_lobbies_names(event_id)
@@ -134,7 +136,7 @@ async def apply_lobbies(lobby_ids: list[int], lobbies_structure: list[list[Team]
 
     for lobby_id, team_id in queries:
         await execute(
-            "UPDATE teams SET lobby_id = ? WHERE team_id = ?",
+            "UPDATE teams SET lobby_id = $1 WHERE team_id = $2",
             (lobby_id, team_id)
         )
 
@@ -143,50 +145,57 @@ async def recreate_lobbies(event_id: int, lobbies: list[Lobby]):
     existing = await fetch_all("""
         SELECT lobby_id, name
         FROM lobbies
-        WHERE event_id = ?
+        WHERE event_id = $1
         ORDER BY lobby_id ASC
     """, (event_id,))
 
     if len(existing) != len(lobbies):
         raise ValueError("Lobby config mismatch")
 
-    for (lobby_id, name), lobby in zip(existing, lobbies):
+    for row, lobby in zip(existing, lobbies):
+        lobby_id = row["lobby_id"]
+        name = row["name"]
         lobby.lobby_id = lobby_id
         lobby.name = name
 
         for team in lobby.teams:
             await execute(
-                "UPDATE teams SET lobby_id = ? WHERE team_id = ?",
+                "UPDATE teams SET lobby_id = $1 WHERE team_id = $2",
                 (lobby_id, team.team_id)
             )
 
 
 async def get_lobbies_names(event_id: int):
     rows = await fetch_all(
-        "SELECT name FROM lobbies WHERE event_id = ?",
+        "SELECT name FROM lobbies WHERE event_id = $1",
         (event_id,)
     )
-    return [row[0] for row in rows]
+    return [row["name"] for row in rows]
 
 async def get_lobbies(event_id: int) -> list[Lobby]:
     rows = await fetch_all("""
         SELECT 
             l.lobby_id,
-            l.name,
+            l.name AS lobby_name,
             t.team_id,
-            t.name,
+            t.name AS team_name,
             t.leader_discord_id,
-            t.kd,
-            t.lobby_id
+            t.kd
         FROM lobbies l
         LEFT JOIN teams t ON t.lobby_id = l.lobby_id
-        WHERE l.event_id = ?
+        WHERE l.event_id = $1
         ORDER BY l.lobby_id ASC, t.kd DESC
     """, (event_id,))
 
     lobbies_map: dict[int, Lobby] = {}
 
-    for lobby_id, lobby_name, team_id, team_name, team_leader_discord_id, team_kd, team_lobby_id in rows:
+    for row in rows:
+        lobby_id = row["lobby_id"]
+        lobby_name = row["lobby_name"]
+        team_id = row["team_id"]
+        team_name = row["team_name"]
+        team_leader_discord_id = row["leader_discord_id"]
+        team_kd = row["kd"]
 
         if lobby_id not in lobbies_map:
             lobbies_map[lobby_id] = Lobby(
@@ -198,21 +207,21 @@ async def get_lobbies(event_id: int) -> list[Lobby]:
 
         if team_id is not None:
             lobbies_map[lobby_id].teams.append(
-                Team(team_id, team_name, team_leader_discord_id, team_kd, team_lobby_id)
+                Team(team_id, team_name, team_leader_discord_id, team_kd, lobby_id)
             )
 
     return list(lobbies_map.values())
 
 async def get_lobby(event_id: int, lobby_id: int) -> Lobby | None:
     lobby_row = await fetch_one(
-        "SELECT name FROM lobbies WHERE event_id = ? AND lobby_id = ?",
+        "SELECT name FROM lobbies WHERE event_id = $1 AND lobby_id = $2",
         (event_id, lobby_id)
     )
 
     if lobby_row is None:
         return None
 
-    name = lobby_row[0]
+    name = lobby_row["name"]
 
     teams = await get_teams(event_id, lobby_id=lobby_id)
 
@@ -223,7 +232,7 @@ async def get_lobby(event_id: int, lobby_id: int) -> Lobby | None:
     )
 
 async def set_lobbies_number(event_id: int, new_number: int):
-    await execute("UPDATE events_settings SET lobbies_number = ? WHERE event_id = ?",
+    await execute("UPDATE events_settings SET lobbies_number = $1 WHERE event_id = $2",
         (new_number, event_id))
 
 async def update_lobbies_config(event_id: int, guild_id: int, new_number: int, mode: str):
@@ -241,11 +250,11 @@ async def update_lobbies_config(event_id: int, guild_id: int, new_number: int, m
             f"{i+1}" for i in range(len(names), new_number)
         ]
 
-    await execute("DELETE FROM lobbies WHERE event_id = ?", (event_id,))
+    await execute("DELETE FROM lobbies WHERE event_id = $1", (event_id,))
     await create_lobbies_db(event_id, names)
 
 async def switch_team_lobby(team_id: int, lobby_id: int):
     await execute(
-        "UPDATE teams SET lobby_id = ? WHERE team_id = ?",
+        "UPDATE teams SET lobby_id = $1 WHERE team_id = $2",
         (lobby_id, team_id)
     )
