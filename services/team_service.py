@@ -226,11 +226,11 @@ async def insert_results(
             event_id, team_id, placement, match_number
         )
         VALUES ($1, $2, $3, $4)
-        RETURNING team_score_id
+        RETURNING id
     """, (event_id, team_id, placement, match))
     if row is None:
         raise ValueError("Error with team score id")
-    team_score_id = row["team_score_id"]
+    team_score_id = row["id"]
     for player_id, player_name, kills in players:
         await execute("""
             INSERT INTO player_scores (
