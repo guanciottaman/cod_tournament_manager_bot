@@ -83,7 +83,7 @@ async def generate_match_results(
     rows = await fetch_all(f"""
         SELECT team_id, member_id, member_name
         FROM team_members
-        WHERE team_id = ANY($2)
+        WHERE team_id = ANY($1)
     """, team_ids)
 
     # dizionario da team_id -> (player_id, name)
