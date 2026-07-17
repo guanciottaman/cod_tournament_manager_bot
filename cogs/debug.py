@@ -80,14 +80,10 @@ async def generate_match_results(
     if not team_ids:
         return []
 
-    placeholders = ",".join(
-        [f"${i}" for i in range(1, len(team_ids) + 1)]
-    )
-
     rows = await fetch_all(f"""
         SELECT team_id, member_id, member_name
         FROM team_members
-        WHERE team_id IN ({placeholders})
+        WHERE team_id = ANY($2)
     """, team_ids)
 
     # dizionario da team_id -> (player_id, name)
@@ -138,7 +134,6 @@ class DebugCommands(commands.Cog):
     async def check_admin_role(self, interaction: discord.Interaction):
         if interaction.guild is None:
             return False
-
         admin_role_id = await get_admin_role_id(interaction.guild.id)
 
         if not admin_role_id:
