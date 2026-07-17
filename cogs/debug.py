@@ -9,7 +9,7 @@ from discord.ext import commands
 
 from db.db import *
 from services.team_service import (insert_teams, update_team_kd, get_teams,
-    insert_results, get_inserted_match_numbers, set_result_status, get_players_names)
+    insert_results, get_inserted_match_numbers, set_result_status)
 from services.event_service import get_events_for_guild, get_event_info
 from services.server_service import get_admin_role_id
 from models.team import Team
@@ -136,13 +136,19 @@ class DebugCommands(commands.Cog):
         self.bot = bot
     
     async def check_admin_role(self, interaction: discord.Interaction):
-        admin_role_id = await get_admin_role_id(interaction.guild_id)
+        if interaction.guild is None:
+            return False
+
+        admin_role_id = await get_admin_role_id(interaction.guild.id)
+
         if not admin_role_id:
             return False
 
         admin_role = interaction.guild.get_role(admin_role_id)
+
         if admin_role is None:
             return False
+
         return admin_role in interaction.user.roles
 
     @app_commands.command(name="gen_teams", description="Genera team random per un evento")
@@ -157,7 +163,7 @@ class DebugCommands(commands.Cog):
         amount: int
     ):
         if not await self.check_admin_role(interaction):
-            await interaction.response.send_message("Non hai il ruolo necessario per configurare le lobby di un evento!", ephemeral=True)
+            await interaction.response.send_message("Non hai i permessi per generare i team!", ephemeral=True)
             return
         if amount <= 0 or amount > 100:
             await interaction.response.send_message(
@@ -211,7 +217,7 @@ class DebugCommands(commands.Cog):
         event_id: int
     ):
         if not await self.check_admin_role(interaction):
-            await interaction.response.send_message("Non hai il ruolo necessario per configurare le lobby di un evento!", ephemeral=True)
+            await interaction.response.send_message("Non hai i permessi per generare i risultati!", ephemeral=True)
             return
         await interaction.response.defer(ephemeral=True)
 
@@ -236,7 +242,7 @@ class DebugCommands(commands.Cog):
             WHERE event_id = $1
         """, (event_id,))
 
-        kill_points_value = settings[0] if settings else 1
+        kill_points_value = settings["kill_points"] if settings else 1
 
         placement_rows = await fetch_all("""
             SELECT position, points
@@ -244,7 +250,7 @@ class DebugCommands(commands.Cog):
             WHERE event_id = $1
         """, (event_id,))
 
-        placement_dict = {p: pts for p, pts in placement_rows}
+        placement_dict = {row["position"]: row["points"] for row in placement_rows}
         inserted = 0
         buffer = []
         for match_number in range(1, matches_number + 1):
@@ -314,7 +320,7 @@ class DebugCommands(commands.Cog):
         event_id: int
     ):
         if not await self.check_admin_role(interaction):
-            await interaction.response.send_message("Non hai il ruolo necessario per configurare le lobby di un evento!", ephemeral=True)
+            await interaction.response.send_message("Non hai i permessi per accettare tutti i risultati!", ephemeral=True)
             return
         await interaction.response.defer(ephemeral=True)
 
@@ -329,7 +335,8 @@ class DebugCommands(commands.Cog):
             await interaction.followup.send("Nessun risultato da accettare.")
             return
 
-        for (team_score_id,) in results:
+        for row in results:
+            team_score_id = row["id"]
             await set_result_status(team_score_id, "accepted")
 
         await interaction.followup.send(
