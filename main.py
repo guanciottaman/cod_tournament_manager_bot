@@ -44,7 +44,7 @@ class Bot(commands.Bot):
         super().__init__(command_prefix="!", intents=intents, tree_cls=CustomTree)
 
     async def on_ready(self):
-        print(f"Bot online come {self.user.display_name}")
+        logging.info(f"Bot online come {self.user.display_name}")
     
     async def error_handler(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
         msg = None
@@ -72,7 +72,7 @@ class Bot(commands.Bot):
         for guild in DEV_GUILDS:
             self.tree.copy_global_to(guild=guild)
             commands = await self.tree.sync(guild=guild)
-            print(f"Sincronizzati {len(commands)} comandi su {guild.id}")
+            logging.info(f"Sincronizzati {len(commands)} comandi su {guild.id}")
 
         await self.tree.sync()
 

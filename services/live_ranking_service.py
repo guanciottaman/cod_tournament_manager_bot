@@ -1,5 +1,6 @@
 import asyncio
 import discord
+import logging
 
 from typing import Any
 
@@ -40,7 +41,7 @@ async def live_mvp_loop(event_id: int, lobby_id: int):
                     include_pending=True
                 )
             except Exception as e:
-                print(e)
+                logging.error(e)
                 continue
             drop_worst_match = await get_drop_worst_match(event_id)
             embed = build_live_mvp_ranking_embed(
@@ -85,7 +86,7 @@ async def live_team_loop(event_id: int, lobby_id: int):
                     include_pending=True
                 )
             except Exception as e:
-                print(e)
+                logging.error(e)
                 continue
             inserted_matches = await get_inserted_matches_count(event_id)
             matches_number = await get_matches_number(event_id)

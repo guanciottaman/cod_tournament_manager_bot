@@ -1,4 +1,5 @@
 import discord
+import logging
 
 from models.event import Event
 from ui.embeds.lobby_builders import build_event_start_summary
@@ -37,7 +38,7 @@ async def start_event_callback(interaction: discord.Interaction, event: Event):
             try:
                 await start_live(event.event_id, interaction.guild, lobby.lobby_id)
             except Exception as e:
-                print(f"start_live error lobby {lobby.lobby_id}: {e}")
+                logging.error(f"start_live error lobby {lobby.lobby_id}: {e}")
     start_event_btn.callback = confirm_start
     view.add_item(start_event_btn)
     await interaction.response.send_message(embed=embed, view=view, ephemeral=True)

@@ -1,6 +1,6 @@
 import discord
 
-import traceback
+import logging
 
 from models.event import Event
 from services.event_service import get_duplicate_team_score
@@ -67,8 +67,7 @@ async def controlla_risultati_callback(
         )
 
     except Exception as e:
-        print("ERROR controlla_risultati:", e)
-        traceback.print_exc()
+        logging.error("ERROR controlla_risultati:", e)
 
         if interaction.response.is_done():
             await interaction.followup.send(

@@ -1,6 +1,7 @@
 import random
 import json
 from io import BytesIO
+import logging
 
 import discord
 from discord import app_commands
@@ -380,7 +381,7 @@ class DebugCommands(commands.Cog):
             )
 
         except Exception as e:
-            print(e)
+            logging.error(e)
 
             await interaction.followup.send(
                 f"Errore: {e}",
