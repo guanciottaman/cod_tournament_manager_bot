@@ -111,10 +111,11 @@ async def termina_evento_callback(
         await ranking_channel.send(embeds=embeds)
     except (discord.Forbidden, discord.HTTPException):
         await interaction.followup.send(
-            "Il bot non ha i permessi per vedere o scrivere nel canale!"
+            "Il bot non ha i permessi per vedere o scrivere nel canale!",
+            ephemeral=True
         )
         return
-    await interaction.followup.send(f"La classifica è stata mandata su {ranking_channel.mention}")
+    await interaction.followup.send(f"La classifica è stata mandata su {ranking_channel.mention}", ephemeral=True)
     if delete_event_flag:
         await stop_live(event_id)
         await delete_lobbies_roles(event_id, interaction.guild)

@@ -93,7 +93,11 @@ async def generate_match_results(
     # dizionario da team_id -> (player_id, name)
     players_map: dict[int, list[tuple[int, str]]] = {}
 
-    for team_id, member_id, member_name in rows:
+    for row in rows:
+        team_id = row["team_id"]
+        member_id = row["member_id"]
+        member_name = row["member_name"]
+
         players_map.setdefault(team_id, []).append((member_id, member_name))
 
     temp = []
