@@ -196,8 +196,8 @@ async def blacklist_guild(guild_id: int, by: int):
     row = await fetch_one(
         """
         INSERT INTO blacklisted_servers
-        (guild_id, blacklisted_at, blacklisted_by)
-        VALUES ($1, CURRENT_TIMESTAMP, $2)
+        (guild_id, blacklisted_by)
+        VALUES ($1, $2)
         ON CONFLICT (guild_id)
         DO UPDATE SET
             blacklisted_at = CURRENT_TIMESTAMP,
@@ -206,6 +206,7 @@ async def blacklist_guild(guild_id: int, by: int):
         """,
         (guild_id, by)
     )
+    logging.info(row)
     if row is None:
         logger.error(f"Failed to blacklist guild {guild_id}. No row returned from database.")
         return
