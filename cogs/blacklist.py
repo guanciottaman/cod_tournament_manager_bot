@@ -27,7 +27,7 @@ class Blacklist(commands.Cog):
     @app_commands.checks.has_permissions(ban_members=True)
     async def blacklist(self, interaction: discord.Interaction):
         await interaction.response.defer(ephemeral=True)
-        if interaction.guild.id not in (1493505736523907102, 1043217543604748290):
+        if interaction.guild is not None and interaction.guild.id not in DEV_GUILDS:
             await interaction.followup.send("Questo comando è riservato.", ephemeral=True)
             return
         rome = ZoneInfo("Europe/Rome")
@@ -46,8 +46,7 @@ class Blacklist(commands.Cog):
                 guild_name = guild.name
             else:
                 guild_name = "Nome sconosciuto"
-            dt = datetime.strptime(b["blacklisted_at"], "%Y-%m-%d %H:%M:%S")
-            dt = dt.replace(tzinfo=ZoneInfo("UTC")).astimezone(rome)
+            dt = b["blacklisted_at"].replace(tzinfo=ZoneInfo("UTC")).astimezone(rome)
             blacklisted_at = dt.strftime("%d/%m/%Y %H:%M")
             blacklisted_by = interaction.guild.get_member(b["blacklisted_by"])
             emb_description += f"{guild_name} | {b_id} | {blacklisted_at} | {blacklisted_by.mention}\n"

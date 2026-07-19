@@ -140,6 +140,4 @@ CREATE TABLE IF NOT EXISTS blacklisted_servers(
     guild_id BIGINT PRIMARY KEY,
     blacklisted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     blacklisted_by BIGINT,
-
-    FOREIGN KEY (guild_id) REFERENCES server_configs(guild_id) ON DELETE CASCADE
 );
