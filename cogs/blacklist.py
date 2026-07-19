@@ -1,3 +1,5 @@
+import logging
+
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -6,6 +8,14 @@ from datetime import datetime
 from zoneinfo import ZoneInfo
 
 from services.server_service import *
+
+
+logger = logging.getLogger(__name__)
+
+DEV_GUILDS = [
+    discord.Object(id=1493505736523907102),
+    discord.Object(id=1043217543604748290)
+]
 
 @app_commands.guilds(discord.Object(id=1493505736523907102), discord.Object(id=1043217543604748290))
 class Blacklist(commands.Cog):
@@ -50,7 +60,7 @@ class Blacklist(commands.Cog):
     @app_commands.checks.has_permissions(ban_members=True)
     async def blacklist_add(self, interaction: discord.Interaction, server_id: str):
         await interaction.response.defer(ephemeral=True)
-        if interaction.guild.id not in (1493505736523907102, 1043217543604748290):
+        if interaction.guild is None or interaction.guild.id not in DEV_GUILDS:
             await interaction.followup.send("Questo comando è riservato.", ephemeral=True)
             return
         if not server_id.isdigit():
@@ -60,7 +70,9 @@ class Blacklist(commands.Cog):
         if is_blacklisted(guild_id):
             await interaction.followup.send("Questo server è già blacklistato!", ephemeral=True)
             return
+        logger.info(f"Blacklistando server {guild_id} per richiesta di {interaction.user} ({interaction.user.id})")
         await blacklist_guild(guild_id, interaction.user.id)
+        logger.info(f"Server {guild_id} blacklistato per richiesta di {interaction.user} ({interaction.user.id})")
         try:
             guild = await self.bot.fetch_guild(guild_id)
         except (discord.HTTPException, discord.NotFound, discord.Forbidden):
