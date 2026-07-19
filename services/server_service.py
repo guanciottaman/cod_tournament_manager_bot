@@ -1,10 +1,13 @@
 import discord
 import asyncpg
+import logging
 
 from typing import Any
 
 from models.server_config import ServerConfig
 from db.db import *
+
+logger = logging.getLogger(__name__)
 
 blacklist_cache: dict[int, dict[str, Any]] = {}
 
@@ -203,6 +206,9 @@ async def blacklist_guild(guild_id: int, by: int):
         """,
         (guild_id, by)
     )
+    if row is None:
+        logger.error(f"Failed to blacklist guild {guild_id}. No row returned from database.")
+        return
 
     blacklist_cache[guild_id] = {
         "blacklisted_at": row["blacklisted_at"],
