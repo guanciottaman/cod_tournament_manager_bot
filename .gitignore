@@ -6,6 +6,8 @@ __pycache__/
 # C extensions
 *.so
 
+bin/
+
 # Distribution / packaging
 .Python
 build/
@@ -212,3 +214,12 @@ bin/pyftmerge
 bin/pyftsubset
 bin/ttx
 share/man/man1/ttx.1
+pyvenv.cfg
+bin/activate
+bin/activate.csh
+bin/activate.fish
+bin/dotenv
+bin/pip
+bin/pip3
+bin/pip3.14
+cogs/__pycache__/events.cpython-314.pyc

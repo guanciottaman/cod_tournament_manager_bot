@@ -190,7 +190,7 @@ async def reload_blacklist_cache():
     await init_blacklist_cache()
 
 async def blacklist_guild(guild_id: int, by: int):
-    await execute(
+    row = await fetch_one(
         """
         INSERT INTO blacklisted_servers
         (guild_id, blacklisted_at, blacklisted_by)
@@ -199,21 +199,14 @@ async def blacklist_guild(guild_id: int, by: int):
         DO UPDATE SET
             blacklisted_at = CURRENT_TIMESTAMP,
             blacklisted_by = EXCLUDED.blacklisted_by
+        RETURNING blacklisted_at, blacklisted_by
         """,
         (guild_id, by)
     )
 
-    row = await fetch_one(
-        "SELECT blacklisted_at FROM blacklisted_servers WHERE guild_id = $1",
-        (guild_id,)
-    )
-
-    if row is None:
-        return
-
     blacklist_cache[guild_id] = {
         "blacklisted_at": row["blacklisted_at"],
-        "blacklisted_by": by
+        "blacklisted_by": row["blacklisted_by"]
     }
 
 async def unblacklist_guild(guild_id: int):

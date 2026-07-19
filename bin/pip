@@ -1,4 +1,4 @@
-#!/home/guanciottaman/python_projects/cod_tournament_manager/bin/python3
+#!/home/guanciottaman/python_projects/cod_tournament_manager_bot/bin/python3
 import sys
 from pip._internal.cli.main import main
 if __name__ == '__main__':

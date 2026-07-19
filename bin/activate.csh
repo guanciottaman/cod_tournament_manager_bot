@@ -9,17 +9,17 @@ alias deactivate 'test $?_OLD_VIRTUAL_PATH != 0 && setenv PATH "$_OLD_VIRTUAL_PA
 # Unset irrelevant variables.
 deactivate nondestructive
 
-setenv VIRTUAL_ENV /home/guanciottaman/python_projects/cod_tournament_manager
+setenv VIRTUAL_ENV /home/guanciottaman/python_projects/cod_tournament_manager_bot
 
 set _OLD_VIRTUAL_PATH="$PATH"
 setenv PATH "$VIRTUAL_ENV/"bin":$PATH"
-setenv VIRTUAL_ENV_PROMPT cod_tournament_manager
+setenv VIRTUAL_ENV_PROMPT cod_tournament_manager_bot
 
 
 set _OLD_VIRTUAL_PROMPT="$prompt"
 
 if (! "$?VIRTUAL_ENV_DISABLE_PROMPT") then
-    set prompt = "("cod_tournament_manager") $prompt:q"
+    set prompt = "("cod_tournament_manager_bot") $prompt:q"
 endif
 
 alias pydoc python -m pydoc
