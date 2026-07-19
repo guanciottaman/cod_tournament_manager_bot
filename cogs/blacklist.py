@@ -13,8 +13,8 @@ from services.server_service import *
 logger = logging.getLogger(__name__)
 
 DEV_GUILDS = [
-    discord.Object(id=1493505736523907102),
-    discord.Object(id=1043217543604748290)
+    1493505736523907102,
+    1043217543604748290
 ]
 
 @app_commands.guilds(discord.Object(id=1493505736523907102), discord.Object(id=1043217543604748290))
