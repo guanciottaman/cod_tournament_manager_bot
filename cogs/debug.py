@@ -15,6 +15,8 @@ from services.server_service import get_admin_role_id
 from models.team import Team
 
 
+logger = logging.getLogger(__name__)
+
 TEAM_NAMES = [
     "Alpha", "Bravo", "Delta", "Omega", "Titan", "Shadow",
     "Storm", "Viper", "Ghost", "Nova", "Blaze", "Phantom"
@@ -387,7 +389,7 @@ class DebugCommands(commands.Cog):
             )
 
         except Exception as e:
-            logging.error(e)
+            logger.error(e)
 
             await interaction.followup.send(
                 f"Errore: {e}",

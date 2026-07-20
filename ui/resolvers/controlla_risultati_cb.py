@@ -8,6 +8,8 @@ from services.team_service import get_event_results
 from ui.embeds.event_builders import build_results_embed
 from ui.views.controlla_risultati import ControllaRisultatiView
 
+logger = logging.getLogger(__name__)
+
 async def controlla_risultati_callback(
     interaction: discord.Interaction,
     event: Event,
@@ -67,7 +69,7 @@ async def controlla_risultati_callback(
         )
 
     except Exception as e:
-        logging.error("ERROR controlla_risultati:", e)
+        logger.error("ERROR controlla_risultati:", e)
 
         if interaction.response.is_done():
             await interaction.followup.send(

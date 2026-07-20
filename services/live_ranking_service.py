@@ -12,6 +12,8 @@ from services.ranking_service import compute_team_ranking, compute_mvp_ranking
 from ui.embeds.event_builders import build_live_team_ranking_embed, build_live_mvp_ranking_embed
 
 
+logger = logging.getLogger(__name__)
+
 live_events: dict[int, dict[int, dict[str, Any]]] = {}
 
 
@@ -41,7 +43,7 @@ async def live_mvp_loop(event_id: int, lobby_id: int):
                     include_pending=True
                 )
             except Exception as e:
-                logging.error(e)
+                logger.error(e)
                 continue
             drop_worst_match = await get_drop_worst_match(event_id)
             embed = build_live_mvp_ranking_embed(
@@ -86,7 +88,7 @@ async def live_team_loop(event_id: int, lobby_id: int):
                     include_pending=True
                 )
             except Exception as e:
-                logging.error(e)
+                logger.error(e)
                 continue
             inserted_matches = await get_inserted_matches_count(event_id)
             matches_number = await get_matches_number(event_id)

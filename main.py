@@ -4,6 +4,7 @@ from discord.ext import commands
 from dotenv import load_dotenv
 
 import asyncio
+import sys
 import logging
 
 load_dotenv(".env")
@@ -14,8 +15,15 @@ from cogs.events import build_member_cache
 from services.server_service import is_blacklisted, init_blacklist_cache
 
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 
+logger = logging.getLogger(__name__)
 
 DEV_GUILDS = [
     discord.Object(id=1493505736523907102),
@@ -44,7 +52,7 @@ class Bot(commands.Bot):
         super().__init__(command_prefix="!", intents=intents, tree_cls=CustomTree)
 
     async def on_ready(self):
-        logging.info(f"Bot online come {self.user.display_name}")
+        logger.info(f"Bot online come {self.user.display_name}")
     
     async def error_handler(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
         msg = None
@@ -72,7 +80,7 @@ class Bot(commands.Bot):
         for guild in DEV_GUILDS:
             self.tree.copy_global_to(guild=guild)
             commands = await self.tree.sync(guild=guild)
-            logging.info(f"Sincronizzati {len(commands)} comandi su {guild.id}")
+            logger.info(f"Sincronizzati {len(commands)} comandi su {guild.id}")
 
         await self.tree.sync()
 

@@ -7,6 +7,8 @@ from services.lobby_service import get_lobbies
 from services.event_service import set_event_status, check_event_config_complete
 from services.live_ranking_service import start_live
 
+logger = logging.getLogger(__name__)
+
 async def start_event_callback(interaction: discord.Interaction, event: Event):
     missing = await check_event_config_complete(event.event_id, interaction.guild_id)
     if missing:
@@ -38,7 +40,7 @@ async def start_event_callback(interaction: discord.Interaction, event: Event):
             try:
                 await start_live(event.event_id, interaction.guild, lobby.lobby_id)
             except Exception as e:
-                logging.error(f"start_live error lobby {lobby.lobby_id}: {e}")
+                logger.error(f"start_live error lobby {lobby.lobby_id}: {e}")
     start_event_btn.callback = confirm_start
     view.add_item(start_event_btn)
     await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
