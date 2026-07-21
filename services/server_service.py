@@ -21,17 +21,22 @@ async def check_server_registered(guild_id: int) -> bool:
 
 async def create_server_config(
     guild_id: int,
-    ranking_channel_id: int,
-    admin_role_id: int,
-    live_ranking_channel_id: int,
-    lobbies_channel_id: int
+    config: ServerConfig
 ) -> bool:
     try:
         await execute("""
             INSERT INTO server_configs
-            (guild_id, ranking_channel_id, admin_role_id, live_ranking_channel_id, lobbies_channel_id)
-            VALUES ($1, $2, $3, $4, $5)
-        """, (guild_id, ranking_channel_id, admin_role_id, live_ranking_channel_id, lobbies_channel_id))
+            (guild_id, panel_channel_id, ranking_channel_id, admin_role_id, live_ranking_channel_id, lobbies_channel_id)
+            VALUES ($1, $2, $3, $4, $5, $6)
+        """, (
+                guild_id,
+                config.panel_channel_id,
+                config.ranking_channel_id,
+                config.admin_role_id,
+                config.live_ranking_channel_id,
+                config.lobbies_channel_id
+            )
+        )
 
         return True
 
@@ -47,6 +52,7 @@ async def get_server_config(guild_id: int) -> ServerConfig | None:
         return None
     return ServerConfig(
         guild_id,
+        server_config["panel_channel_id"],
         server_config["ranking_channel_id"],
         server_config["admin_role_id"],
         server_config["live_ranking_channel_id"],
@@ -55,28 +61,29 @@ async def get_server_config(guild_id: int) -> ServerConfig | None:
 
 async def edit_server_config(
     guild_id: int,
-    ranking_channel_id: int | None = None,
-    admin_role_id: int | None = None,
-    live_ranking_channel_id: int | None = None,
-    lobbies_channel_id: int | None = None
+    config: ServerConfig
 ) -> None:
     updates: list[str] = []
     params: list[int] = []
 
-    if ranking_channel_id is not None:
-        params.append(ranking_channel_id)
+    if config.panel_channel_id is not None:
+        params.append(config.panel_channel_id)
+        updates.append(f"panel_channel_id = ${len(params)}")
+
+    if config.ranking_channel_id is not None:
+        params.append(config.ranking_channel_id)
         updates.append(f"ranking_channel_id = ${len(params)}")
 
-    if admin_role_id is not None:
-        params.append(admin_role_id)
+    if config.admin_role_id is not None:
+        params.append(config.admin_role_id)
         updates.append(f"admin_role_id = ${len(params)}")
 
-    if live_ranking_channel_id is not None:
-        params.append(live_ranking_channel_id)
+    if config.live_ranking_channel_id is not None:
+        params.append(config.live_ranking_channel_id)
         updates.append(f"live_ranking_channel_id = ${len(params)}")
 
-    if lobbies_channel_id is not None:
-        params.append(lobbies_channel_id)
+    if config.lobbies_channel_id is not None:
+        params.append(config.lobbies_channel_id)
         updates.append(f"lobbies_channel_id = ${len(params)}")
 
     if not updates:

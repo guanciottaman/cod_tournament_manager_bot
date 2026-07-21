@@ -6,6 +6,7 @@ import pytz
 
 from services.event_service import *
 from models.team import TeamScore
+from models.server_config import ServerConfig
 
 DEFAULT_PLACEMENT_POINTS = {
     "1": 15,
@@ -61,17 +62,40 @@ def build_event_embed(
     return embed
 
 def build_server_config_embed(
-    guild_name: str,
-    ranking_channel: discord.TextChannel | None,
-    admin_role: discord.Role | None,
-    live_ranking_channel: discord.TextChannel | None,
-    lobbies_channel: discord.TextChannel | None
+    guild: discord.Guild,
+    server_config: ServerConfig
 ) -> discord.Embed:
+    if server_config.panel_channel_id is not None:
+        panel_channel = guild.get_channel(server_config.panel_channel_id)
+    else:
+        panel_channel = None
+    if server_config.ranking_channel_id is not None:
+        ranking_channel = guild.get_channel(server_config.ranking_channel_id)
+    else:
+        ranking_channel = None
+    if server_config.admin_role_id is not None:
+        admin_role = guild.get_role(server_config.admin_role_id)
+    else:
+        admin_role = None
+    if server_config.live_ranking_channel_id is not None:
+        live_ranking_channel = guild.get_channel(server_config.live_ranking_channel_id)
+    else:
+        live_ranking_channel = None
+    if server_config.lobbies_channel_id is not None:
+        lobbies_channel = guild.get_channel(server_config.lobbies_channel_id)
+    else:
+        lobbies_channel = None
     embed = discord.Embed(
         title="Config server",
-        color=discord.Color.blue(),
-        description=f"**Server:** {guild_name}\n**Canale classifiche:** {ranking_channel.mention if ranking_channel is not None else 'Nessuno'}\n**Ruolo admin:** {admin_role.mention if admin_role is not None else 'Nessuno'}\n**Canale classifiche live:** {live_ranking_channel.mention if live_ranking_channel is not None else 'Nessuno'}\n**Canale lobby:** {lobbies_channel.mention if lobbies_channel else 'Nessuno'}"
+        color=discord.Color.blue()
     )
+    description = f"**Server:** {guild.name}\n"
+    description += f"**Canale pannello: ** {panel_channel.mention if panel_channel is not None else 'Nessuno'}\n"
+    description += f"**Canale classifiche:** {ranking_channel.mention if ranking_channel is not None else 'Nessuno'}\n"
+    description += f"**Ruolo admin:** {admin_role.mention if admin_role is not None else 'Nessuno'}\n"
+    description += f"**Canale classifiche live:** {live_ranking_channel.mention if live_ranking_channel is not None else 'Nessuno'}\n"
+    description += f"**Canale lobby:** {lobbies_channel.mention if lobbies_channel is not None else 'Nessuno'}\n"
+    embed.description = description
     return embed
 
 def build_results_embed(
