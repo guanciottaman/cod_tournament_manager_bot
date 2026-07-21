@@ -310,7 +310,7 @@ class SetupViewPage2(discord.ui.View):
                 interaction.guild,
                 self.config
             ),
-            view=SetupViewPage1(interaction.guild.id, self.config)
+            view=SetupViewPage1(interaction.guild.id, self.config, self.edit_mode)
         )
 
     @discord.ui.button(
