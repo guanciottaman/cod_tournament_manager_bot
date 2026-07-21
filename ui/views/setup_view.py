@@ -224,12 +224,13 @@ class SetupViewPage2(discord.ui.View):
             await interaction.response.send_message("Non puoi usarmi dai DM", ephemeral=True)
             return
         selected = select.values[0]
-        self.live_ranking_channel = interaction.guild.get_channel(selected.id)
-        if self.live_ranking_channel is None:
+        self.config.live_ranking_channel_id = selected.id
+        live_ranking_channel = interaction.guild.get_channel(selected.id)
+        if live_ranking_channel is None:
             await interaction.response.send_message("Canale non trovato!", ephemeral=True)
             return
         missing = await check_channel_permissions(
-            self.live_ranking_channel,
+            live_ranking_channel,
             interaction.guild,
             RANKING_CHANNEL_PERMS | READ_HISTORY_PERMS
         )
@@ -238,7 +239,7 @@ class SetupViewPage2(discord.ui.View):
                 title="Permessi mancanti",
                 color=discord.Color.red(),
                 description=(
-                    f"Mancano i seguenti permessi per il canale {self.live_ranking_channel.mention}:\n"
+                    f"Mancano i seguenti permessi per il canale {live_ranking_channel.mention}:\n"
                     + "\n".join(f"- {perm}" for perm in missing)
                 )
             )
@@ -268,17 +269,18 @@ class SetupViewPage2(discord.ui.View):
             await interaction.response.send_message("Non puoi usarmi dai DM", ephemeral=True)
             return
         selected = select.values[0]
-        self.lobbies_channel = interaction.guild.get_channel(selected.id)
-        if self.lobbies_channel is None:
+        self.config.lobbies_channel_id = selected.id
+        lobbies_channel = interaction.guild.get_channel(selected.id)
+        if lobbies_channel is None:
             await interaction.response.send_message("Canale non trovato!", ephemeral=True)
             return
-        missing = await check_channel_permissions(self.lobbies_channel, interaction.guild, RANKING_CHANNEL_PERMS)
+        missing = await check_channel_permissions(lobbies_channel, interaction.guild, RANKING_CHANNEL_PERMS)
         if missing:
             embed = discord.Embed(
                 title="Permessi mancanti",
                 color=discord.Color.red(),
                 description=(
-                    f"Mancano i seguenti permessi per il canale {self.lobbies_channel.mention}:\n"
+                    f"Mancano i seguenti permessi per il canale {lobbies_channel.mention}:\n"
                     + "\n".join(f"- {perm}" for perm in missing)
                 )
             )
