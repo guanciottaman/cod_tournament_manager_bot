@@ -351,7 +351,7 @@ class SetupViewPage2(discord.ui.View):
                 self.config
             )
 
-            if not success:
+            if not success and not self.edit_mode:
                 await interaction.response.send_message(
                     "Il tuo server è già registrato!",
                     ephemeral=True
