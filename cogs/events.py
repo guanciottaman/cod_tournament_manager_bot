@@ -8,7 +8,7 @@ from ui.embeds.event_builders import *
 from ui.embeds.lobby_builders import build_info_lobby_embed
 from ui.modals.nome_evento import NomeEventoModal
 from ui.views.elimina_evento import EliminaEventoView
-from ui.views.setup_view import SetupView, DeleteServerView
+from ui.views.setup_view import SetupViewPage1, DeleteServerView
 from ui.views.team_selector import TeamsSelectorView
 from ui.resolvers.lobby_config_cb import start_lobby_config
 from ui.resolvers.start_event_cb import start_event_callback
@@ -100,7 +100,10 @@ class Events(commands.Cog):
     @app_commands.command(name="setup_server", description="Imposta il bot per questo server")
     @app_commands.checks.has_permissions(ban_members=True)
     async def setup_server(self, interaction: discord.Interaction):
-        exists = await check_server_registered(interaction.guild_id)
+        if interaction.guild is None:
+            await interaction.response.send_message("Non puoi usarmi dai DM")
+            return
+        exists = await check_server_registered(interaction.guild.id)
 
         if exists:
             await interaction.response.send_message(
@@ -111,17 +114,20 @@ class Events(commands.Cog):
 
         await interaction.response.send_message(
             embed=build_server_config_embed(
-                interaction.guild.name,
-                None, None, None, None
+                interaction.guild,
+                ServerConfig(interaction.guild.id)
             ),
-            view=SetupView(),
+            view=SetupViewPage1(interaction.guild.id),
             ephemeral=True
         )
     
     @app_commands.command(name="modifica_config_server", description="Modifica la configurazione di questo server")
     @app_commands.checks.has_permissions(ban_members=True)
     async def modifica_config_server(self, interaction: discord.Interaction):
-        exists = await check_server_registered(interaction.guild_id)
+        if interaction.guild is None:
+            await interaction.response.send_message("Non puoi usarmi dai DM")
+            return
+        exists = await check_server_registered(interaction.guild.id)
 
         if not exists:
             await interaction.response.send_message(
@@ -130,37 +136,21 @@ class Events(commands.Cog):
             )
             return
         await interaction.response.defer(ephemeral=True)
-        config = await get_server_config(interaction.guild_id)
+        config = await get_server_config(interaction.guild.id)
         if config is None:
             await interaction.followup.send("C'è stato un problema!", ephemeral=True)
             return
-        view = SetupView(edit_mode=True)
-        if config.ranking_channel_id is not None:
-            ranking_channel = interaction.guild.get_channel(config.ranking_channel_id)
-            view.ranking_channel = ranking_channel
-        else:
-            ranking_channel = None
-        if config.admin_role_id is not None:
-            admin_role = interaction.guild.get_role(config.admin_role_id)
-            view.admin_role = admin_role
-        else:
-            admin_role = None
-        if config.live_ranking_channel_id is not None:
-            live_ranking_channel = interaction.guild.get_channel(config.live_ranking_channel_id)
-            view.live_ranking_channel = live_ranking_channel
-        else:
-            live_ranking_channel = None
-        if config.lobbies_channel_id is not None:
-            lobbies_channel = interaction.guild.get_channel(config.lobbies_channel_id)
-            view.lobbies_channel = lobbies_channel
-        else:
-            lobbies_channel = None
+        view = SetupViewPage1(interaction.guild.id, config=config, edit_mode=True)
         embed = build_server_config_embed(
-            interaction.guild.name,
-            ranking_channel,
-            admin_role,
-            live_ranking_channel,
-            lobbies_channel
+            interaction.guild,
+            ServerConfig(
+                interaction.guild.id,
+                config.panel_channel_id,
+                config.ranking_channel_id,
+                config.admin_role_id,
+                config.live_ranking_channel_id,
+                config.lobbies_channel_id
+            )
         )
         await interaction.followup.send(
             embed=embed,
@@ -171,7 +161,10 @@ class Events(commands.Cog):
     @app_commands.command(name="elimina_config_server", description="Elimina la configurazione di questo server")
     @app_commands.checks.has_permissions(ban_members=True)
     async def delete_server(self, interaction: discord.Interaction):
-        exists = await check_server_registered(interaction.guild_id)
+        if interaction.guild is None:
+            await interaction.response.send_message("Non puoi usarmi dai DM")
+            return
+        exists = await check_server_registered(interaction.guild.id)
         if not exists:
             await interaction.response.send_message("Il tuo server non è registrato!", ephemeral=True)
             return
