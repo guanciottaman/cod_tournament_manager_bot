@@ -1,5 +1,6 @@
 CREATE TABLE IF NOT EXISTS server_configs(
     guild_id BIGINT PRIMARY KEY,
+    panel_channel_id BIGINT,
     ranking_channel_id BIGINT,
     admin_role_id BIGINT,
     live_ranking_channel_id BIGINT,

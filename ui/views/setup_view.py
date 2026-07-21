@@ -107,7 +107,11 @@ class SetupViewPage1(discord.ui.View):
             await interaction.response.send_message("Non puoi usarmi dai DM", ephemeral=True)
             return
         selected = select.values[0]
-        self.admin_role = interaction.guild.get_role(selected.id)
+        self.config.admin_role_id = selected.id
+        admin_role = interaction.guild.get_role(selected.id)
+        if admin_role is None:
+            await interaction.response.send_message("Questo ruolo non esiste!", ephemeral=True)
+            return
         await interaction.response.edit_message(
             embed=build_server_config_embed(
                 interaction.guild,
@@ -234,7 +238,7 @@ class SetupViewPage2(discord.ui.View):
                 title="Permessi mancanti",
                 color=discord.Color.red(),
                 description=(
-                    f"Mancano i seguenti permessi per il canale {self.ranking_channel.mention}:\n"
+                    f"Mancano i seguenti permessi per il canale {self.live_ranking_channel.mention}:\n"
                     + "\n".join(f"- {perm}" for perm in missing)
                 )
             )
@@ -260,13 +264,13 @@ class SetupViewPage2(discord.ui.View):
         row=1
     )
     async def select_lobbies_channel(self, interaction: discord.Interaction, select: discord.ui.ChannelSelect):
+        if interaction.guild is None:
+            await interaction.response.send_message("Non puoi usarmi dai DM", ephemeral=True)
+            return
         selected = select.values[0]
         self.lobbies_channel = interaction.guild.get_channel(selected.id)
         if self.lobbies_channel is None:
             await interaction.response.send_message("Canale non trovato!", ephemeral=True)
-            return
-        if interaction.guild is None:
-            await interaction.response.send_message("Non puoi usarmi dai DM", ephemeral=True)
             return
         missing = await check_channel_permissions(self.lobbies_channel, interaction.guild, RANKING_CHANNEL_PERMS)
         if missing:
@@ -274,7 +278,7 @@ class SetupViewPage2(discord.ui.View):
                 title="Permessi mancanti",
                 color=discord.Color.red(),
                 description=(
-                    f"Mancano i seguenti permessi per il canale {self.ranking_channel.mention}:\n"
+                    f"Mancano i seguenti permessi per il canale {self.lobbies_channel.mention}:\n"
                     + "\n".join(f"- {perm}" for perm in missing)
                 )
             )
