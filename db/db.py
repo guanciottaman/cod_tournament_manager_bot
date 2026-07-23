@@ -24,6 +24,13 @@ def get_pool() -> Pool:
         raise RuntimeError("Database pool not initialized")
     return pool
 
+async def close_db():
+    global pool
+
+    if pool is not None:
+        await pool.close()
+        pool = None
+
 async def fetch_one(query: str, params: tuple[Any, ...] = tuple()):
     async with get_pool() as conn:
         return await conn.fetchrow(query, *params)

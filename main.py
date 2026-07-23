@@ -97,6 +97,10 @@ class Bot(commands.Bot):
         for event in active_events:
             self.add_view(RegistraTeamView(event.event_id))
 
+    async def close(self):
+        await close_db()
+        await super().close()
+
 
 bot = Bot()
 
