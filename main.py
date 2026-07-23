@@ -79,26 +79,38 @@ class Bot(commands.Bot):
 
     async def setup_hook(self):
         await init_db()
+        logger.info("DB OK")
         await init_blacklist_cache()
+
+        logger.info("BLACKLIST OK")
 
         for guild in DEV_GUILDS:
             self.tree.copy_global_to(guild=guild)
             commands = await self.tree.sync(guild=guild)
             logger.info(f"Sincronizzati {len(commands)} comandi su {guild.id}")
+        
+        logger.info("SYNC DEV OK")
 
         await self.tree.sync()
+        logger.info("SYNC GLOBAL OK")
 
         self.tree.on_error = self.error_handler
 
         for guild in self.guilds:
             await build_member_cache(guild)
+        
+        logger.info("CACHE OK")
         logger.info("Sincronizzo le view...")
         self.add_view(ServerPanelView())
         active_events = await get_active_events()
+        logger.info(active_events)
         for event in active_events:
             self.add_view(RegistraTeamView(event.event_id))
 
+        logger.info("VIEWS OK")
+
     async def close(self):
+        logger.warning("BOT CLOSE CHIAMATO")
         await close_db()
         await super().close()
 
