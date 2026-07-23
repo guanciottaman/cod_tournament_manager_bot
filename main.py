@@ -102,6 +102,7 @@ class Bot(commands.Bot):
         logger.info("CACHE OK")
         logger.info("Sincronizzo le view...")
         self.add_view(ServerPanelView())
+        logger.info("ServerPanelView sincronizzata")
         active_events = await get_active_events()
         logger.info(active_events)
         for event in active_events:
