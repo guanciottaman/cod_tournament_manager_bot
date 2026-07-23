@@ -43,15 +43,15 @@ async def close_db():
         pool = None
 
 async def fetch_one(query: str, params: tuple[Any, ...] = tuple()):
-    async with get_pool() as conn:
+    async with get_pool().acquire() as conn:
         return await conn.fetchrow(query, *params)
 
 
 async def fetch_all(query: str, params: tuple[Any, ...] = tuple()):
-    async with get_pool() as conn:
+    async with get_pool().acquire() as conn:
         return await conn.fetch(query, *params)
 
 
 async def execute(query: str, params: tuple[Any, ...] = tuple()):
-    async with get_pool() as conn:
+    async with get_pool().acquire() as conn:
         return await conn.execute(query, *params)
