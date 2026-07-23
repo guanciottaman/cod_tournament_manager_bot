@@ -148,6 +148,8 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
             self.capoteam.default = self.player_names[0]
             if kds is not None:
                 self.kds = kds
+        else:
+            team_id = None
         other_players = players_names[1:] if players_names else []
 
         self.inputs: list[discord.ui.TextInput[Any]] = []
@@ -296,8 +298,10 @@ class RegistraTeamModal(discord.ui.Modal, title="Registra il tuo team"):
                     self.team_id, lobby_id, _ = team_tuple
                     await assign_user_lobby_role(self.event_id, lobby_id, interaction.user.id, interaction.guild)
                 else:
-                    await insert_teams(self.event_id, nome_team, interaction.user.id, names)
-                
+                    team_tuple = await insert_teams(self.event_id, nome_team, interaction.user.id, names)
+                    if team_tuple is None:
+                        return
+                    self.team_id = team_tuple[0]
                 channel = await create_team_channel(self.event_id, interaction, self.team_id, nome_team)
                 if channel is None:
                     raise RuntimeError("Errore nella creazione del canale")
@@ -399,8 +403,11 @@ class TeamKDModal(discord.ui.Modal, title="Inserisci KD team"):
                 team_id, member_ids = team_tuple
                 players_kd_dict = dict(zip(member_ids, kd_values))
                 await update_team_kd(team_id, players_kd_dict)
+            channel = await create_team_channel(self.event_id, interaction, self.team_id, self.team_name)
+            if channel is None:
+                return
             await interaction.response.send_message(
-                "Hai iscritto il tuo team all'evento con successo.",
+                f"Hai iscritto il tuo team all'evento con successo.\nVai su {channel.mention} per inserire i risultati.",
                 ephemeral=True
             )
             await notify_admins(interaction, self.team_name, [(n, kd) for n, kd in zip(self.players, kd_values)])
