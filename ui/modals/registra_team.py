@@ -335,6 +335,8 @@ class TeamKDModal(discord.ui.Modal, title="Inserisci KD team"):
         if self.edit_mode and team_id is not None and kds is not None:
             self.team_id = team_id
             self.kds = kds
+        else:
+            self.team_id = None
 
         self.inputs: list[discord.ui.TextInput[Any]] = []
 
@@ -363,7 +365,7 @@ class TeamKDModal(discord.ui.Modal, title="Inserisci KD team"):
                 ephemeral=True
             )
             return
-        if self.edit_mode:
+        if self.edit_mode and self.team_id is not None:
             member_ids = await edit_teams(self.team_id, self.players, self.team_name if self.team_name else None)
 
             players_kd_dict = dict(zip(member_ids, kd_values))
@@ -401,6 +403,7 @@ class TeamKDModal(discord.ui.Modal, title="Inserisci KD team"):
                     await interaction.response.send_message("Errore interno team_id", ephemeral=True)
                     return
                 team_id, member_ids = team_tuple
+                self.team_id = team_id
                 players_kd_dict = dict(zip(member_ids, kd_values))
                 await update_team_kd(team_id, players_kd_dict)
             channel = await create_team_channel(self.event_id, interaction, self.team_id, self.team_name)
