@@ -150,7 +150,7 @@ async def get_active_events() -> list[Event]:
 
         FROM events e
         LEFT JOIN events_settings s ON s.event_id = e.event_id
-        WHERE status IN ('ready', 'setup', 'running')
+        WHERE e.status IN ('ready', 'setup', 'running')
         ORDER BY e.event_id DESC
     """
 
