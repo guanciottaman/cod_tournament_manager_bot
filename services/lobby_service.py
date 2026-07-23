@@ -235,8 +235,10 @@ async def set_lobbies_number(event_id: int, new_number: int):
     await execute("UPDATE events_settings SET lobbies_number = $1 WHERE event_id = $2",
         (new_number, event_id))
 
-async def update_lobbies_config(event_id: int, guild_id: int, new_number: int, mode: str):
+async def update_lobbies_config(event_id: int, guild_id: int, new_number: int):
     event = await get_event_info(event_id, guild_id)
+    if event is None:
+        return
 
     if event.status != "ready":
         raise ValueError("Cannot modify running event")

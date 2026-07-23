@@ -1,5 +1,7 @@
 import discord
 
+from typing import Any
+
 from models.lobby import Lobby
 from models.event import Event
 from services.lobby_service import get_lobbies
@@ -9,6 +11,8 @@ from services.server_service import check_channel_permissions
 from config.permissions import LOBBY_CODES_CHANNEL_PERMS
 
 async def set_lobby_codes_callback(interaction: discord.Interaction, event: Event):
+    if interaction.guild is None:
+        return
     lobbies = await get_lobbies(event.event_id)
     embed = discord.Embed(
         title="Seleziona canali",
@@ -28,7 +32,7 @@ async def set_lobby_codes_callback(interaction: discord.Interaction, event: Even
     channels: dict[int, int] = dict()
     view = discord.ui.View()
 
-    def make_callback(current_lobby: Lobby, select: discord.ui.ChannelSelect):
+    def make_callback(current_lobby: Lobby, select: discord.ui.ChannelSelect[Any]):
         async def select_callback(interaction: discord.Interaction):
             selected_channel = select.values[0]
             if interaction.guild is None:
@@ -54,7 +58,8 @@ async def set_lobby_codes_callback(interaction: discord.Interaction, event: Even
 
                 if channel_id:
                     channel = interaction.guild.get_channel(channel_id)
-                    emb_description += f"LOBBY {lobby.name} | {channel.mention}\n"
+                    if channel is not None:
+                        emb_description += f"LOBBY {lobby.name} | {channel.mention}\n"
             embed.description = emb_description
             await interaction.response.edit_message(
                 embed=embed,
@@ -63,7 +68,7 @@ async def set_lobby_codes_callback(interaction: discord.Interaction, event: Even
         return select_callback
     
     for lobby in lobbies:
-        select = discord.ui.ChannelSelect(
+        select: discord.ui.ChannelSelect[Any] = discord.ui.ChannelSelect(
             placeholder=f"Seleziona il canale per la lobby {lobby.name}",
             channel_types=[discord.ChannelType.text],
             min_values=1,
@@ -71,11 +76,13 @@ async def set_lobby_codes_callback(interaction: discord.Interaction, event: Even
         )
         select.callback = make_callback(lobby, select)
         view.add_item(select)
-    confirm_btn = discord.ui.Button(
+    confirm_btn: discord.ui.Button[Any] = discord.ui.Button(
         style=discord.ButtonStyle.green,
         label="Conferma"
     )
     async def confirm_callback(interaction: discord.Interaction):
+        if interaction.guild is None:
+            return
         if len(lobbies) != len(channels):
             await interaction.response.send_message("Non hai impostato tutti i canali!", ephemeral=True)
             return
@@ -117,7 +124,7 @@ async def set_lobby_codes_callback(interaction: discord.Interaction, event: Even
             channel = interaction.guild.get_channel(channel_id)
             role = interaction.guild.get_role(role_id)
 
-            if channel is None:
+            if not isinstance(channel, discord.TextChannel):
                 await interaction.response.send_message("Il canale non esiste!", ephemeral=True)
                 return
 

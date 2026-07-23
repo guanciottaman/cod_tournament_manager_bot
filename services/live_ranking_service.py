@@ -160,6 +160,8 @@ async def start_live(event_id: int, guild: discord.Guild, lobby_id: int):
         raise ValueError("No permission to access live channel")
     except discord.HTTPException:
         raise ValueError("Missing live channel")
+    if not isinstance(live_ranking_channel, discord.TextChannel):
+        return
     drop_worst_match = await get_drop_worst_match(event_id)
     team_embed = build_live_team_ranking_embed(
         event.name,
@@ -207,7 +209,7 @@ async def stop_live(event_id: int, lobby_id: int | None = None):
     if event_id not in live_events:
         return
 
-    async def cancel_task(task: asyncio.Task | None):
+    async def cancel_task(task: asyncio.Task[Any] | None):
         if task is None:
             return
         task.cancel()
@@ -218,7 +220,7 @@ async def stop_live(event_id: int, lobby_id: int | None = None):
 
     # stop all lobbies of event
     if lobby_id is None:
-        for lid, data in list(live_events[event_id].items()):
+        for _, data in list(live_events[event_id].items()):
             await cancel_task(data.get("team_task"))
             await cancel_task(data.get("mvp_task"))
 

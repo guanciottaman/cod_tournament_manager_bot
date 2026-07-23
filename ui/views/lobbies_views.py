@@ -41,7 +41,7 @@ class LobbyConfigView(discord.ui.View):
             )
             for i in possible_lobbies
         ]
-        select = discord.ui.Select(
+        select: discord.ui.Select[Any] = discord.ui.Select(
             placeholder="Numero lobby",
             min_values=1,
             max_values=1,
@@ -62,12 +62,13 @@ class LobbyConfigView(discord.ui.View):
                 self.lobbies_number,
                 self.teams_count
             )
+            if interaction.message is not None:
 
-            await interaction.followup.edit_message(
-                interaction.message.id,
-                embed=embed,
-                view=self
-            )
+                await interaction.followup.edit_message(
+                    interaction.message.id,
+                    embed=embed,
+                    view=self
+                )
 
         select.callback = set_lobbies_number_select
         self.add_item(select)
@@ -78,7 +79,9 @@ class LobbyConfigView(discord.ui.View):
         style=discord.ButtonStyle.secondary,
         row=1
     )
-    async def edit_lobbies_names(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def edit_lobbies_names(self, interaction: discord.Interaction, button: discord.ui.Button[Any]):
+        if interaction.message is None:
+            return
         await interaction.response.send_modal(
             LobbiesNamesModal(
                 event_id=self.event_id,
@@ -96,9 +99,11 @@ class LobbyConfigView(discord.ui.View):
         style=discord.ButtonStyle.green,
         row=2
     )
-    async def start_event(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def start_event(self, interaction: discord.Interaction, button: discord.ui.Button[Any]):
+        if interaction.guild is None:
+            return
         await interaction.response.defer(ephemeral=True)
-        event = await get_event_info(self.event_id, interaction.guild_id)
+        event = await get_event_info(self.event_id, interaction.guild.id)
 
         if not event:
             await interaction.followup.send("Evento non valido", ephemeral=True)
@@ -130,10 +135,11 @@ class LobbyConfigView(discord.ui.View):
         await apply_lobbies(self.lobby_ids, lobbies_structure)
         lobbies = await get_lobbies(self.event_id)
         guild = interaction.guild
-        if guild is None:
+        if not guild:
             await interaction.followup.send("Non puoi eseguirlo da un DM", ephemeral=True)
             return
-
+        if interaction.client.user is None:
+            return
         me = guild.get_member(interaction.client.user.id)
         if me is None:
             return

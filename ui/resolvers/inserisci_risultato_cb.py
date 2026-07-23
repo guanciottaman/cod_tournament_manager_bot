@@ -1,4 +1,7 @@
 import discord
+
+from typing import Any
+
 from models.event import Event
 from services.team_service import get_team_id, get_inserted_matches, get_players_names
 from ui.modals.registra_risultati import RegistraRisultatiModal
@@ -27,7 +30,7 @@ async def inserisci_risultato_callback(
     second_embed = discord.Embed(color=discord.Color.blurple())
     second_embed.set_image(url=prova2.url)
     view = discord.ui.View()
-    insert_result_btn = discord.ui.Button(label="INSERISCI RISULTATO", style=discord.ButtonStyle.green)
+    insert_result_btn: discord.ui.Button[Any] = discord.ui.Button(label="INSERISCI RISULTATO", style=discord.ButtonStyle.green)
     async def insert_result_callback(interaction: discord.Interaction):
         embed = discord.Embed(
             title="Match",
@@ -48,7 +51,7 @@ async def inserisci_risultato_callback(
             )
             return
         view = discord.ui.View()
-        match_selector = discord.ui.Select(
+        match_selector: discord.ui.Select[Any] = discord.ui.Select(
             placeholder="Seleziona il match...",
             min_values=1,
             max_values=1,

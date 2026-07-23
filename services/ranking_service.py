@@ -1,4 +1,5 @@
 from db.db import *
+from models.ranking import TeamRankingEntry, MVPRanking
 
 from collections import defaultdict
 import re
@@ -47,7 +48,7 @@ async def compute_team_ranking(
     scope: str = "global", 
     lobby_id: int | None = None,
     include_pending: bool = False
-):
+) -> list[TeamRankingEntry]:
     statuses = ["accepted", "edited"]
 
     if include_pending:
@@ -114,7 +115,7 @@ async def compute_team_ranking(
 
     placement_dict = {row["position"]: row["points"] for row in placement_map}
 
-    match_kills = defaultdict(int)
+    match_kills: defaultdict[int, int] = defaultdict(int)
 
     player_rows_query = """
         SELECT ps.team_score_id, ps.kills
@@ -153,7 +154,7 @@ async def compute_team_ranking(
             "kills": kills
         })
 
-    final = []
+    final: list[TeamRankingEntry] = []
 
     for row in teams:
         matches = team_matches.get(row["team_id"], [])
@@ -164,13 +165,15 @@ async def compute_team_ranking(
         score = sum(m["score"] for m in matches) - team_penalties.get(row["team_id"], 0)
         kills = sum(m["kills"] for m in matches)
 
-        final.append({
-            "team_id": row["team_id"],
-            "name": row["name"],
-            "score": score,
-            "kills": kills
-        })
-    return sorted(final, key=lambda x: x["score"], reverse=True)
+        final.append(
+            TeamRankingEntry(
+                team_id=row["team_id"],
+                name=row["name"],
+                score=score,
+                kills=kills
+            )
+        )
+    return sorted(final, key=lambda x: x.score, reverse=True)
 
 async def compute_mvp_ranking(
     event_id: int,
@@ -178,7 +181,7 @@ async def compute_mvp_ranking(
     lobby_id: int | None = None, 
     top_n: int = 5,
     include_pending: bool = False
-):
+) -> list[MVPRanking]:
     rows = await get_team_match_data(event_id, scope, lobby_id, include_pending)
 
     row = await fetch_one("""
@@ -201,15 +204,17 @@ async def compute_mvp_ranking(
 
         player_matches[formatted_player].append(row["kills"])
 
-    final_players = []
+    final_players: list[MVPRanking] = []
 
     for player, matches in player_matches.items():
         if drop_worst_match and len(matches) > 1:
             matches = sorted(matches)[1:]
 
-        final_players.append({
-            "player": player,
-            "kills": sum(matches)
-        })
+        final_players.append(
+            MVPRanking(
+                player=player,
+                kills=sum(matches)
+            )
+        )
 
-    return sorted(final_players, key=lambda x: x["kills"], reverse=True)[:top_n]
+    return sorted(final_players, key=lambda x: x.kills, reverse=True)[:top_n]

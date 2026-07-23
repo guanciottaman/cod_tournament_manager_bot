@@ -1,5 +1,7 @@
 import discord
 
+from typing import Any
+
 from services.server_service import get_server_config, check_server_registered
 from ui.embeds.event_builders import build_server_config_embed
 from ui.modals.nome_evento import NomeEventoModal
@@ -8,7 +10,7 @@ from ui.views.setup_view import SetupViewPage1, DeleteServerView
 
 class ServerPanelView(discord.ui.View):
     def __init__(self, timeout: int | None = None):
-        super().__init__(timeout=None)
+        super().__init__(timeout=timeout)
 
     
     @discord.ui.button(
@@ -17,7 +19,7 @@ class ServerPanelView(discord.ui.View):
         row=0,
         custom_id="server_panel:create_event"
     )
-    async def create_event(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def create_event(self, interaction: discord.Interaction, button: discord.ui.Button[Any]):
         await interaction.response.send_modal(NomeEventoModal())
 
 
@@ -28,7 +30,7 @@ class ServerPanelView(discord.ui.View):
         row=1,
         custom_id="server_panel:edit_config"
     )
-    async def edit_server_config(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def edit_server_config(self, interaction: discord.Interaction, button: discord.ui.Button[Any]):
         if interaction.guild is None:
             return
         config = await get_server_config(interaction.guild.id)
@@ -48,7 +50,7 @@ class ServerPanelView(discord.ui.View):
         row=1,
         custom_id="server_panel:delete_config"
     )
-    async def delete_server_config(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def delete_server_config(self, interaction: discord.Interaction, button: discord.ui.Button[Any]):
         if interaction.guild is None:
             return
         exists = await check_server_registered(interaction.guild.id)

@@ -1,5 +1,7 @@
 import discord
 
+from typing import Any
+
 from models.event import Event
 from services.event_service import get_teams_by_event, get_team_from_leader, delete_team
 from services.lobby_service import get_lobbies
@@ -37,6 +39,8 @@ async def delete_team_callback(interaction: discord.Interaction, event: Event):
 
 
 async def delete_team_callback_personal(interaction: discord.Interaction, event: Event):
+    if interaction.guild is None:
+        return
     event_id = event.event_id
     team = await get_team_from_leader(event_id, interaction.user.id)
     if team is None:
@@ -46,16 +50,23 @@ async def delete_team_callback_personal(interaction: discord.Interaction, event:
         await interaction.response.send_message("Non puoi eliminare il tuo team in questo momento!", ephemeral=True)
         return
     view = discord.ui.View()
-    delete_btn = discord.ui.Button(
+    delete_btn: discord.ui.Button[Any] = discord.ui.Button(
         label="Conferma",
         style=discord.ButtonStyle.red
     )
     async def delete_callback(interaction: discord.Interaction):
+        if interaction.guild is None:
+            return
         await delete_team(team.team_id, event.status)
         await interaction.response.send_message("Team eliminato con successo!", ephemeral=True)
-        admin_role_id = await get_admin_role_id(interaction.guild_id)
+        admin_role_id = await get_admin_role_id(interaction.guild.id)
+        if admin_role_id is None:
+            await interaction.followup.send("Ruolo admin non configurato!", ephemeral=True)
+            return
         admin_role = interaction.guild.get_role(admin_role_id)
         if admin_role is None:
+            return
+        if interaction.client.user is None:
             return
         for admin in admin_role.members:
             if admin.id == interaction.user.id or admin.id == interaction.client.user.id:

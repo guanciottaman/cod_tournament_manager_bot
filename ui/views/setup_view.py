@@ -21,7 +21,7 @@ class SetupViewPage1(discord.ui.View):
         max_values=1,
         row=0
     )
-    async def select_panel_channel(self, interaction: discord.Interaction, select: discord.ui.ChannelSelect):
+    async def select_panel_channel(self, interaction: discord.Interaction, select: discord.ui.ChannelSelect[Any]):
         if interaction.guild is None:
             await interaction.response.send_message("Non puoi usarmi dai DM", ephemeral=True)
             return
@@ -62,7 +62,7 @@ class SetupViewPage1(discord.ui.View):
         max_values=1,
         row=1
     )
-    async def select_ranking_channel(self, interaction: discord.Interaction, select: discord.ui.ChannelSelect):
+    async def select_ranking_channel(self, interaction: discord.Interaction, select: discord.ui.ChannelSelect[Any]):
         if interaction.guild is None:
             await interaction.response.send_message("Non puoi usarmi dai DM", ephemeral=True)
             return
@@ -103,7 +103,7 @@ class SetupViewPage1(discord.ui.View):
         max_values=1,
         row=2
     )
-    async def select_admin_role(self, interaction: discord.Interaction, select: discord.ui.RoleSelect):
+    async def select_admin_role(self, interaction: discord.Interaction, select: discord.ui.RoleSelect[Any]):
         if interaction.guild is None:
             await interaction.response.send_message("Non puoi usarmi dai DM", ephemeral=True)
             return
@@ -125,7 +125,7 @@ class SetupViewPage1(discord.ui.View):
         style=discord.ButtonStyle.blurple,
         row=3
     )
-    async def next_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def next_page(self, interaction: discord.Interaction, button: discord.ui.Button[Any]):
         if interaction.guild is None:
             return
         await interaction.response.edit_message(
@@ -141,7 +141,7 @@ class SetupViewPage1(discord.ui.View):
         style=discord.ButtonStyle.green,
         row=4
     )
-    async def confirm_setup(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def confirm_setup(self, interaction: discord.Interaction, button: discord.ui.Button[Any]):
         if interaction.guild is None:
             return
         missing = await check_bot_permissions(interaction.guild)
@@ -206,6 +206,12 @@ class SetupViewPage1(discord.ui.View):
         )
         if self.config.panel_channel_id is not None:
             panel_channel = interaction.guild.get_channel(self.config.panel_channel_id)
+            if not isinstance(panel_channel, discord.TextChannel):
+                await interaction.followup.send(
+                    "Devi selezionare un canale testuale!",
+                    ephemeral=True
+                )
+                return
             from ui.views.server_panel import ServerPanelView
             await panel_channel.send(
                 embed=build_panel_embed(interaction.guild),
@@ -227,7 +233,7 @@ class SetupViewPage2(discord.ui.View):
         max_values=1,
         row=0
     )
-    async def select_live_ranking_channel(self, interaction: discord.Interaction, select: discord.ui.ChannelSelect):
+    async def select_live_ranking_channel(self, interaction: discord.Interaction, select: discord.ui.ChannelSelect[Any]):
         if interaction.guild is None:
             await interaction.response.send_message("Non puoi usarmi dai DM", ephemeral=True)
             return
@@ -272,7 +278,7 @@ class SetupViewPage2(discord.ui.View):
         max_values=1,
         row=1
     )
-    async def select_lobbies_channel(self, interaction: discord.Interaction, select: discord.ui.ChannelSelect):
+    async def select_lobbies_channel(self, interaction: discord.Interaction, select: discord.ui.ChannelSelect[Any]):
         if interaction.guild is None:
             await interaction.response.send_message("Non puoi usarmi dai DM", ephemeral=True)
             return
@@ -310,7 +316,7 @@ class SetupViewPage2(discord.ui.View):
         style=discord.ButtonStyle.blurple,
         row=2
     )
-    async def previous_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def previous_page(self, interaction: discord.Interaction, button: discord.ui.Button[Any]):
         if interaction.guild is None:
             return
         await interaction.response.edit_message(
@@ -326,7 +332,7 @@ class SetupViewPage2(discord.ui.View):
         style=discord.ButtonStyle.green,
         row=3
     )
-    async def confirm_setup(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def confirm_setup(self, interaction: discord.Interaction, button: discord.ui.Button[Any]):
         if interaction.guild is None:
             return
         missing = await check_bot_permissions(interaction.guild)
@@ -391,6 +397,12 @@ class SetupViewPage2(discord.ui.View):
         )
         if self.config.panel_channel_id is not None:
             panel_channel = interaction.guild.get_channel(self.config.panel_channel_id)
+            if not isinstance(panel_channel, discord.TextChannel):
+                await interaction.followup.send(
+                    "Devi selezionare un canale testuale!",
+                    ephemeral=True
+                )
+                return
             from ui.views.server_panel import ServerPanelView
             await panel_channel.send(
                 embed=build_panel_embed(interaction.guild),
@@ -405,7 +417,7 @@ class DeleteServerView(discord.ui.View):
         label="❌ Annulla",
         style=discord.ButtonStyle.gray
     )
-    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button[Any]):
         await interaction.response.edit_message(
             content="Operazione annullata.",
             view=None
@@ -415,7 +427,7 @@ class DeleteServerView(discord.ui.View):
         label="🗑 Conferma eliminazione",
         style=discord.ButtonStyle.danger
     )
-    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button[Any]):
         if interaction.guild_id is None:
             await interaction.response.send_message("Non puoi usarmi dai DM", ephemeral=True)
             return

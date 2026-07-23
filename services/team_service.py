@@ -5,7 +5,7 @@ from models.team import Team, TeamScore, PlayerScore
 
 async def get_teams(event_id: int, lobby_id: int | None = None, setup_mode: bool = False) -> list[Team]:
     query = """
-        SELECT team_id, name, leader_discord_id, kd, lobby_id
+        SELECT team_id, name, leader_discord_id, channel_id, kd, lobby_id
         FROM teams
         WHERE event_id = $1
     """
@@ -30,7 +30,8 @@ async def get_teams(event_id: int, lobby_id: int | None = None, setup_mode: bool
                 team["name"],
                 team["leader_discord_id"],
                 team["kd"],
-                team["lobby_id"]
+                team["lobby_id"],
+                team["channel_id"]
             )
         )
     return teams_list
@@ -62,7 +63,8 @@ async def insert_teams(
 
     if await already_has_team(event_id, leader_discord_id):
         raise ValueError("USER_ALREADY_HAS_TEAM")
-
+    if db.pool is None:
+        return
     async with db.pool.acquire() as conn:
         async with conn.transaction():
             team_id = await conn.fetchval(
@@ -77,7 +79,7 @@ async def insert_teams(
                 leader_discord_id
             )
 
-            player_ids = []
+            player_ids: list[int] = []
 
             for player_name in players_names:
                 player_id = await conn.fetchval(
@@ -94,6 +96,12 @@ async def insert_teams(
                 player_ids.append(player_id)
 
     return team_id, player_ids
+
+async def set_team_channel_id(event_id: int, team_id: int, channel_id: int):
+    await execute(
+        "UPDATE teams SET channel_id = $1 WHERE event_id = $2 AND team_id = $3",
+        (channel_id, event_id, team_id)
+    )
 
 async def assign_free_slot(
     event_id: int,

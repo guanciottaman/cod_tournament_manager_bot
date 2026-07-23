@@ -181,6 +181,8 @@ class Events(commands.Cog):
     
     @app_commands.command(name="config_lobby", description="Configura le lobby di un evento programmato")
     async def config_lobby(self, interaction: discord.Interaction):
+        if interaction.guild is None:
+            return
         if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario per configurare le lobby di un evento!", ephemeral=True)
             return
@@ -188,18 +190,20 @@ class Events(commands.Cog):
             title="Configura lobby",
             description="Hai già configurato i seguenti eventi.\nAssicurati che tutti i capoteam abbiano iscritto la propria squadra!"
         )
-        events = await get_events_for_guild(interaction.guild_id, ["ready"])
+        events = await get_events_for_guild(interaction.guild.id, ["ready"])
         await resolve_event(interaction, embed, events, start_lobby_config)
 
     @app_commands.command(name="sposta_team", description="Sposta un team in un'altra lobby")
     async def sposta_team(self, interaction: discord.Interaction):
+        if interaction.guild is None:
+            return
         if not await check_admin_role(interaction):
             await interaction.response.send_message(
                 "Non hai il ruolo necessario per spostare un team in un'altra lobby in un evento!",
                 ephemeral=True
             )
             return
-        events = await get_events_for_guild(interaction.guild_id, ["setup"])
+        events = await get_events_for_guild(interaction.guild.id, ["setup"])
         embed = discord.Embed(
             title="Avvia evento",
             description="Hai già configurato le lobby dei seguenti eventi.\nScegli l'evento in cui vuoi spostare un team!"
@@ -223,10 +227,12 @@ class Events(commands.Cog):
 
     @app_commands.command(name="avvia_evento", description="Avvia un evento configurato")
     async def avvia_evento(self, interaction: discord.Interaction):
+        if interaction.guild is None:
+            return
         if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario ad avviare un evento!", ephemeral=True)
             return
-        events = await get_events_for_guild(interaction.guild_id, ["setup"])
+        events = await get_events_for_guild(interaction.guild.id, ["setup"])
         embed = discord.Embed(
             title="Avvia evento",
             description="Hai già configurato i seguenti eventi.\nAssicurati di aver configurato correttamente le lobby!"
@@ -236,7 +242,9 @@ class Events(commands.Cog):
     @app_commands.command(name="manda_codice_lobby", description="Manda il codice lobby ai capoteam di una certa lobby")
     @app_commands.describe(code="Il codice da mandare")
     async def manda_codice_lobby(self, interaction: discord.Interaction, code: str):
-        events = await get_events_for_guild(interaction.guild_id, ["running"])
+        if interaction.guild is None:
+            return
+        events = await get_events_for_guild(interaction.guild.id, ["running"])
         embed = discord.Embed(
             title="Manda codici lobby",
             color=discord.Color.blue(),
@@ -258,25 +266,31 @@ class Events(commands.Cog):
         if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario a ricevere informazioni su un evento!", ephemeral=True)
             return
-        events = await get_events_for_guild(interaction.guild_id)
+        if interaction.guild is None:
+            return
+        events = await get_events_for_guild(interaction.guild.id)
         embed = discord.Embed(
             title="Info eventi",
             description="Seleziona l'evento di cui vuoi controllare le informazioni"
         )
         async def event_selector_callback(interaction: discord.Interaction, event: Event):
+            if interaction.guild is None:
+                return
             placement_points = await get_placement_points(event.event_id)
             teams = await get_teams_by_event(event.event_id)
-            embed = build_event_embed(event, placement_points, teams)
+            embed = build_event_embed(event, interaction.guild, placement_points, teams)
             await interaction.response.send_message(embed=embed, ephemeral=True)
         await resolve_event(interaction, embed, events, event_selector_callback)
         
     
     @app_commands.command(name="info_lobby", description="Ricevi informazioni sulle lobby di un certo evento")
     async def info_lobby(self, interaction: discord.Interaction):
+        if interaction.guild is None:
+            return
         if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario a ricevere informazioni sulle lobby di un evento!", ephemeral=True)
             return
-        events = await get_events_for_guild(interaction.guild_id, ["setup", "running"])
+        events = await get_events_for_guild(interaction.guild.id, ["setup", "running"])
         embed = discord.Embed(
             title="Info eventi",
             description="Seleziona l'evento di cui vuoi controllare le lobby"
@@ -286,33 +300,41 @@ class Events(commands.Cog):
     
     @app_commands.command(name="elimina_evento", description="Elimina un evento creato")
     async def elimina_evento(self, interaction: discord.Interaction):
+        if interaction.guild is None:
+            return
         if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario per eliminare un evento!", ephemeral=True)
             return
-        events = await get_events_for_guild(interaction.guild_id)
+        events = await get_events_for_guild(interaction.guild.id)
         embed = discord.Embed(
             title="Elimina evento",
             description="Questa è una lista degli eventi del tuo server.\nScegli l'evento da eliminare.",
             color=discord.Colour.red()
         )
         async def event_selector_callback(interaction: discord.Interaction, event: Event):
+            if interaction.guild is None:
+                return
             event_id = event.event_id
             placement_points = await get_placement_points(event_id)
             teams = await get_teams_by_event(event_id)
-            embed = build_event_embed(event, placement_points, teams, embed_title="Elimina evento")
+            embed = build_event_embed(event, interaction.guild, placement_points, teams, embed_title="Elimina evento")
             await interaction.response.send_message(embed=embed, view=EliminaEventoView(event_id), ephemeral=True)
         
         await resolve_event(interaction, embed, events, event_selector_callback)
     
     @app_commands.command(name="info_team", description="Controlla informazioni su un team")
     async def info_team(self, interaction: discord.Interaction):
-        events = await get_events_for_guild(interaction.guild_id, ["ready", "setup", "running"])
+        if interaction.guild is None:
+            return
+        events = await get_events_for_guild(interaction.guild.id, ["ready", "setup", "running"])
         embed = discord.Embed(
             title="Info team",
             color=discord.Colour.red(),
             description="Questa è una lista degli eventi attivi e in corso.\nScegli l'evento in cui il team è presente."
         )
         async def event_selector_callback(interaction: discord.Interaction, event: Event):
+            if interaction.guild is None:
+                return
             event_id = event.event_id
             if not await check_admin_role(interaction):
                 team = await get_team_from_leader(event_id, interaction.user.id)
@@ -367,7 +389,9 @@ class Events(commands.Cog):
 
     @app_commands.command(name="elimina_team", description="Elimina un team da un evento")
     async def elimina_team(self, interaction: discord.Interaction):
-        events: list[Event] = await get_events_for_guild(interaction.guild_id, ["ready", "setup", "running"])
+        if interaction.guild is None:
+            return
+        events: list[Event] = await get_events_for_guild(interaction.guild.id, ["ready", "setup", "running"])
         embed = discord.Embed(
             title="Elimina team",
             color=discord.Colour.red(),
@@ -380,10 +404,12 @@ class Events(commands.Cog):
     
     @app_commands.command(name="penalizza_team", description="Penalizza un team")
     async def penalizza_team(self, interaction: discord.Interaction):
+        if interaction.guild is None:
+            return
         if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario per eliminare un team!", ephemeral=True)
             return
-        events: list[Event] = await get_events_for_guild(interaction.guild_id, ["running"])
+        events: list[Event] = await get_events_for_guild(interaction.guild.id, ["running"])
         embed = discord.Embed(
             title="Iscrizione team",
             color=discord.Colour.red(),
@@ -414,10 +440,12 @@ class Events(commands.Cog):
     
     @app_commands.command(name="invia_lobby", description="Invia le lobby ai capoteam e agli admin (solo in setup mode)")
     async def invia_lobby(self, interaction: discord.Interaction):
+        if interaction.guild is None:
+            return
         if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario per inviare le lobby!", ephemeral=True)
             return
-        events: list[Event] = await get_events_for_guild(interaction.guild_id, ["setup"])
+        events: list[Event] = await get_events_for_guild(interaction.guild.id, ["setup"])
         embed = discord.Embed(
             title="Invia lobby",
             color=discord.Colour.blue(),
@@ -437,8 +465,11 @@ class Events(commands.Cog):
                 await interaction.followup.send("Non hai impostato un canale dove mandare le lobby!", ephemeral=True)
                 return
             lobbies_channel = guild.get_channel(lobbies_channel_id)
-            if lobbies_channel is None:
-                await interaction.followup.send("Canale non trovato", ephemeral=True)
+            if not isinstance(lobbies_channel, discord.TextChannel):
+                await interaction.followup.send(
+                    "Devi selezionare un canale testuale!",
+                    ephemeral=True
+                )
                 return
             await lobbies_channel.send(embed=embed)
             await interaction.followup.send(f"Lobby mandate nel canale {lobbies_channel.mention}", ephemeral=True)
@@ -448,18 +479,25 @@ class Events(commands.Cog):
     @app_commands.describe(member="Il membro da aggiungere")
     @app_commands.autocomplete(member=member_search)
     async def add_event_host(self, interaction: discord.Interaction, member: str):
+        if interaction.guild is None:
+            return
         if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario per aggiungere un host!", ephemeral=True)
             return
-        events: list[Event] = await get_events_for_guild(interaction.guild_id, ["ready", "setup", "running"])
+        events: list[Event] = await get_events_for_guild(interaction.guild.id, ["ready", "setup", "running"])
         embed = discord.Embed(
             title="Aggiungi host evento",
             color=discord.Colour.blue(),
             description="Questa è una lista degli eventi in corso.\nScegli l'evento in cui vuoi aggiungere un host."
         )
         async def event_selector_callback(interaction: discord.Interaction, event: Event):
+            if interaction.guild is None:
+                return
             await add_event_host_db(event.event_id, int(member))
             m = interaction.guild.get_member(int(member))
+            if m is None:
+                await interaction.response.send_message("Membro non trovato!", ephemeral=True)
+                return
             await interaction.response.send_message(
                 f"Il membro {m.mention} è stato aggiunto agli host!",
                 ephemeral=True
@@ -470,18 +508,28 @@ class Events(commands.Cog):
     @app_commands.describe(member="Il membro da rimuovere")
     @app_commands.autocomplete(member=member_search)
     async def remove_event_host(self, interaction: discord.Interaction, member: str):
+        if interaction.guild is None:
+            return
         if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario per rimuovere un host!", ephemeral=True)
             return
-        events: list[Event] = await get_events_for_guild(interaction.guild_id, ["ready", "setup", "running"])
+        events: list[Event] = await get_events_for_guild(interaction.guild.id, ["ready", "setup", "running"])
         embed = discord.Embed(
             title="Rimuovi host evento",
             color=discord.Colour.red(),
             description="Questa è una lista degli eventi in corso.\nScegli l'evento in cui vuoi rimuovere un host."
         )
         async def event_selector_callback(interaction: discord.Interaction, event: Event):
+            if interaction.guild is None:
+                return
             await remove_event_host_db(event.event_id, int(member))
             m = interaction.guild.get_member(int(member))
+            if m is None:
+                await interaction.response.send_message(
+                    "Membro non trovato!",
+                    ephemeral=True
+                )
+                return
             await interaction.response.send_message(
                 f"Il membro {m.mention} è stato rimosso dagli host!",
                 ephemeral=True
@@ -490,16 +538,20 @@ class Events(commands.Cog):
     
     @app_commands.command(name="get_event_host", description="Controlla gli host dell'evento che possono mandare i codici lobby")
     async def get_event_host(self, interaction: discord.Interaction):
+        if interaction.guild is None:
+            return
         if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario per controllare gli host!", ephemeral=True)
             return
-        events: list[Event] = await get_events_for_guild(interaction.guild_id, ["ready", "setup", "running"])
+        events: list[Event] = await get_events_for_guild(interaction.guild.id, ["ready", "setup", "running"])
         embed = discord.Embed(
             title="Controlla host evento",
             color=discord.Colour.blue(),
             description="Questa è una lista degli eventi in corso.\nScegli l'evento in cui vuoi controllare gli host."
         )
         async def event_selector_callback(interaction: discord.Interaction, event: Event):
+            if interaction.guild is None:
+                return
             hosts = await get_event_hosts_db(event.event_id)
             embed = discord.Embed(
                 title=f"Host {event.name}",
@@ -524,10 +576,12 @@ class Events(commands.Cog):
         status: Literal["pending", "accepted", "rejected", "edited"],
         page: int = 1
     ):
+        if interaction.guild is None:
+            return
         if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario per eliminare un team!", ephemeral=True)
             return
-        events: list[Event] = await get_events_for_guild(interaction.guild_id, ["running"])
+        events: list[Event] = await get_events_for_guild(interaction.guild.id, ["running"])
         embed = discord.Embed(
             title="Controlla risultati",
             color=discord.Colour.red(),
@@ -543,10 +597,12 @@ class Events(commands.Cog):
         description="Imposta i canali dove mandare i codici lobby per un certo evento"
     )
     async def set_lobbies_codes_channels(self, interaction: discord.Interaction):
+        if interaction.guild is None:
+            return
         if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario per impostare i canali dove mandare i codici lobby!", ephemeral=True)
             return
-        events: list[Event] = await get_events_for_guild(interaction.guild_id, ["setup", "running"])
+        events: list[Event] = await get_events_for_guild(interaction.guild.id, ["setup", "running"])
         embed = discord.Embed(
             title="Imposta canali codici lobby",
             color=discord.Colour.blue(),
@@ -557,10 +613,12 @@ class Events(commands.Cog):
 
     @app_commands.command(name="termina_evento", description="Termina un evento")
     async def termina_evento(self, interaction: discord.Interaction):
+        if interaction.guild is None:
+            return
         if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario per eliminare un team!", ephemeral=True)
             return
-        ranking_channel_id = await get_ranking_channel_id(interaction.guild_id)
+        ranking_channel_id = await get_ranking_channel_id(interaction.guild.id)
         if ranking_channel_id is None:
             await interaction.response.send_message(
                 "Non è stato impostato un canale per le classifiche!",
@@ -568,7 +626,7 @@ class Events(commands.Cog):
             )
             return
         ranking_channel = interaction.guild.get_channel(ranking_channel_id)
-        if ranking_channel is None:
+        if not isinstance(ranking_channel, discord.TextChannel):
             await interaction.response.send_message(
                 f"Il canale con id {ranking_channel_id} non esiste o è stato eliminato!",
                 ephemeral=True
@@ -589,7 +647,7 @@ class Events(commands.Cog):
                 ephemeral=True
             )
             return
-        events: list[Event] = await get_events_for_guild(interaction.guild_id, ["running"])
+        events: list[Event] = await get_events_for_guild(interaction.guild.id, ["running"])
         embed = discord.Embed(
             title="Termina evento",
             color=discord.Colour.blurple(),
@@ -601,6 +659,8 @@ class Events(commands.Cog):
     
     @app_commands.command(name="stop_live", description="Ferma le classifiche live")
     async def stop_live(self, interaction: discord.Interaction):
+        if interaction.guild is None:
+            return
         if not await check_admin_role(interaction):
             await interaction.response.send_message("Non hai il ruolo necessario per fermare le classifiche live!", ephemeral=True)
             return
@@ -612,7 +672,7 @@ class Events(commands.Cog):
             color=discord.Color.red(),
             description="Scegli l'evento per cui fermare le classifiche live"
         )
-        events = await get_events_for_guild(interaction.guild_id, ["running"])
+        events = await get_events_for_guild(interaction.guild.id, ["running"])
         await resolve_event(interaction, embed, events, event_selector_callback)
 
     @app_commands.command(name="load_panel", description="Manda il pannello nel canale configurato")
@@ -625,14 +685,18 @@ class Events(commands.Cog):
             await interaction.response.send_message("Non hai configurato correttamente il server! Usa /modifica_config_server o /setup_server se non hai ancora configurato il server.")
             return
         panel_channel = interaction.guild.get_channel(config.panel_channel_id)
-        if panel_channel is None:
-            await interaction.response.send_message("Canale configurato non trovato!", ephemeral=True)
+        if not isinstance(panel_channel, discord.TextChannel):
+            await interaction.response.send_message(
+                "Devi selezionare un canale testuale!",
+                ephemeral=True
+            )
             return
 
         await panel_channel.send(
             embed=build_panel_embed(interaction.guild),
             view=ServerPanelView()
         )
+        await interaction.response.send_message(f"Pannello mandato su {panel_channel.mention}!")
 
 
 async def setup(bot: commands.Bot):

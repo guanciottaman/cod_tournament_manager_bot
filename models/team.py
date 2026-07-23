@@ -7,6 +7,7 @@ class Team:
     leader_discord_id: int
     kd: float = 0.0
     lobby: int | None = None
+    channel_id: int | None = None
 
 
 @dataclass

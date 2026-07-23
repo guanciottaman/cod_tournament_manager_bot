@@ -1,6 +1,8 @@
 import discord
 import logging
 
+from typing import Any
+
 from models.event import Event
 from ui.embeds.lobby_builders import build_event_start_summary
 from services.lobby_service import get_lobbies
@@ -10,7 +12,9 @@ from services.live_ranking_service import start_live
 logger = logging.getLogger(__name__)
 
 async def start_event_callback(interaction: discord.Interaction, event: Event):
-    missing = await check_event_config_complete(event.event_id, interaction.guild_id)
+    if interaction.guild is None:
+        return
+    missing = await check_event_config_complete(event.event_id, interaction.guild.id)
     if missing:
         embed = discord.Embed(
             title="Configurazione incompleta",
@@ -26,11 +30,13 @@ async def start_event_callback(interaction: discord.Interaction, event: Event):
     embed = await build_event_start_summary(lobbies)
     embed.title = "Avvia evento"
     view = discord.ui.View()
-    start_event_btn = discord.ui.Button(
+    start_event_btn: discord.ui.Button[Any] = discord.ui.Button(
         label="Avvia evento",
         style=discord.ButtonStyle.green
     )
     async def confirm_start(interaction: discord.Interaction):
+        if interaction.guild is None:
+            return
         await set_event_status(event.event_id, "running")
         await interaction.response.send_message(
             "L'evento è stato avviato con successo!",

@@ -13,7 +13,7 @@ GOLD_MEDAL = Image.open("assets/gold.png").convert("RGBA")
 SILVER_MEDAL = Image.open("assets/silver.png").convert("RGBA")
 BRONZE_MEDAL = Image.open("assets/bronze.png").convert("RGBA")
 
-_font_cache = {}
+_font_cache: dict[tuple[int, bool], ImageFont.FreeTypeFont] = {}
 
 def _load_font(
     size: int,

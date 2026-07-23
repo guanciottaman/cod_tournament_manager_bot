@@ -15,3 +15,4 @@ class Event:
     matches_number: int
     lobby_mode: str
     lobbies_number: int | None
+    teams_category_id: int

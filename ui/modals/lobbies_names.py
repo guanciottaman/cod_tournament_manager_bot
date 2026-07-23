@@ -1,5 +1,7 @@
 import discord
 
+from typing import Any
+
 from services.lobby_service import *
 from ui.embeds.lobby_builders import *
 
@@ -23,13 +25,13 @@ class LobbiesNamesModal(discord.ui.Modal, title="Configura Lobby"):
         self.teams_count = teams_count
         self.msg_id = msg_id
 
-        self.inputs: list[discord.ui.TextInput] = []
+        self.inputs: list[discord.ui.TextInput[Any]] = []
 
 
         for i in range(lobbies_number):
             default = f"{i+1}"
 
-            name_input = discord.ui.TextInput(
+            name_input: discord.ui.TextInput[Any] = discord.ui.TextInput(
                 label=f"{i+1}",
                 default=default,
                 max_length=20

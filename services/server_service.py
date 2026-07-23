@@ -157,13 +157,15 @@ async def get_lobbies_channel_id(guild_id: int) -> int | None:
         return None
 
 async def check_admin_role(interaction: discord.Interaction):
-    if interaction.guild_id is None:
+    if interaction.guild is None:
         return False
-    admin_role_id = await get_admin_role_id(interaction.guild_id)
+    admin_role_id = await get_admin_role_id(interaction.guild.id)
     if not admin_role_id:
         return False
     admin_role = interaction.guild.get_role(admin_role_id)
     if admin_role is None:
+        return False
+    if not interaction.user or not isinstance(interaction.user, discord.Member):
         return False
     return admin_role in interaction.user.roles
 

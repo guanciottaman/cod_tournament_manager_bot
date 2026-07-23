@@ -1,11 +1,11 @@
 import discord
 
-from typing import Any
 import datetime
 import pytz
 
 from services.event_service import *
 from models.team import TeamScore
+from models.ranking import TeamRankingEntry, MVPRanking
 from models.server_config import ServerConfig
 
 DEFAULT_PLACEMENT_POINTS = {
@@ -19,6 +19,7 @@ DEFAULT_PLACEMENT_POINTS = {
 
 def build_event_embed(
     event: Event,
+    guild: discord.Guild,
     placement_points: list[tuple[int, int]],
     teams: list[Team],
     embed_title: str="Configurazione evento"
@@ -33,6 +34,7 @@ def build_event_embed(
         "kd": "KD",
         "kd_balanced": "KD bilanciato"
     }
+    category_channel = guild.get_channel(event.teams_category_id) if event.teams_category_id else None
 
     embed.description = (
         f"# {event.name}\n"
@@ -41,6 +43,7 @@ def build_event_embed(
         f"**Giocatori per team:** {event.players_per_team}\n"
         f"**Lobby Mode:** {lobby_modes[event.lobby_mode]}\n"
         f"**Scarta partita peggiore:** {'ON' if event.drop_worst_match else 'OFF'}\n\n"
+        f"**Categoria ticket team:** {category_channel.mention if event.teams_category_id and category_channel is not None else 'Nessuno'}\n"
         f"**Punti piazzamento:**\n"
     )
 
@@ -147,7 +150,7 @@ def build_results_embed(
 def build_live_mvp_ranking_embed(
     event_name: str,
     lobby_name: str,
-    mvp_ranking: list[dict[str, Any]],
+    mvp_ranking: list[MVPRanking],
     drop_worst_match: bool
 ) -> discord.Embed:
     embed = discord.Embed(
@@ -156,8 +159,8 @@ def build_live_mvp_ranking_embed(
     )
     emb_description = f"Ecco la classifiche degli MVP dell'evento **{event_name}** per la tua **LOBBY {lobby_name}**:\n\n**MVP:**\n"
     for i, player in enumerate(mvp_ranking, start=1):
-        name = player["player"]
-        kills = player.get("kills", 0)
+        name = player.player
+        kills = player.kills
 
         emb_description += f"**{i}. {name}** | {kills} kill\n"
     if drop_worst_match:
@@ -169,7 +172,7 @@ def build_live_mvp_ranking_embed(
 def build_live_team_ranking_embed(
     event_name: str,
     lobby_name: str,
-    team_ranking: list[dict[str, Any]],
+    team_ranking: list[TeamRankingEntry],
     inserted_matches: dict[int, int],
     matches_number: int,
     drop_worst_match: bool
@@ -180,10 +183,10 @@ def build_live_team_ranking_embed(
     )
     emb_description = f"Ecco la classifiche dell'evento **{event_name}** per la tua **LOBBY {lobby_name}**:\n\n**Classifica Team:**\n"
     for i, team in enumerate(team_ranking, start=1):
-        name = team["name"]
-        score = team["score"]
-        kills = team.get("kills", 0)
-        inserted = inserted_matches.get(team["team_id"], 0)
+        name = team.name
+        score = team.score
+        kills = team.kills
+        inserted = inserted_matches.get(team.team_id, 0)
 
         emb_description += f"**{i}. {name}** | {score} pts | {kills} kill ({inserted}/{matches_number} match inseriti)\n"
     if drop_worst_match:

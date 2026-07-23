@@ -1,9 +1,12 @@
 import discord
+
+from typing import Any
+
 from services.team_service import penalize_team
 
 
 class PenalizzaTeam(discord.ui.Modal, title="Penalizza team"):
-    penalty_points = discord.ui.TextInput(
+    penalty_points: discord.ui.TextInput[Any] = discord.ui.TextInput(
         label="Punti di penalità",
         placeholder="Inserisci i punti da togliere al team...",
         min_length=1,

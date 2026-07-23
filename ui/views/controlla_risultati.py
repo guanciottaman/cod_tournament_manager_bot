@@ -1,5 +1,7 @@
 import discord
 
+from typing import Any
+
 from ui.embeds.event_builders import build_results_embed
 from ui.modals.registra_risultati import RegistraRisultatiModal
 from models.team import TeamScore
@@ -23,7 +25,7 @@ class ControllaRisultatiView(discord.ui.View):
         self.leaders_per_page = 25
         self.leaders: list[discord.Member] = []
         self.leader_view = None
-        self.go_to_duplicate_btn = discord.ui.Button(
+        self.go_to_duplicate_btn: discord.ui.Button[Any] = discord.ui.Button(
             label="Vai al duplicato",
             style=discord.ButtonStyle.grey
         )
@@ -81,7 +83,7 @@ class ControllaRisultatiView(discord.ui.View):
                 elif item.label == "Modifica":
                     item.disabled = not edit
     
-    def build_leader_select(self) -> discord.ui.Select[str] | None:
+    def build_leader_select(self) -> discord.ui.Select[Any] | None:
         page_leaders = self.get_leader_page()
         if not page_leaders:
             return None
@@ -94,7 +96,7 @@ class ControllaRisultatiView(discord.ui.View):
             for l in page_leaders
         ]
 
-        select = discord.ui.Select[str](
+        select = discord.ui.Select[Any](
             placeholder="Seleziona capoteam...",
             min_values=1,
             max_values=1,
@@ -111,7 +113,7 @@ class ControllaRisultatiView(discord.ui.View):
 
         self.leader_view = discord.ui.View()
 
-        select = self.build_leader_select()
+        select: discord.ui.Select[Any] | None = self.build_leader_select()
         if select is None:
             if edit:
                 await interaction.response.edit_message(content="Non ci sono leader reali disponibili")
@@ -119,7 +121,7 @@ class ControllaRisultatiView(discord.ui.View):
                 await interaction.response.send_message(content="Non ci sono leader reali disponibili", ephemeral=True)
             return
 
-        async def callback(interaction_: discord.Interaction):
+        async def callback(interaction: discord.Interaction):
             selected = int(select.values[0])
             team = await get_team_from_leader(self.event_id, selected)
             scores = await get_event_results(self.event_id, self.status, team)
@@ -127,14 +129,14 @@ class ControllaRisultatiView(discord.ui.View):
             self.team_scores = scores
             self.page = 0
             self.sync_buttons()
-            await interaction_.response.defer()
+            await interaction.response.defer()
 
             await self.refresh(interaction)
 
         select.callback = callback
 
-        prev_btn = discord.ui.Button(label="⬅️")
-        next_btn = discord.ui.Button(label="➡️")
+        prev_btn: discord.ui.Button[Any] = discord.ui.Button(label="⬅️")
+        next_btn: discord.ui.Button[Any] = discord.ui.Button(label="➡️")
 
         async def prev_callback(interaction: discord.Interaction):
             if self.leader_page > 0:
@@ -288,7 +290,7 @@ class ControllaRisultatiView(discord.ui.View):
         emoji="✅",
         row=0
     )
-    async def accept_result(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def accept_result(self, interaction: discord.Interaction, button: discord.ui.Button[Any]):
         await interaction.response.defer()
         await self._handle(interaction, "accepted")
 
@@ -298,7 +300,7 @@ class ControllaRisultatiView(discord.ui.View):
         emoji="✏️",
         row=0
     )
-    async def edit_result(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def edit_result(self, interaction: discord.Interaction, button: discord.ui.Button[Any]):
         if not self.team_scores:
             await interaction.response.send_message(
                 "Nessun risultato disponibile.",
@@ -318,8 +320,7 @@ class ControllaRisultatiView(discord.ui.View):
                 team_score.screenshots,
                 mode="edit",
                 team_score_id=team_score.team_score_id,
-                parent_view=self,
-                interaction=interaction
+                refresh_callback=lambda: self.refresh(interaction)
             )
         )
 
@@ -329,7 +330,9 @@ class ControllaRisultatiView(discord.ui.View):
         emoji="❌",
         row=0
     )
-    async def reject_result(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def reject_result(self, interaction: discord.Interaction, button: discord.ui.Button[Any]):
+        if interaction.guild is None:
+            return
         await interaction.response.defer()
         leader_id = await get_leader_discord_id(self.team_scores[self.page].team_id)
         if leader_id is None:
@@ -337,6 +340,7 @@ class ControllaRisultatiView(discord.ui.View):
                 "Non è stato possibile mandare il DM perché non è stato trovato l'id dell'utente",
                 ephemeral=True
             )
+            return
         leader = interaction.guild.get_member(leader_id) if leader_id > 10e16 else None
         if leader is not None:
             embed = discord.Embed(
@@ -354,7 +358,7 @@ class ControllaRisultatiView(discord.ui.View):
         style=discord.ButtonStyle.secondary,
         row=1
     )
-    async def prev_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def prev_page(self, interaction: discord.Interaction, button: discord.ui.Button[Any]):
         await self.prev_page_(interaction)
 
     @discord.ui.button(
@@ -362,7 +366,7 @@ class ControllaRisultatiView(discord.ui.View):
         style=discord.ButtonStyle.secondary,
         row=1
     )
-    async def next_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def next_page(self, interaction: discord.Interaction, button: discord.ui.Button[Any]):
         await self.next_page_(interaction)
     
     @discord.ui.button(
@@ -370,7 +374,9 @@ class ControllaRisultatiView(discord.ui.View):
         style=discord.ButtonStyle.blurple,
         row=2
     )
-    async def filter_by_leader(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def filter_by_leader(self, interaction: discord.Interaction, button: discord.ui.Button[Any]):
+        if interaction.guild is None:
+            return
         leader_ids = await get_leader_ids(self.event_id)
 
         leaders: list[discord.Member] = []
@@ -388,7 +394,7 @@ class ControllaRisultatiView(discord.ui.View):
         style=discord.ButtonStyle.red,
         row=2
     )
-    async def reset_filter(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def reset_filter(self, interaction: discord.Interaction, button: discord.ui.Button[Any]):
         scores = await get_event_results(self.event_id, self.status)
         if not scores:
             await interaction.response.send_message(
@@ -414,6 +420,8 @@ class ControllaRisultatiView(discord.ui.View):
             self.team_scores[0],
             warnings
         )
+        if embeds is None:
+            return
 
         await interaction.response.edit_message(
             embeds=embeds,

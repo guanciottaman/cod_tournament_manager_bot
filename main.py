@@ -12,8 +12,10 @@ load_dotenv(".env")
 from db.db import *
 from config.config import TOKEN
 from ui.views.server_panel import ServerPanelView
+from ui.views.registra_team_view import RegistraTeamView
 from cogs.events import build_member_cache
 from services.server_service import is_blacklisted, init_blacklist_cache
+from services.event_service import get_active_events
 
 
 logging.basicConfig(
@@ -53,7 +55,8 @@ class Bot(commands.Bot):
         super().__init__(command_prefix="!", intents=intents, tree_cls=CustomTree)
 
     async def on_ready(self):
-        logger.info(f"Bot online come {self.user.display_name}")
+        if self.user is not None:
+            logger.info(f"Bot online come {self.user.display_name}")
     
     async def error_handler(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
         msg = None
@@ -90,6 +93,9 @@ class Bot(commands.Bot):
         for guild in self.guilds:
             await build_member_cache(guild)
         self.add_view(ServerPanelView())
+        active_events = await get_active_events()
+        for event in active_events:
+            self.add_view(RegistraTeamView(event.event_id))
 
 
 bot = Bot()

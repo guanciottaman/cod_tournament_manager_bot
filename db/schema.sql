@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS events_settings(
     matches_number INTEGER DEFAULT 5,
     lobby_mode TEXT DEFAULT 'random',
     lobbies_number INTEGER,
+    teams_category_id BIGINT,
 
     FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE
 );
@@ -79,6 +80,7 @@ CREATE TABLE IF NOT EXISTS teams(
     event_id INTEGER,
     name TEXT,
     lobby_id INTEGER,
+    channel_id BIGINT,
     leader_discord_id BIGINT,
     penalty_points INTEGER DEFAULT 0,
     kd REAL DEFAULT 0,

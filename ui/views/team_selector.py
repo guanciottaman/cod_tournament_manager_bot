@@ -35,7 +35,7 @@ class TeamsSelectorView(discord.ui.View):
         self.use_lobbies = use_lobbies
         self.interaction = interaction
         self.send_lobbies = send_lobbies
-        self.teams_by_lobby = defaultdict(list[Team])
+        self.teams_by_lobby: defaultdict[int, list[Team]] = defaultdict(list)
 
         for t in self.teams:
             if t.lobby is None:
@@ -45,8 +45,10 @@ class TeamsSelectorView(discord.ui.View):
         if self.use_lobbies and lobbies is not None:
             self.lobbies = lobbies
 
-            self.lobby_map = {l.lobby_id: l for l in self.lobbies}
-            self.lobby_ids = list(self.lobby_map.keys())
+            self.lobby_map: dict[int, Lobby] = {
+                l.lobby_id: l for l in self.lobbies
+            }
+            self.lobby_ids: list[int] = list(self.lobby_map.keys())
             self.lobby_ids.sort()
         self.add_item(self.build_select())
 
@@ -66,8 +68,11 @@ class TeamsSelectorView(discord.ui.View):
             await interaction.followup.send("Non hai impostato il canale delle lobby!", ephemeral=True)
             return
         lobbies_channel = guild.get_channel(lobbies_channel_id)
-        if lobbies_channel is None:
-            await interaction.followup.send("Non ho trovato il canale nel server!", ephemeral=True)
+        if not isinstance(lobbies_channel, discord.TextChannel):
+            await interaction.followup.send(
+                "Devi selezionare un canale testuale!",
+                ephemeral=True
+            )
             return
         try:
             await lobbies_channel.send(embed=embed)
@@ -77,12 +82,14 @@ class TeamsSelectorView(discord.ui.View):
 
 
     def get_leader_name(self, interaction: discord.Interaction, leader_id: int) -> str:
+        if interaction.guild is None:
+            return "Unknown"
         member = interaction.guild.get_member(leader_id)
         if member is None:
             return "Unknown"
         return member.display_name
 
-    def build_select(self) -> discord.ui.Select:
+    def build_select(self) -> discord.ui.Select[Any]:
         if self.use_lobbies:
             lobby = self.lobby_map[self.lobby_ids[self.page]]
             page_teams: list[Team] = self.teams_by_lobby[lobby.lobby_id]
@@ -100,8 +107,17 @@ class TeamsSelectorView(discord.ui.View):
                 disabled=True
             )
 
-
-        select = discord.ui.Select(
+        if self.interaction is None:
+            return discord.ui.Select(
+                placeholder=placeholder,
+                options=[
+                    discord.SelectOption(
+                        label="Errore",
+                        value="Errore"
+                    )
+                ]
+            )
+        select: discord.ui.Select[Any] = discord.ui.Select(
             placeholder=placeholder,
             options=[
                 discord.SelectOption(
@@ -117,6 +133,8 @@ class TeamsSelectorView(discord.ui.View):
         )
 
         async def callback(interaction: discord.Interaction):
+            if interaction.guild is None:
+                return
             team_id = int(select.values[0])
 
             team = await get_team_info(team_id)
@@ -124,7 +142,7 @@ class TeamsSelectorView(discord.ui.View):
                 await interaction.response.send_message("Il team non esiste!", ephemeral=True)
                 return
             team_members = await get_team_members(team_id)
-            event = await get_event_info(self.event_id, interaction.guild_id)
+            event = await get_event_info(self.event_id, interaction.guild.id)
             if event is None:
                 await interaction.response.send_message("L'evento non esiste!", ephemeral=True)
                 return
@@ -154,8 +172,10 @@ class TeamsSelectorView(discord.ui.View):
                 await interaction.response.send_message(embed=embed, ephemeral=True)
             elif self.mode == "switch":
                 old_lobby_id = team.lobby
+                if old_lobby_id is None:
+                    return
                 view = discord.ui.View()
-                sposta_team_btn = discord.ui.Button(label="Sposta team", style=discord.ButtonStyle.blurple)
+                sposta_team_btn: discord.ui.Button[Any] = discord.ui.Button(label="Sposta team", style=discord.ButtonStyle.blurple)
                 async def switch_team_callback(interaction: discord.Interaction):
                     embed = discord.Embed(
                         title="Sposta team", 
@@ -164,11 +184,11 @@ class TeamsSelectorView(discord.ui.View):
                     )
                     lobbies = await get_lobbies(self.event_id)
                     view = discord.ui.View()
-                    lobby_selector = discord.ui.Select(
+                    lobby_selector: discord.ui.Select[Any] = discord.ui.Select(
                         placeholder="Lobby in cui spostare il team...",
                         options=[
                             discord.SelectOption(
-                                label=lobby.name,
+                                label=lobby.name if lobby.name else "Nome lobby sconosciuto",
                                 value=str(lobby.lobby_id)
                             )
                             for lobby in lobbies
@@ -178,6 +198,8 @@ class TeamsSelectorView(discord.ui.View):
                         max_values=1
                     )
                     async def lobby_selector_callback(interaction: discord.Interaction):
+                        if interaction.guild is None:
+                            return
                         lobby = next(
                             (l for l in lobbies if l.lobby_id == int(lobby_selector.values[0])),
                             None
@@ -217,16 +239,16 @@ class TeamsSelectorView(discord.ui.View):
                             ephemeral=True
                         )
                         confirm_view = discord.ui.View()
-                        sposta_team_yes = discord.ui.Button(
+                        sposta_team_yes: discord.ui.Button[Any] = discord.ui.Button(
                             label="Si",
                             style=discord.ButtonStyle.green
                         )
-                        sposta_team_no = discord.ui.Button(
+                        sposta_team_no: discord.ui.Button[Any] = discord.ui.Button(
                             label="No",
                             style=discord.ButtonStyle.red
                         )
                         async def yes_callback(interaction: discord.Interaction):
-                            await self.notify_users(interaction, team.name, lobby.name)
+                            await self.notify_users(interaction, team.name, lobby.name if lobby.name else "Nome lobby sconosciuto")
                         sposta_team_yes.callback = yes_callback
                         async def no_callback(interaction: discord.Interaction):
                             await interaction.response.send_message("Non è stato mandato nessun dm.", ephemeral=True)
@@ -271,11 +293,15 @@ class TeamsSelectorView(discord.ui.View):
                 )
             elif self.mode == "delete":
                 view = discord.ui.View()
-                delete_btn = discord.ui.Button(
+                delete_btn: discord.ui.Button[Any] = discord.ui.Button(
                     label="Conferma",
                     style=discord.ButtonStyle.red
                 )
                 async def delete_team_callback(interaction: discord.Interaction):
+                    if interaction.guild is None:
+                        return
+                    if team.lobby is None:
+                        return
                     await remove_user_lobby_role(event.event_id, team.lobby, team.leader_discord_id, interaction.guild)
                     await delete_team(team_id, event.status)
                     await interaction.response.send_message("Team eliminato con successo!", ephemeral=True)
@@ -295,7 +321,7 @@ class TeamsSelectorView(discord.ui.View):
         return select
 
     @discord.ui.button(label="⬅️", style=discord.ButtonStyle.secondary, row=1)
-    async def prev_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def prev_page(self, interaction: discord.Interaction, button: discord.ui.Button[Any]):
         if self.page > 0:
             self.page -= 1
 
@@ -307,7 +333,7 @@ class TeamsSelectorView(discord.ui.View):
         await interaction.response.edit_message(view=self)
 
     @discord.ui.button(label="➡️", style=discord.ButtonStyle.secondary, row=1)
-    async def next_page(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def next_page(self, interaction: discord.Interaction, button: discord.ui.Button[Any]):
         if self.use_lobbies:
             if self.page < len(self.lobby_ids) - 1:
                 self.page += 1

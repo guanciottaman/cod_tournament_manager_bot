@@ -1,5 +1,7 @@
 import discord
 
+from typing import Any
+
 from services.event_service import get_leader_ids, get_lobby_codes_channel
 from models.event import Event
 from models.lobby import Lobby
@@ -12,11 +14,11 @@ async def send_lobby_codes_callback(
 ):
     event_id = event.event_id
     view = discord.ui.View()
-    select = discord.ui.Select(
+    select: discord.ui.Select[Any] = discord.ui.Select(
         placeholder="Scegli la lobby a cui mandare il codice",
         options=[
             discord.SelectOption(
-                label=lobby.name,
+                label=lobby.name if lobby.name else "Nome lobby sconosciuto",
                 description=f"Il codice {code} verrà mandato ai capoteam della lobby {lobby.name}",
                 value=str(lobby.lobby_id)
             )
@@ -51,15 +53,21 @@ async def send_lobby_codes_callback(
             await interaction.followup.send("Il canale non esiste!", ephemeral=True)
             return
         view = discord.ui.View()
-        yes_btn = discord.ui.Button(
+        yes_btn: discord.ui.Button[Any] = discord.ui.Button(
             style=discord.ButtonStyle.green,
             label="Conferma"
         )
-        cancel_btn = discord.ui.Button(
+        cancel_btn: discord.ui.Button[Any] = discord.ui.Button(
             style=discord.ButtonStyle.gray,
             label="Annulla"
         )
         async def yes_callback(interaction: discord.Interaction):
+            if not isinstance(lobby_codes_channel, discord.TextChannel):
+                await interaction.response.send_message(
+                    "Devi selezionare un canale testuale!",
+                    ephemeral=True
+                )
+                return
             try:
                 await lobby_codes_channel.send(embed=embed)
                 await interaction.response.send_message(f"Codice mandato in {lobby_codes_channel.mention}", ephemeral=True)

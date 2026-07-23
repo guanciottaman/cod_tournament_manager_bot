@@ -1,6 +1,8 @@
 import asyncpg
 from asyncpg import Pool
 
+from typing import Any
+
 from config.config import DB_USER, DB_PASSWORD, DB, DB_HOST
 
 pool: Pool | None = None
@@ -17,16 +19,21 @@ async def init_db():
         max_size=10
     )
 
-async def fetch_one(query: str, params: tuple = tuple()):
-    async with pool.acquire() as conn:
+def get_pool() -> Pool:
+    if pool is None:
+        raise RuntimeError("Database pool not initialized")
+    return pool
+
+async def fetch_one(query: str, params: tuple[Any, ...] = tuple()):
+    async with get_pool() as conn:
         return await conn.fetchrow(query, *params)
 
 
-async def fetch_all(query: str, params: tuple = tuple()):
-    async with pool.acquire() as conn:
+async def fetch_all(query: str, params: tuple[Any, ...] = tuple()):
+    async with get_pool() as conn:
         return await conn.fetch(query, *params)
 
 
-async def execute(query: str, params: tuple = tuple()):
-    async with pool.acquire() as conn:
+async def execute(query: str, params: tuple[Any, ...] = tuple()):
+    async with get_pool() as conn:
         return await conn.execute(query, *params)

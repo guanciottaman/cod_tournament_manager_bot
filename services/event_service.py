@@ -20,7 +20,7 @@ async def get_event_info(event_id: int, guild_id: int) -> Event | None:
 
     row_settings = await fetch_one("""
         SELECT kill_points, players_per_team, drop_worst_match,
-            matches_number, lobby_mode, lobbies_number
+            matches_number, lobby_mode, lobbies_number, teams_category_id
         FROM events_settings
         WHERE event_id = $1
     """, (event_id,))
@@ -40,7 +40,8 @@ async def get_event_info(event_id: int, guild_id: int) -> Event | None:
         drop_worst_match=bool(row_settings["drop_worst_match"]),
         matches_number=row_settings["matches_number"],
         lobby_mode=row_settings["lobby_mode"],
-        lobbies_number=row_settings["lobbies_number"]
+        lobbies_number=row_settings["lobbies_number"],
+        teams_category_id=row_settings["teams_category_id"]
     )
     return event
 
@@ -93,7 +94,8 @@ async def get_events_for_guild(
             s.drop_worst_match,
             s.matches_number,
             s.lobby_mode,
-            s.lobbies_number
+            s.lobbies_number,
+            s.teams_category_id
 
         FROM events e
         LEFT JOIN events_settings s ON s.event_id = e.event_id
@@ -122,7 +124,52 @@ async def get_events_for_guild(
             drop_worst_match=row["drop_worst_match"],
             matches_number=row["matches_number"],
             lobby_mode=row["lobby_mode"],
-            lobbies_number=row["lobbies_number"]
+            lobbies_number=row["lobbies_number"],
+            teams_category_id=row["teams_category_id"]
+        )
+        for row in rows
+    ]
+
+async def get_active_events() -> list[Event]:
+
+    query = """
+        SELECT
+            e.event_id,
+            e.guild_id,
+            e.name,
+            e.created_at,
+            e.status,
+
+            s.kill_points,
+            s.players_per_team,
+            s.drop_worst_match,
+            s.matches_number,
+            s.lobby_mode,
+            s.lobbies_number,
+            s.teams_category_id
+
+        FROM events e
+        LEFT JOIN events_settings s ON s.event_id = e.event_id
+        WHERE status IN ('ready', 'setup', 'running')
+        ORDER BY e.event_id DESC
+    """
+
+    rows = await fetch_all(query)
+
+    return [
+        Event(
+            event_id=row["event_id"],
+            guild_id=row["guild_id"],
+            name=row["name"],
+            created_at=row["created_at"],
+            status=row["status"],
+            kill_points=row["kill_points"],
+            players_per_team=row["players_per_team"],
+            drop_worst_match=row["drop_worst_match"],
+            matches_number=row["matches_number"],
+            lobby_mode=row["lobby_mode"],
+            lobbies_number=row["lobbies_number"],
+            teams_category_id=row["teams_category_id"]
         )
         for row in rows
     ]
@@ -188,6 +235,19 @@ async def set_lobbies_number(event_id: int, value: int):
         (value, event_id)
     )
 
+async def set_category_channel_id(event_id: int, value: int):
+    await execute(
+        "UPDATE events_settings SET teams_category_id = $1 WHERE event_id = $2",
+        (value, event_id)
+    )
+
+async def get_category_channel_id(event_id: int) -> int | None:
+    row = await fetch_one(
+        "SELECT teams_category_id FROM events_settings WHERE event_id = $1",
+        (event_id,)
+    )
+    return row["teams_category_id"] if row else None
+
 async def create_event(guild_id: int, name: str) -> int:
     row = await fetch_one(
         """
@@ -213,7 +273,7 @@ async def delete_event(guild_id: int, event_id: int):
 
 async def get_teams_by_event(event_id: int):
     rows = await fetch_all(
-        "SELECT team_id, name, leader_discord_id, kd, lobby_id FROM teams WHERE event_id = $1",
+        "SELECT team_id, name, leader_discord_id, channel_id, kd, lobby_id FROM teams WHERE event_id = $1",
         (event_id,)
     )
 
@@ -223,13 +283,14 @@ async def get_teams_by_event(event_id: int):
             name=row["name"],
             leader_discord_id=row["leader_discord_id"],
             kd=row["kd"],
-            lobby=row["lobby_id"]
+            lobby=row["lobby_id"],
+            channel_id=row["channel_id"]
         )
         for row in rows
     ]
 
 async def get_team_info(team_id: int):
-    row = await fetch_one("SELECT name, leader_discord_id, kd, lobby_id FROM teams WHERE team_id = $1", (team_id,))
+    row = await fetch_one("SELECT name, leader_discord_id, channel_id, kd, lobby_id FROM teams WHERE team_id = $1", (team_id,))
     if not row:
         return None
     return Team(
@@ -237,7 +298,8 @@ async def get_team_info(team_id: int):
         name=row["name"],
         leader_discord_id=row["leader_discord_id"],
         kd=row["kd"],
-        lobby=row["lobby_id"]
+        lobby=row["lobby_id"],
+        channel_id=row["channel_id"]
     )
 
 async def get_team_members(team_id: int) -> list[str]:
@@ -279,7 +341,7 @@ async def get_leader_ids(event_id: int, lobby_id: int | None = None):
 
 async def get_team_from_leader(event_id: int, leader_id: int):
     row = await fetch_one(
-        "SELECT team_id, name, lobby_id, leader_discord_id, kd FROM teams WHERE event_id = $1 AND leader_discord_id = $2",
+        "SELECT team_id, name, lobby_id, leader_discord_id, channel_id, kd FROM teams WHERE event_id = $1 AND leader_discord_id = $2",
         (event_id, leader_id)
     )
     if row is None:
@@ -289,7 +351,8 @@ async def get_team_from_leader(event_id: int, leader_id: int):
         row["name"],
         row["leader_discord_id"],
         row["kd"],
-        row["lobby_id"]
+        row["lobby_id"],
+        row["channel_id"]
     )
 
 async def has_free_slot(event_id: int) -> bool:

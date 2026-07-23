@@ -1,6 +1,6 @@
 import discord
 
-from typing import Callable, Awaitable
+from typing import Callable, Awaitable, Any
 
 from models.event import Event
 from ui.selects.event_select import build_event_selector
@@ -26,14 +26,16 @@ async def resolve_event(
         return
 
     view = discord.ui.View()
-    selector = build_event_selector(events)
+    selector: discord.ui.Select[Any] | None = build_event_selector(events)
     if selector is None:
         await interaction.response.send_message("C'è stato un errore!", ephemeral=True)
         return
 
     async def _cb(interaction: discord.Interaction):
+        if interaction.guild is None:
+            return
         event_id = int(selector.values[0])
-        event = await get_event_info(event_id, interaction.guild_id)
+        event = await get_event_info(event_id, interaction.guild.id)
 
         if event is None:
             await interaction.response.send_message("Evento non valido", ephemeral=True)

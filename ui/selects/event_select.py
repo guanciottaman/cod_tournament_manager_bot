@@ -1,8 +1,10 @@
 import discord
 
+from typing import Any
+
 from models.event import Event
 
-def build_event_selector(events: list[Event]) -> discord.ui.Select | None:
+def build_event_selector(events: list[Event]) -> discord.ui.Select[Any] | None:
     if not events:
         return None
 
