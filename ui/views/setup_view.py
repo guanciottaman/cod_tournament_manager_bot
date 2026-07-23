@@ -4,7 +4,6 @@ from models.server_config import ServerConfig
 from services.server_service import *
 from ui.embeds.event_builders import build_server_config_embed
 from ui.embeds.panel_embed_builder import build_panel_embed
-from ui.views.server_panel import ServerPanelView
 from config.permissions import RANKING_CHANNEL_PERMS, READ_HISTORY_PERMS
 
 
@@ -207,6 +206,7 @@ class SetupViewPage1(discord.ui.View):
         )
         if self.config.panel_channel_id is not None:
             panel_channel = interaction.guild.get_channel(self.config.panel_channel_id)
+            from ui.views.server_panel import ServerPanelView
             await panel_channel.send(
                 embed=build_panel_embed(interaction.guild),
                 view=ServerPanelView()
@@ -391,6 +391,7 @@ class SetupViewPage2(discord.ui.View):
         )
         if self.config.panel_channel_id is not None:
             panel_channel = interaction.guild.get_channel(self.config.panel_channel_id)
+            from ui.views.server_panel import ServerPanelView
             await panel_channel.send(
                 embed=build_panel_embed(interaction.guild),
                 view=ServerPanelView()
