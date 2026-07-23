@@ -11,7 +11,7 @@ load_dotenv(".env")
 
 from db.db import *
 from config.config import TOKEN
-from ui.views.server_panel import ServerPanel
+from ui.views.server_panel import ServerPanelView
 from cogs.events import build_member_cache
 from services.server_service import is_blacklisted, init_blacklist_cache
 
@@ -89,7 +89,7 @@ class Bot(commands.Bot):
 
         for guild in self.guilds:
             await build_member_cache(guild)
-        await self.add_view(ServerPanel())
+        self.add_view(ServerPanelView())
 
 
 bot = Bot()
