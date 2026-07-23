@@ -92,6 +92,7 @@ class Bot(commands.Bot):
 
         for guild in self.guilds:
             await build_member_cache(guild)
+        logger.info("Sincronizzo le view...")
         self.add_view(ServerPanelView())
         active_events = await get_active_events()
         for event in active_events:
