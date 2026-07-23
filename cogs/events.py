@@ -6,10 +6,12 @@ from typing import Literal
 
 from ui.embeds.event_builders import *
 from ui.embeds.lobby_builders import build_info_lobby_embed
+from ui.embeds.panel_embed_builder import build_panel_embed
 from ui.modals.nome_evento import NomeEventoModal
 from ui.views.elimina_evento import EliminaEventoView
 from ui.views.setup_view import SetupViewPage1, DeleteServerView
 from ui.views.team_selector import TeamsSelectorView
+from ui.views.server_panel import ServerPanelView
 from ui.resolvers.lobby_config_cb import start_lobby_config
 from ui.resolvers.start_event_cb import start_event_callback
 from ui.resolvers.controlla_risultati_cb import controlla_risultati_callback
@@ -612,6 +614,25 @@ class Events(commands.Cog):
         )
         events = await get_events_for_guild(interaction.guild_id, ["running"])
         await resolve_event(interaction, embed, events, event_selector_callback)
+
+    @app_commands.command(name="load_panel", description="Manda il pannello nel canale configurato")
+    async def load_panel(self, interaction: discord.Interaction):
+        if interaction.guild is None:
+            await interaction.response.send_message("Non puoi usarmi dai DM!", ephemeral=True)
+            return
+        config = await get_server_config(interaction.guild.id)
+        if config is None or config.panel_channel_id is None:
+            await interaction.response.send_message("Non hai configurato correttamente il server! Usa /modifica_config_server o /setup_server se non hai ancora configurato il server.")
+            return
+        panel_channel = interaction.guild.get_channel(config.panel_channel_id)
+        if panel_channel is None:
+            await interaction.response.send_message("Canale configurato non trovato!", ephemeral=True)
+            return
+
+        await panel_channel.send(
+            embed=build_panel_embed(interaction.guild),
+            view=ServerPanelView()
+        )
 
 
 async def setup(bot: commands.Bot):

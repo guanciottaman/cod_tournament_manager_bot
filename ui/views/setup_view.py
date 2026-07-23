@@ -3,6 +3,8 @@ import discord
 from models.server_config import ServerConfig
 from services.server_service import *
 from ui.embeds.event_builders import build_server_config_embed
+from ui.embeds.panel_embed_builder import build_panel_embed
+from ui.views.server_panel import ServerPanelView
 from config.permissions import RANKING_CHANNEL_PERMS, READ_HISTORY_PERMS
 
 
@@ -173,7 +175,7 @@ class SetupViewPage1(discord.ui.View):
                 self.config
             )
 
-            if not success and not self.edit_mode:
+            if not success:
                 await interaction.response.send_message(
                     "Il tuo server è già registrato!",
                     ephemeral=True
@@ -203,6 +205,12 @@ class SetupViewPage1(discord.ui.View):
             f"Il tuo server è stato {'registrato' if not self.edit_mode else 'modificato'} con successo!",
             ephemeral=True
         )
+        if self.config.panel_channel_id is not None:
+            panel_channel = interaction.guild.get_channel(self.config.panel_channel_id)
+            await panel_channel.send(
+                embed=build_panel_embed(interaction.guild),
+                view=ServerPanelView()
+            )
 
 
 class SetupViewPage2(discord.ui.View):
@@ -351,7 +359,7 @@ class SetupViewPage2(discord.ui.View):
                 self.config
             )
 
-            if not success and not self.edit_mode:
+            if not success:
                 await interaction.response.send_message(
                     "Il tuo server è già registrato!",
                     ephemeral=True
@@ -381,6 +389,12 @@ class SetupViewPage2(discord.ui.View):
             f"Il tuo server è stato {'registrato' if not self.edit_mode else 'modificato'} con successo!",
             ephemeral=True
         )
+        if self.config.panel_channel_id is not None:
+            panel_channel = interaction.guild.get_channel(self.config.panel_channel_id)
+            await panel_channel.send(
+                embed=build_panel_embed(interaction.guild),
+                view=ServerPanelView()
+            )
 
 class DeleteServerView(discord.ui.View):
     def __init__(self):
