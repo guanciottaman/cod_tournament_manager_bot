@@ -10,7 +10,7 @@ from ui.views.elimina_evento import EliminaEventoView
 from ui.views.team_selector import TeamsSelectorView
 from ui.resolvers.termina_evento_cb import termina_evento_callback
 from ui.resolvers.lobby_config_cb import start_lobby_config
-
+from ui.resolvers.start_event_cb import start_event_callback
 
 class ConfigLobby(discord.ui.Button[Any]):
     def __init__(self, event_id: int):
@@ -33,6 +33,28 @@ class ConfigLobby(discord.ui.Button[Any]):
             await interaction.response.send_message("Non puoi configurare le lobby in questa fase dell'evento!", ephemeral=True)
             return
         await start_lobby_config(interaction, event)
+
+class AvviaEvento(discord.ui.Button[Any]):
+    def __init__(self, event_id: int):
+        super().__init__(
+            label="Avvia evento",
+            emoji="▶️",
+            style=discord.ButtonStyle.green,
+            row=0,
+            custom_id=f"event_panel:avvia_evento:{event_id}"
+        )
+        self.event_id = event_id
+
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.guild is None:
+            return
+        event = await get_event_info(self.event_id, interaction.guild.id)
+        if event is None:
+            return
+        if event.status != "setup":
+            await interaction.response.send_message("Non puoi avviare l'evento in questa fase!", ephemeral=True)
+            return
+        await start_event_callback(interaction, event)
 
 class RicaricaButton(discord.ui.Button[Any]):
     def __init__(self, event_id: int):
@@ -57,7 +79,8 @@ class RicaricaButton(discord.ui.Button[Any]):
         await interaction.response.edit_message(
             embed=build_event_embed(
                 event, interaction.guild, placement_points, teams
-            )
+            ),
+            view=EventPanelView(self.event_id)
         )
 
 class SpostaTeam(discord.ui.Button[Any]):
@@ -66,7 +89,7 @@ class SpostaTeam(discord.ui.Button[Any]):
             label="Sposta team",
             emoji="⤵️",
             style=discord.ButtonStyle.blurple,
-            row=0,
+            row=1,
             custom_id=f"event_panel:sposta_team:{event_id}"
         )
         self.event_id = event_id
@@ -87,6 +110,66 @@ class SpostaTeam(discord.ui.Button[Any]):
                 teams,
                 event,
                 "switch",
+                use_lobbies=True,
+                lobbies=await get_lobbies(self.event_id),
+                interaction=interaction
+            )
+        )
+
+class EliminaTeam(discord.ui.Button[Any]):
+    def __init__(self, event_id: int):
+        super().__init__(
+            label="Elimina team",
+            emoji="🔨",
+            style=discord.ButtonStyle.red,
+            row=1,
+            custom_id=f"event_panel:elimina_team:{event_id}"
+        )
+        self.event_id = event_id
+
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.guild is None:
+            return
+        event = await get_event_info(self.event_id, interaction.guild.id)
+        if event is None:
+            await interaction.response.send_message("Evento non trovato!", ephemeral=True)
+            return
+        teams = await get_teams_by_event(self.event_id)
+        await interaction.response.send_message(
+            view=TeamsSelectorView(
+                teams,
+                event,
+                "delete",
+                use_lobbies=True,
+                lobbies=await get_lobbies(self.event_id),
+                interaction=interaction
+            )
+        )
+
+class ModificaTeam(discord.ui.Button[Any]):
+    def __init__(self, event_id: int):
+        super().__init__(
+            label="Modifica team",
+            emoji="✏️",
+            style=discord.ButtonStyle.grey,
+            row=1,
+            custom_id=f"event_panel:modifica_team:{event_id}"
+        )
+        self.event_id = event_id
+
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.guild is None:
+            return
+        event = await get_event_info(self.event_id, interaction.guild.id)
+        if event is None:
+            await interaction.response.send_message("Evento non trovato!", ephemeral=True)
+            return
+        teams = await get_teams_by_event(self.event_id)
+        await interaction.response.send_message(
+            view=TeamsSelectorView(
+                teams,
+                event,
+                "edit",
                 use_lobbies=True,
                 lobbies=await get_lobbies(self.event_id),
                 interaction=interaction
@@ -158,7 +241,10 @@ class EventPanelView(discord.ui.View):
         super().__init__(timeout=None)
 
         self.add_item(ConfigLobby(event_id))
+        self.add_item(AvviaEvento(event_id))
         self.add_item(RicaricaButton(event_id))
         self.add_item(SpostaTeam(event_id))
+        self.add_item(ModificaTeam(event_id))
+        self.add_item(EliminaTeam(event_id))
         self.add_item(TerminaButton(event_id))
         self.add_item(EliminaButton(event_id))
