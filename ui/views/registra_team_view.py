@@ -105,6 +105,12 @@ class ConfermaEliminaTeamButton(discord.ui.Button[discord.ui.View]):
     async def callback(self, interaction: discord.Interaction):
         if interaction.guild is None:
             return
+        team_channel_id = await get_team_channel_id(self.event.event_id, self.team.team_id)
+        if team_channel_id is not None:
+            team_channel = interaction.guild.get_channel(team_channel_id)
+            if team_channel is not None:
+                await team_channel.delete()
+
         await delete_team(self.team.team_id, self.event.status)
         await interaction.response.send_message("Team eliminato con successo!", ephemeral=True)
         admin_role_id = await get_admin_role_id(interaction.guild.id)
@@ -125,11 +131,6 @@ class ConfermaEliminaTeamButton(discord.ui.Button[discord.ui.View]):
             )
             except (discord.Forbidden, discord.HTTPException):
                 continue
-        team_channel_id = await get_team_channel_id(self.event.event_id, self.team.team_id)
-        if team_channel_id is not None:
-            team_channel = interaction.guild.get_channel(team_channel_id)
-            if team_channel is not None:
-                await team_channel.delete()
 
 class EliminaButton(discord.ui.Button[discord.ui.View]):
     def __init__(self, event_id: int):
