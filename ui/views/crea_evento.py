@@ -242,6 +242,10 @@ class CreaEventoView2(discord.ui.View):
         row=4
     )
     async def create_event(self, interaction: discord.Interaction, button: discord.ui.Button[Any]):
+        category_channel_id = await get_category_channel_id(self.event_id)
+        if category_channel_id is None:
+            await interaction.response.send_message("Non hai ancora impostato una categoria per i ticket dei team!", ephemeral=True)
+            return
         embed = build_event_channels_embed()
         await interaction.response.send_message(
             embed=embed,

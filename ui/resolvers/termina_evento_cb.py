@@ -1,7 +1,7 @@
 import discord
 
 from models.event import Event
-from services.lobby_service import get_lobbies
+from services.lobby_service import get_lobbies, get_teams
 from services.event_service import delete_event, delete_lobbies_roles
 from services.ranking_service import *
 from services.live_ranking_service import stop_live
@@ -123,6 +123,15 @@ async def termina_evento_callback(
         return
     await interaction.followup.send(f"La classifica è stata mandata su {ranking_channel.mention}", ephemeral=True)
     if delete_event_flag:
+        teams = await get_teams(event_id)
+        for team in teams:
+            channel_id = team.channel_id
+            if channel_id is None:
+                continue
+            channel = interaction.guild.get_channel(channel_id)
+            if channel is None:
+                continue
+            await channel.delete()
         await stop_live(event_id)
         await delete_lobbies_roles(event_id, interaction.guild)
         await delete_event(interaction.guild.id, event_id)
