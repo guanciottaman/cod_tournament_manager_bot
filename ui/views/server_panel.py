@@ -2,10 +2,14 @@ import discord
 
 from typing import Any
 
+from models.event import Event
+from services.event_flow import resolve_event
+from services.event_service import get_events_for_guild
 from services.server_service import get_server_config, check_server_registered
 from ui.embeds.event_builders import build_server_config_embed
 from ui.modals.nome_evento import NomeEventoModal
 from ui.views.setup_view import SetupViewPage1, DeleteServerView
+from ui.views.elimina_evento import EliminaEventoView
 
 
 class ServerPanelView(discord.ui.View):
@@ -16,11 +20,40 @@ class ServerPanelView(discord.ui.View):
     @discord.ui.button(
         label="Crea evento",
         style=discord.ButtonStyle.green,
+        emoji="➕",
         row=0,
         custom_id="server_panel:create_event"
     )
     async def create_event(self, interaction: discord.Interaction, button: discord.ui.Button[Any]):
         await interaction.response.send_modal(NomeEventoModal())
+
+    @discord.ui.button(
+        label="Elimina evento",
+        style=discord.ButtonStyle.red,
+        row=0,
+        custom_id="server_panel:delete_event"
+    )
+    async def delete_event(self, interaction: discord.Interaction, button: discord.ui.Button[Any]):
+        if interaction.guild is None:
+            return
+        embed = discord.Embed(
+            title="Elimina evento",
+            color=discord.Color.red(),
+            description="Ecco una lista degli eventi attivi. Scegli quello da eliminare."
+        )
+        events = await get_events_for_guild(interaction.guild.id)
+        async def callback(interaction: discord.Interaction, event: Event):
+            embed = discord.Embed(
+                title="Elimina evento",
+                color=discord.Color.red(),
+                description=f"Stai per eliminare l'evento **{event.name}**. Sei sicuro?"
+            )
+            await interaction.response.send_message(
+                embed=embed,
+                view=EliminaEventoView(event.event_id),
+                ephemeral=True
+            )
+        await resolve_event(interaction, embed, events, callback)
 
 
     @discord.ui.button(
