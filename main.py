@@ -12,6 +12,7 @@ load_dotenv(".env")
 from db.db import *
 from config.config import TOKEN
 from ui.views.server_panel import ServerPanelView
+from ui.views.event_panel_view import EventPanelView
 from ui.views.registra_team_view import RegistraTeamView
 from cogs.events import build_member_cache
 from services.server_service import is_blacklisted, init_blacklist_cache
@@ -107,6 +108,7 @@ class Bot(commands.Bot):
         logger.info(active_events)
         for event in active_events:
             self.add_view(RegistraTeamView(event.event_id))
+            self.add_view(EventPanelView(event.event_id))
 
         logger.info("VIEWS OK")
 

@@ -65,6 +65,17 @@ def build_event_embed(
 
     return embed
 
+def build_event_channels_embed(
+    register_team_channel: discord.TextChannel | None = None,
+    event_panel_channel: discord.TextChannel | None = None
+) -> discord.Embed:
+    embed = discord.Embed(
+        title="Seleziona canali evento",
+        color=discord.Color.blue(),
+        description=f"**Canale registra team:** {register_team_channel.mention if register_team_channel else 'Nessuno'}\n**Canale pannello gestione evento:** {event_panel_channel.mention if event_panel_channel else 'Nessuno'}\n"
+    )
+    return embed
+
 def build_server_config_embed(
     guild: discord.Guild,
     server_config: ServerConfig

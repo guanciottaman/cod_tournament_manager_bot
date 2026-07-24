@@ -1,9 +1,10 @@
 import discord
 
 from services.event_service import *
-from ui.embeds.event_builders import build_event_embed, LOBBY_MODES
+from ui.embeds.event_builders import build_event_embed, build_event_channels_embed
 from ui.modals.placement_modal import KillPointsModal
 from ui.views.registra_team_view import RegistraTeamView
+from ui.views.event_channels_view import EventChannelsView
 
 class CreaEventoView1(discord.ui.View):
     def __init__(self, event_id: int):
@@ -241,53 +242,9 @@ class CreaEventoView2(discord.ui.View):
         row=4
     )
     async def create_event(self, interaction: discord.Interaction, button: discord.ui.Button[Any]):
-        view = discord.ui.View()
-        select: discord.ui.ChannelSelect[Any] = discord.ui.ChannelSelect(
-            channel_types=[discord.ChannelType.text],
-            placeholder="Seleziona canale registrazione...",
-            min_values=1,
-            max_values=1,
-            row=0
+        embed = build_event_channels_embed()
+        await interaction.response.send_message(
+            embed=embed,
+            view=EventChannelsView(self.event_id),
+            ephemeral=True
         )
-        async def select_callback(interaction: discord.Interaction):
-            if interaction.guild is None:
-                return
-            await interaction.response.defer(ephemeral=True)
-            c_id = select.values[0].id
-            channel = interaction.guild.get_channel(c_id)
-            if not isinstance(channel, discord.TextChannel):
-                await interaction.followup.send(
-                    "Devi selezionare un canale testuale!",
-                    ephemeral=True
-                )
-                return
-            event = await get_event_info(self.event_id, interaction.guild.id)
-            if event is None:
-                await interaction.followup.send("C'è stato un errore!", ephemeral=True)
-                return
-            embed = discord.Embed(
-                title=event.name,
-                color=discord.Color.blue(),
-                description=f"""
-                    **Giocatori per team:** {event.players_per_team}
-                    **Match:** {event.matches_number}
-                    **Modalità:** {LOBBY_MODES[event.lobby_mode]}
-                    **Scarta partita peggiore:** {'ON' if event.drop_worst_match else 'OFF'}
-
-                    Usa i bottoni qui sotto per registrare il tuo team, modificarlo o eliminarlo.
-                """
-            )
-            await channel.send(
-                embed=embed,
-                view=RegistraTeamView(self.event_id)
-            )
-            await set_event_status(self.event_id, "ready")
-            await interaction.followup.send(f"Evento creato con successo!", ephemeral=True)
-        select.callback = select_callback
-        view.add_item(select)
-        embed = discord.Embed(
-            title="Seleziona canale registrazione",
-            color=discord.Color.blue(),
-            description="Seleziona il canale dove verrà mandato il messaggio per permettere ai team di registrarsi"
-        )
-        await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
