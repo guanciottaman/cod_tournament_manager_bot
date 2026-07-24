@@ -303,6 +303,11 @@ class TeamsSelectorView(discord.ui.View):
                     if team.lobby is None:
                         return
                     await remove_user_lobby_role(event.event_id, team.lobby, team.leader_discord_id, interaction.guild)
+                    team_channel_id = await get_team_channel_id(self.event_id, team.team_id)
+                    if team_channel_id is not None:
+                        team_channel = interaction.guild.get_channel(team_channel_id)
+                        if team_channel is not None:
+                            await team_channel.delete()
                     await delete_team(team_id, event.status)
                     await interaction.response.send_message("Team eliminato con successo!", ephemeral=True)
                 delete_btn.callback = delete_team_callback

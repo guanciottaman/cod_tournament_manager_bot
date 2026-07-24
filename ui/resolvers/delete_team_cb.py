@@ -6,7 +6,7 @@ from models.event import Event
 from services.event_service import get_teams_by_event, get_team_from_leader, delete_team
 from services.lobby_service import get_lobbies
 from services.server_service import get_admin_role_id
-from services.team_service import get_teams
+from services.team_service import get_teams, get_team_channel_id
 from ui.views.team_selector import TeamsSelectorView
 
 async def delete_team_callback(interaction: discord.Interaction, event: Event):
@@ -57,6 +57,11 @@ async def delete_team_callback_personal(interaction: discord.Interaction, event:
     async def delete_callback(interaction: discord.Interaction):
         if interaction.guild is None:
             return
+        team_channel_id = await get_team_channel_id(event_id, team.team_id)
+        if team_channel_id is not None:
+            team_channel = interaction.guild.get_channel(team_channel_id)
+            if team_channel is not None:
+                await team_channel.delete()
         await delete_team(team.team_id, event.status)
         await interaction.response.send_message("Team eliminato con successo!", ephemeral=True)
         admin_role_id = await get_admin_role_id(interaction.guild.id)

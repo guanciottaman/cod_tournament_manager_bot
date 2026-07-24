@@ -103,6 +103,13 @@ async def set_team_channel_id(event_id: int, team_id: int, channel_id: int):
         (channel_id, event_id, team_id)
     )
 
+async def get_team_channel_id(event_id: int, team_id: int) -> int | None:
+    row = await fetch_one(
+        "SELECT channel_id FROM teams WHERE event_id = $1 AND team_id = $2",
+        (event_id, team_id)
+    )
+    return row["channel_id"] if row is not None else None
+
 async def assign_free_slot(
     event_id: int,
     team_name: str,
