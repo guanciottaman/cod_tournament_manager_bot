@@ -7,8 +7,38 @@ from services.event_service import get_event_info, get_placement_points, get_tea
 from services.server_service import get_ranking_channel_id
 from ui.embeds.event_builders import build_event_embed
 from services.event_flow import resolve_event
+from ui.views.elimina_evento import EliminaEventoView
 from ui.resolvers.termina_evento_cb import termina_evento_callback
 
+
+class EliminaButton(discord.ui.Button[Any]):
+    def __init__(self, event_id: int):
+        super().__init__(
+            label="Elimina evento",
+            emoji="🗑️",
+            style=discord.ButtonStyle.red,
+            row=0,
+            custom_id=f"event_panel:elimina:{event_id}"
+        )
+        self.event_id = event_id
+
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.guild is None:
+            return
+        event = await get_event_info(self.event_id, interaction.guild.id)
+        if event is None:
+            await interaction.response.send_message("C'è stato un errore!", ephemeral=True)
+            return
+        embed = discord.Embed(
+            title="Elimina evento",
+            color=discord.Color.red(),
+            description=f"Stai per eliminare l'evento **{event.name}**. Sei sicuro?"
+        )
+        await interaction.response.send_message(
+            embed=embed,
+            view=EliminaEventoView(self.event_id),
+            ephemeral=True
+        )
 
 class TerminaButton(discord.ui.Button[Any]):
     def __init__(self, event_id: int):
@@ -51,7 +81,7 @@ class RicaricaButton(discord.ui.Button[Any]):
             emoji="🔄",
             style=discord.ButtonStyle.grey,
             row=1,
-            custom_id=f"event_panel:termina:{event_id}"
+            custom_id=f"event_panel:ricarica:{event_id}"
         )
         self.event_id = event_id
 
