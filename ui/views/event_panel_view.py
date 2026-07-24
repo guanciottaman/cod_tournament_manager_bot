@@ -23,11 +23,14 @@ class ConfigLobby(discord.ui.Button[Any]):
         )
         self.event_id = event_id
 
-    async def config_lobby(self, interaction: discord.Interaction):
+    async def callback(self, interaction: discord.Interaction):
         if interaction.guild is None:
             return
         event = await get_event_info(self.event_id, interaction.guild.id)
         if event is None:
+            return
+        if event.status != "ready":
+            await interaction.response.send_message("Non puoi configurare le lobby in questa fase dell'evento!", ephemeral=True)
             return
         await start_lobby_config(interaction, event)
 
@@ -68,7 +71,7 @@ class SpostaTeam(discord.ui.Button[Any]):
         )
         self.event_id = event_id
 
-    async def config_lobby(self, interaction: discord.Interaction):
+    async def callback(self, interaction: discord.Interaction):
         if interaction.guild is None:
             return
         event = await get_event_info(self.event_id, interaction.guild.id)
@@ -84,8 +87,8 @@ class SpostaTeam(discord.ui.Button[Any]):
                 teams,
                 event,
                 "switch",
-                use_lobbies=False if event.status not in ("setup", "running") else True,
-                lobbies=None if event.status not in ("setup", "running") else await get_lobbies(self.event_id),
+                use_lobbies=True,
+                lobbies=await get_lobbies(self.event_id),
                 interaction=interaction
             )
         )
