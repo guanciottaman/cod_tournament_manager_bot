@@ -1,7 +1,7 @@
 import discord
 
 from services.event_service import *
-from ui.embeds.event_builders import build_event_embed
+from ui.embeds.event_builders import build_event_embed, LOBBY_MODES
 from ui.modals.placement_modal import KillPointsModal
 from ui.views.registra_team_view import RegistraTeamView
 
@@ -261,7 +261,24 @@ class CreaEventoView2(discord.ui.View):
                     ephemeral=True
                 )
                 return
-            await channel.send(view=RegistraTeamView(self.event_id))
+            event = await get_event_info(self.event_id, interaction.guild.id)
+            if event is None:
+                await interaction.followup.send("C'è stato un errore!", ephemeral=True)
+                return
+            embed = discord.Embed(
+                title=event.name,
+                color=discord.Color.blue(),
+                description=f"""
+                    **Giocatori per team:** {event.players_per_team}
+                    **Match:** {event.matches_number}
+                    **Modalità:** {LOBBY_MODES[event.lobby_mode]}
+                    **Scarta partita peggiore:** {'ON' if event.drop_worst_match else 'OFF'}
+                """
+            )
+            await channel.send(
+                embed=embed,
+                view=RegistraTeamView(self.event_id)
+            )
             await set_event_status(self.event_id, "ready")
             await interaction.followup.send(f"Evento creato con successo!", ephemeral=True)
         select.callback = select_callback

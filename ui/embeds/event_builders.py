@@ -16,6 +16,12 @@ DEFAULT_PLACEMENT_POINTS = {
     "5": 6
 }
 
+LOBBY_MODES = {
+    "random": "Casuale",
+    "random_max": "Casuale (massimo 16 team/lobby)",
+    "kd": "KD",
+    "kd_balanced": "KD bilanciato"
+}
 
 def build_event_embed(
     event: Event,
@@ -28,12 +34,7 @@ def build_event_embed(
         title=embed_title,
         color=discord.Color.blurple()
     )
-    lobby_modes = {
-        "random": "Casuale",
-        "random_max": "Casuale (massimo 16 team/lobby)",
-        "kd": "KD",
-        "kd_balanced": "KD bilanciato"
-    }
+    
     category_channel = guild.get_channel(event.teams_category_id) if event.teams_category_id else None
 
     embed.description = (
@@ -41,9 +42,9 @@ def build_event_embed(
         f"**Stato:** {event.status}\n"
         f"**Match:** {event.matches_number}\n"
         f"**Giocatori per team:** {event.players_per_team}\n"
-        f"**Lobby Mode:** {lobby_modes[event.lobby_mode]}\n"
-        f"**Scarta partita peggiore:** {'ON' if event.drop_worst_match else 'OFF'}\n\n"
-        f"**Categoria ticket team:** {category_channel.mention if event.teams_category_id and category_channel is not None else 'Nessuno'}\n"
+        f"**Lobby Mode:** {LOBBY_MODES[event.lobby_mode]}\n"
+        f"**Scarta partita peggiore:** {'ON' if event.drop_worst_match else 'OFF'}\n"
+        f"**Categoria ticket team:** {category_channel.mention if event.teams_category_id and category_channel is not None else 'Nessuno'}\n\n"
         f"**Punti piazzamento:**\n"
     )
 
