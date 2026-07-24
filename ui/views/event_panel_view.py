@@ -2,14 +2,93 @@ import discord
 
 from typing import Any
 
-from models.event import Event
-from services.event_service import get_event_info, get_placement_points, get_teams_by_event, get_events_for_guild
+from services.event_service import get_event_info, get_placement_points, get_teams_by_event
+from services.lobby_service import get_lobbies
 from services.server_service import get_ranking_channel_id
 from ui.embeds.event_builders import build_event_embed
-from services.event_flow import resolve_event
 from ui.views.elimina_evento import EliminaEventoView
+from ui.views.team_selector import TeamsSelectorView
 from ui.resolvers.termina_evento_cb import termina_evento_callback
+from ui.resolvers.lobby_config_cb import start_lobby_config
 
+
+class ConfigLobby(discord.ui.Button[Any]):
+    def __init__(self, event_id: int):
+        super().__init__(
+            label="Configura lobby",
+            emoji="⚙️",
+            style=discord.ButtonStyle.blurple,
+            row=0,
+            custom_id=f"event_panel:config_lobby:{event_id}"
+        )
+        self.event_id = event_id
+
+    async def config_lobby(self, interaction: discord.Interaction):
+        if interaction.guild is None:
+            return
+        event = await get_event_info(self.event_id, interaction.guild.id)
+        if event is None:
+            return
+        await start_lobby_config(interaction, event)
+
+class RicaricaButton(discord.ui.Button[Any]):
+    def __init__(self, event_id: int):
+        super().__init__(
+            label="Ricarica",
+            emoji="🔄",
+            style=discord.ButtonStyle.grey,
+            row=0,
+            custom_id=f"event_panel:ricarica:{event_id}"
+        )
+        self.event_id = event_id
+
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.guild is None:
+            return
+        event = await get_event_info(self.event_id, interaction.guild.id)
+        if event is None:
+            await interaction.response.send_message("Evento non trovato!", ephemeral=True)
+            return
+        placement_points = await get_placement_points(self.event_id)
+        teams = await get_teams_by_event(self.event_id)
+        await interaction.response.edit_message(
+            embed=build_event_embed(
+                event, interaction.guild, placement_points, teams
+            )
+        )
+
+class SpostaTeam(discord.ui.Button[Any]):
+    def __init__(self, event_id: int):
+        super().__init__(
+            label="Sposta team",
+            emoji="⤵️",
+            style=discord.ButtonStyle.blurple,
+            row=0,
+            custom_id=f"event_panel:sposta_team:{event_id}"
+        )
+        self.event_id = event_id
+
+    async def config_lobby(self, interaction: discord.Interaction):
+        if interaction.guild is None:
+            return
+        event = await get_event_info(self.event_id, interaction.guild.id)
+        if event is None:
+            await interaction.response.send_message("Evento non trovato!", ephemeral=True)
+            return
+        if event.status != "setup":
+            await interaction.response.send_message("Non puoi spostare team in questa fase dell'evento!", ephemeral=True)
+            return
+        teams = await get_teams_by_event(self.event_id)
+        await interaction.response.send_message(
+            view=TeamsSelectorView(
+                teams,
+                event,
+                "switch",
+                use_lobbies=False if event.status not in ("setup", "running") else True,
+                lobbies=None if event.status not in ("setup", "running") else await get_lobbies(self.event_id),
+                interaction=interaction
+            )
+        )
 
 class EliminaButton(discord.ui.Button[Any]):
     def __init__(self, event_id: int):
@@ -17,7 +96,7 @@ class EliminaButton(discord.ui.Button[Any]):
             label="Elimina evento",
             emoji="🗑️",
             style=discord.ButtonStyle.red,
-            row=0,
+            row=2,
             custom_id=f"event_panel:elimina:{event_id}"
         )
         self.event_id = event_id
@@ -46,42 +125,8 @@ class TerminaButton(discord.ui.Button[Any]):
             label="Termina evento",
             emoji="🛑",
             style=discord.ButtonStyle.red,
-            row=0,
+            row=2,
             custom_id=f"event_panel:termina:{event_id}"
-        )
-        self.event_id = event_id
-
-    async def callback(self, interaction: discord.Interaction):
-        if interaction.guild is None:
-            return
-        embed = discord.Embed(
-            title="Termina evento",
-            color=discord.Color.red(),
-            description="Questa è una lista degli eventi in corso. Scegli quale vuoi terminare."
-        )
-        events = await get_events_for_guild(interaction.guild.id, ["running"])
-        async def wrapper(interaction: discord.Interaction, event: Event):
-            if interaction.guild is None:
-                return
-            ranking_channel_id = await get_ranking_channel_id(interaction.guild.id)
-            if ranking_channel_id is None:
-                await interaction.response.send_message("Server non configurato correttamente!", ephemeral=True)
-                return
-            ranking_channel = interaction.guild.get_channel(ranking_channel_id)
-            if not isinstance(ranking_channel, discord.TextChannel):
-                await interaction.response.send_message("Canale classifiche non trovato!", ephemeral=True)
-                return
-            await termina_evento_callback(interaction, event, ranking_channel, True)
-        await resolve_event(interaction, embed, events, wrapper)
-
-class RicaricaButton(discord.ui.Button[Any]):
-    def __init__(self, event_id: int):
-        super().__init__(
-            label="Ricarica",
-            emoji="🔄",
-            style=discord.ButtonStyle.grey,
-            row=1,
-            custom_id=f"event_panel:ricarica:{event_id}"
         )
         self.event_id = event_id
 
@@ -92,17 +137,25 @@ class RicaricaButton(discord.ui.Button[Any]):
         if event is None:
             await interaction.response.send_message("Evento non trovato!", ephemeral=True)
             return
-        placement_points = await get_placement_points(self.event_id)
-        teams = await get_teams_by_event(self.event_id)
-        await interaction.response.edit_message(
-            embed=build_event_embed(
-                event, interaction.guild, placement_points, teams
-            )
-        )
+        if event.status != "running":
+            await interaction.response.send_message("Non puoi terminare l'evento in questa fase!", ephemeral=True)
+            return
+        ranking_channel_id = await get_ranking_channel_id(interaction.guild.id)
+        if ranking_channel_id is None:
+            await interaction.response.send_message("Server non configurato correttamente!", ephemeral=True)
+            return
+        ranking_channel = interaction.guild.get_channel(ranking_channel_id)
+        if not isinstance(ranking_channel, discord.TextChannel):
+            await interaction.response.send_message("Canale classifiche non trovato!", ephemeral=True)
+            return
+        await termina_evento_callback(interaction, event, ranking_channel, True)
 
 class EventPanelView(discord.ui.View):
     def __init__(self, event_id: int):
         super().__init__(timeout=None)
 
-        self.add_item(TerminaButton(event_id))
+        self.add_item(ConfigLobby(event_id))
         self.add_item(RicaricaButton(event_id))
+        self.add_item(SpostaTeam(event_id))
+        self.add_item(TerminaButton(event_id))
+        self.add_item(EliminaButton(event_id))

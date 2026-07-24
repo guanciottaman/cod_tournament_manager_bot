@@ -23,6 +23,13 @@ LOBBY_MODES = {
     "kd_balanced": "KD bilanciato"
 }
 
+STATUSES = {
+    "draft": "In creazione",
+    "ready": "Registrazione team",
+    "setup": "Lobby create",
+    "running": "In corso"
+}
+
 def build_event_embed(
     event: Event,
     guild: discord.Guild,
@@ -39,7 +46,7 @@ def build_event_embed(
 
     embed.description = (
         f"# {event.name}\n"
-        f"**Stato:** {event.status}\n"
+        f"**Stato:** {STATUSES[event.status]}\n"
         f"**Match:** {event.matches_number}\n"
         f"**Giocatori per team:** {event.players_per_team}\n"
         f"**Lobby Mode:** {LOBBY_MODES[event.lobby_mode]}\n"
