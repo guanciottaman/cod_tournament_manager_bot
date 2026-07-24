@@ -273,6 +273,8 @@ class CreaEventoView2(discord.ui.View):
                     **Match:** {event.matches_number}
                     **Modalità:** {LOBBY_MODES[event.lobby_mode]}
                     **Scarta partita peggiore:** {'ON' if event.drop_worst_match else 'OFF'}
+
+                    Usa i bottoni qui sotto per registrare il tuo team, modificarlo o eliminarlo.
                 """
             )
             await channel.send(

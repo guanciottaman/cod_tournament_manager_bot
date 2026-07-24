@@ -2,7 +2,7 @@ import discord
 
 from services.event_service import get_event_info, get_team_from_leader, delete_team
 from services.team_service import (
-    get_team_id, get_players_names, get_inserted_matches_count_per_team, get_team_kds
+    get_team_id, get_players_names, get_inserted_matches_count_per_team, get_team_kds, get_team_channel_id
 )
 from services.server_service import get_admin_role_id
 from ui.modals.registra_team import RegistraTeamModal
@@ -113,9 +113,10 @@ class ConfermaEliminaTeamButton(discord.ui.Button[discord.ui.View]):
         admin_role = interaction.guild.get_role(admin_role_id)
         if admin_role is None:
             return
+        if interaction.client.user is None:
+            return
         for admin in admin_role.members:
-            if interaction.client.user is None:
-                return
+            
             if admin.id == interaction.user.id or admin.id == interaction.client.user.id:
                 continue
             try:
@@ -124,6 +125,11 @@ class ConfermaEliminaTeamButton(discord.ui.Button[discord.ui.View]):
             )
             except (discord.Forbidden, discord.HTTPException):
                 continue
+        team_channel_id = await get_team_channel_id(self.event.event_id, self.team.team_id)
+        if team_channel_id is not None:
+            team_channel = interaction.guild.get_channel(team_channel_id)
+            if team_channel is not None:
+                await team_channel.delete()
 
 class EliminaButton(discord.ui.Button[discord.ui.View]):
     def __init__(self, event_id: int):
