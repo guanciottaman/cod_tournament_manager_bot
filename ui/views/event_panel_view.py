@@ -105,7 +105,13 @@ class SpostaTeam(discord.ui.Button[Any]):
             await interaction.response.send_message("Non puoi spostare team in questa fase dell'evento!", ephemeral=True)
             return
         teams = await get_teams_by_event(self.event_id)
+        embed = discord.Embed(
+            title="Sposta team",
+            color=discord.Color.blue(),
+            description="Scegli il team da spostare"
+        )
         await interaction.response.send_message(
+            embed=embed,
             view=TeamsSelectorView(
                 teams,
                 event,
@@ -113,37 +119,8 @@ class SpostaTeam(discord.ui.Button[Any]):
                 use_lobbies=True,
                 lobbies=await get_lobbies(self.event_id),
                 interaction=interaction
-            )
-        )
-
-class EliminaTeam(discord.ui.Button[Any]):
-    def __init__(self, event_id: int):
-        super().__init__(
-            label="Elimina team",
-            emoji="🔨",
-            style=discord.ButtonStyle.red,
-            row=1,
-            custom_id=f"event_panel:elimina_team:{event_id}"
-        )
-        self.event_id = event_id
-
-    async def callback(self, interaction: discord.Interaction):
-        if interaction.guild is None:
-            return
-        event = await get_event_info(self.event_id, interaction.guild.id)
-        if event is None:
-            await interaction.response.send_message("Evento non trovato!", ephemeral=True)
-            return
-        teams = await get_teams_by_event(self.event_id)
-        await interaction.response.send_message(
-            view=TeamsSelectorView(
-                teams,
-                event,
-                "delete",
-                use_lobbies=True,
-                lobbies=await get_lobbies(self.event_id),
-                interaction=interaction
-            )
+            ),
+            ephemeral=True
         )
 
 class ModificaTeam(discord.ui.Button[Any]):
@@ -165,7 +142,13 @@ class ModificaTeam(discord.ui.Button[Any]):
             await interaction.response.send_message("Evento non trovato!", ephemeral=True)
             return
         teams = await get_teams_by_event(self.event_id)
+        embed = discord.Embed(
+            title="Modifica team",
+            color=discord.Color.gold(),
+            description="Scegli il team da modificare"
+        )
         await interaction.response.send_message(
+            embed=embed,
             view=TeamsSelectorView(
                 teams,
                 event,
@@ -173,7 +156,45 @@ class ModificaTeam(discord.ui.Button[Any]):
                 use_lobbies=True,
                 lobbies=await get_lobbies(self.event_id),
                 interaction=interaction
-            )
+            ),
+            ephemeral=True
+        )
+
+class EliminaTeam(discord.ui.Button[Any]):
+    def __init__(self, event_id: int):
+        super().__init__(
+            label="Elimina team",
+            emoji="🔨",
+            style=discord.ButtonStyle.red,
+            row=1,
+            custom_id=f"event_panel:elimina_team:{event_id}"
+        )
+        self.event_id = event_id
+
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.guild is None:
+            return
+        event = await get_event_info(self.event_id, interaction.guild.id)
+        if event is None:
+            await interaction.response.send_message("Evento non trovato!", ephemeral=True)
+            return
+        teams = await get_teams_by_event(self.event_id)
+        embed = discord.Embed(
+            title="Elimina team",
+            color=discord.Color.red(),
+            description="Scegli il team da eliminare"
+        )
+        await interaction.response.send_message(
+            embed=embed,
+            view=TeamsSelectorView(
+                teams,
+                event,
+                "delete",
+                use_lobbies=True,
+                lobbies=await get_lobbies(self.event_id),
+                interaction=interaction
+            ),
+            ephemeral=True
         )
 
 class EliminaButton(discord.ui.Button[Any]):
