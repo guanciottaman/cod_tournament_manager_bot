@@ -30,6 +30,7 @@ class ServerPanelView(discord.ui.View):
     @discord.ui.button(
         label="Elimina evento",
         style=discord.ButtonStyle.red,
+        emoji="✖️",
         row=0,
         custom_id="server_panel:delete_event"
     )

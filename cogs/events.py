@@ -696,7 +696,7 @@ class Events(commands.Cog):
             embed=build_panel_embed(interaction.guild),
             view=ServerPanelView()
         )
-        await interaction.response.send_message(f"Pannello mandato su {panel_channel.mention}!")
+        await interaction.response.send_message(f"Pannello mandato su {panel_channel.mention}!", ephemeral=True)
 
 
 async def setup(bot: commands.Bot):
