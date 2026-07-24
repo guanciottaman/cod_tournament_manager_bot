@@ -61,7 +61,7 @@ class EventChannelsView(discord.ui.View):
         placeholder="Seleziona canale pannello evento...",
         min_values=1,
         max_values=1,
-        row=0
+        row=1
     )
     async def event_panel_select(self, interaction: discord.Interaction, select: discord.ui.ChannelSelect[Any]):
         if interaction.guild is None:
