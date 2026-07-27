@@ -239,15 +239,12 @@ class DebugCommands(commands.Cog):
         if not event:
             await interaction.followup.send("Evento non valido", ephemeral=True)
             return
-        logger.info(event)
 
         teams = await get_teams(event_id)
         if not teams:
             await interaction.followup.send("Nessun team trovato", ephemeral=True)
             return
-        logger.info(teams)
-
-        existing_matches = set(await get_inserted_match_numbers(event_id))
+        existing_matches = await get_inserted_match_numbers(event_id)
 
         matches_number = event.matches_number
         logger.info(

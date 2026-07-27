@@ -469,9 +469,15 @@ async def get_inserted_matches(event_id: int, team_id: int) -> set[int]:
 
 async def get_inserted_match_numbers(event_id: int) -> set[int]:
     rows = await fetch_all(
-        "SELECT DISTINCT match_number FROM team_scores WHERE event_id = $1 ORDER BY id",
+        """
+        SELECT match_number
+        FROM team_scores
+        WHERE event_id = $1
+        GROUP BY match_number
+        """,
         (event_id,)
     )
+
     return {r["match_number"] for r in rows}
 
 async def get_inserted_matches_count(event_id: int) -> dict[int, int]:
