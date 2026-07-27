@@ -23,7 +23,6 @@ async def inserisci_risultato_message(
         description=f"**ATTENZIONE**\nIL RISULTATO NON È STATO ANCORA REGISTRATO, controlla le foto che hai caricato e, in caso di errore, rifai il comando, altrimenti clicca il bottone qui sotto per inserire i risultati\n",
         color=discord.Colour.blurple()
     )
-    second_embed = discord.Embed(color=discord.Color.blurple())
     view = discord.ui.View()
     insert_result_btn: discord.ui.Button[Any] = discord.ui.Button(label="INSERISCI RISULTATO", style=discord.ButtonStyle.green)
     async def insert_result_callback(interaction: discord.Interaction):
@@ -66,7 +65,7 @@ async def inserisci_risultato_message(
         await interaction.response.send_message(embed=embed, view=view, ephemeral=True)
     insert_result_btn.callback = insert_result_callback
     view.add_item(insert_result_btn)
-    await message.channel.send(embeds=[embed, second_embed], view=view)
+    await message.channel.send(embed=embed, view=view)
 
 async def inserisci_risultato_callback(
     interaction: discord.Interaction,
