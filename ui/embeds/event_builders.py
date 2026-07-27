@@ -31,7 +31,8 @@ def build_event_embed(
         f"**Giocatori per team:** {event.players_per_team}\n"
         f"**Lobby Mode:** {LOBBY_MODES[event.lobby_mode]}\n"
         f"**Scarta partita peggiore:** {'ON' if event.drop_worst_match else 'OFF'}\n"
-        f"**Categoria ticket team:** {category_channel.mention if event.teams_category_id and category_channel is not None else 'Nessuno'}\n\n"
+        f"**Categoria ticket team:** {category_channel.mention if event.teams_category_id and category_channel is not None else 'Nessuno'}\n"
+        f"**Sistema piazzamento:** {'punti' if placement_settings.system == "points" else 'moltiplicatori'}\n\n"
         f"**Punti piazzamento:**\n"
     )
 
