@@ -73,11 +73,11 @@ async def get_team_match_data(
         WHERE ts.event_id = $1 AND ts.status = ANY($2)
     """
 
-    params = [event_id, statuses]
+    params: list[Any] = [event_id, statuses]
 
     if scope == "lobby" and lobby_id is not None:
-        query += f" AND t.lobby_id = ${len(params) + 2}"
         params.append(lobby_id)
+        query += f" AND t.lobby_id = ${len(params)}"
 
     return await fetch_all(query, tuple(params))
 
