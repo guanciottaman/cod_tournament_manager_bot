@@ -276,9 +276,9 @@ class Events(commands.Cog):
         async def event_selector_callback(interaction: discord.Interaction, event: Event):
             if interaction.guild is None:
                 return
-            placement_points = await get_placement_points(event.event_id)
+            placement_settings = await get_placement_settings(event.event_id)
             teams = await get_teams_by_event(event.event_id)
-            embed = build_event_embed(event, interaction.guild, placement_points, teams)
+            embed = build_event_embed(event, interaction.guild, placement_settings, teams)
             await interaction.response.send_message(embed=embed, ephemeral=True)
         await resolve_event(interaction, embed, events, event_selector_callback)
         
@@ -315,9 +315,9 @@ class Events(commands.Cog):
             if interaction.guild is None:
                 return
             event_id = event.event_id
-            placement_points = await get_placement_points(event_id)
-            teams = await get_teams_by_event(event_id)
-            embed = build_event_embed(event, interaction.guild, placement_points, teams, embed_title="Elimina evento")
+            placement_settings = await get_placement_settings(event.event_id)
+            teams = await get_teams_by_event(event.event_id)
+            embed = build_event_embed(event, interaction.guild, placement_settings, teams, embed_title="Elimina evento")
             await interaction.response.send_message(embed=embed, view=EliminaEventoView(event_id), ephemeral=True)
         
         await resolve_event(interaction, embed, events, event_selector_callback)

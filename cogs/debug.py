@@ -10,9 +10,10 @@ from discord.ext import commands
 from db.db import *
 from services.team_service import (insert_teams, update_team_kd, get_teams,
     insert_results, get_inserted_match_numbers, set_result_status)
-from services.event_service import get_events_for_guild, get_event_info
+from services.event_service import get_events_for_guild, get_event_info, get_placement_settings
 from services.server_service import get_admin_role_id
 from models.team import Team
+from config.consts import DEFAULT_PLACEMENT_MULTIPLIERS, DEFAULT_PLACEMENT_POINTS
 
 
 logger = logging.getLogger(__name__)
@@ -37,6 +38,17 @@ IMAGE_POOL: tuple[str, str] = (
     "https://cdn.discordapp.com/attachments/1496915639170891847/1511440911807156304/appunti.png?ex=6a20768a&is=6a1f250a&hm=a756c98e8c2869ca302212ad5f5186e172c8b14b5c64f27964c927c77b499a6a&"
 )
 
+def get_multiplier(
+    placement: int,
+    multipliers: dict[tuple[int, int | None], float]
+) -> float:
+    for (min_place, max_place), multiplier in multipliers.items():
+        if min_place <= placement and (
+            max_place is None or placement <= max_place
+        ):
+            return multiplier
+
+    return 1.0
 
 def generate_team_name():
     return f"{random.choice(TEAM_NAMES)}#{random.randint(1000, 9999)}"
@@ -246,13 +258,7 @@ class DebugCommands(commands.Cog):
 
         kill_points_value = settings["kill_points"] if settings else 1
 
-        placement_rows = await fetch_all("""
-            SELECT position, points
-            FROM placement_points
-            WHERE event_id = $1
-        """, (event_id,))
-
-        placement_dict = {row["position"]: row["points"] for row in placement_rows}
+        placement_settings = await get_placement_settings(event_id)
         inserted = 0
         buffer: list[dict[str, Any]] = []
         for match_number in range(1, matches_number + 1):
@@ -275,9 +281,21 @@ class DebugCommands(commands.Cog):
                 players: list[tuple[int, str, int]] = r["players"]
 
                 kills = sum(p[2] for p in players)
-                placement_pts = placement_dict.get(placement, 0)
-                kill_pts = kills * kill_points_value
-                total = placement_pts + kill_pts
+                if placement_settings.system == "points":
+                    if placement_settings.points:
+                        placement_pts = placement_settings.points.get(placement, 0)
+                    else:
+                        placement_pts = DEFAULT_PLACEMENT_POINTS.get(placement, 0)
+                    kill_pts = kills * kill_points_value
+                    total = placement_pts + kill_pts
+                else:
+                    kill_pts = kills * kill_points_value
+                    if placement_settings.multipliers:
+                        placement_pts = get_multiplier(placement, placement_settings.multipliers) * kill_pts
+                    else:
+                        placement_pts = get_multiplier(placement, DEFAULT_PLACEMENT_MULTIPLIERS) * kill_pts
+                    
+                    total = placement_pts
                 match_data["teams"].append({
                     "team_id": team_id,
                     "placement": placement,

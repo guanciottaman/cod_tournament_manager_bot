@@ -5,7 +5,7 @@ from typing import Any
 from ui.embeds.event_builders import build_event_channels_embed, build_event_embed, LOBBY_MODES
 from ui.views.registra_team_view import RegistraTeamView
 from ui.views.event_panel_view import EventPanelView
-from services.event_service import get_event_info, set_event_status, get_placement_points, get_teams_by_event
+from services.event_service import get_event_info, set_event_status, get_placement_settings, get_teams_by_event
 from services.server_service import check_channel_permissions
 from config.permissions import BASE_SEND_PERMS
 
@@ -126,9 +126,9 @@ class EventChannelsView(discord.ui.View):
             embed=team_register_embed,
             view=RegistraTeamView(self.event_id)
         )
-        placement_points = await get_placement_points(self.event_id)
+        placement_settings = await get_placement_settings(self.event_id)
         teams = await get_teams_by_event(self.event_id)
-        event_panel_embed = build_event_embed(event, interaction.guild, placement_points, teams)
+        event_panel_embed = build_event_embed(event, interaction.guild, placement_settings, teams)
         if not isinstance(self.manage_event_channel, discord.TextChannel):
             return
         await self.manage_event_channel.send(

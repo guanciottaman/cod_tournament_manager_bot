@@ -23,9 +23,9 @@ class NomeEventoModal(discord.ui.Modal, title="Nuovo evento"):
         if event is None:
             await interaction.response.send_message("C'è stato un errore!", ephemeral=True)
             return
-        placement_points = await get_placement_points(event_id)
+        placement_settings = await get_placement_settings(event_id)
         teams = await get_teams_by_event(event_id)
-        embed = build_event_embed(event, interaction.guild, placement_points, teams)
+        embed = build_event_embed(event, interaction.guild, placement_settings, teams)
         
         await interaction.response.send_message(
             embed=embed,
