@@ -33,10 +33,10 @@ def build_event_embed(
         f"**Scarta partita peggiore:** {'ON' if event.drop_worst_match else 'OFF'}\n"
         f"**Categoria ticket team:** {category_channel.mention if event.teams_category_id and category_channel is not None else 'Nessuno'}\n"
         f"**Sistema piazzamento:** {'punti' if placement_settings.system == "points" else 'moltiplicatori'}\n\n"
-        f"**Punti piazzamento:**\n"
     )
 
     if placement_settings.system == "points":
+        embed.description += "**Punti piazzamento:**\n"
         if placement_settings.points:
             for position, points in placement_settings.points.items():
                 embed.description += f"{position}° posto: *{points} punti*\n"
@@ -44,6 +44,7 @@ def build_event_embed(
             for position, points in DEFAULT_PLACEMENT_POINTS.items():
                 embed.description += f"{position}° posto: *{points} punti*\n"
     elif placement_settings.system == "multipliers":
+        embed.description += "**Moltiplicatori piazzamento:**\n"
         if placement_settings.multipliers:
             for (min_placement, max_placement), multiplier in placement_settings.multipliers.items():
                 if min_placement == 1:

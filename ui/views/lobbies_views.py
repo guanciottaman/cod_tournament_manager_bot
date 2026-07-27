@@ -159,4 +159,4 @@ class LobbyConfigView(discord.ui.View):
 
         embed = await build_event_start_summary(lobbies)
 
-        await interaction.edit_original_response(embed=embed, view=None)
+        await interaction.edit_original_response(content="", embed=embed, view=None)

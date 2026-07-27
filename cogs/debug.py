@@ -250,6 +250,9 @@ class DebugCommands(commands.Cog):
         matches_number = getattr(event, "matches_number", None)
         if not matches_number:
             matches_number = max(1, len(teams) // 10)
+        logger.info(
+            f"Match esistenti: {existing_matches}, totali: {matches_number}"
+        )
         settings = await fetch_one("""
             SELECT kill_points
             FROM events_settings
@@ -314,6 +317,9 @@ class DebugCommands(commands.Cog):
                     match=match_number,
                     players=r["players"],
                     prove=IMAGE_POOL
+                )
+                logger.info(
+                    f"Inserito match {match_number} team {r['team_id']}"
                 )
             buffer.append(match_data)
 
