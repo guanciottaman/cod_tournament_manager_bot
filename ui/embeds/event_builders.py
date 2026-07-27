@@ -47,15 +47,15 @@ def build_event_embed(
         if placement_settings.multipliers:
             for (min_placement, max_placement), multiplier in placement_settings.multipliers.items():
                 if min_placement == 1:
-                    embed.description += f"1° posto: *{multiplier}*\n"
+                    embed.description += f"1° posto: *{multiplier:g}x*\n"
                 else:
-                    embed.description += f"{min_placement}°{f'-{max_placement}°' if max_placement is not None else '+'} posto: *{multiplier}x*\n"
+                    embed.description += f"{min_placement}°{f'-{max_placement}°' if max_placement is not None else '+'} posto: *{multiplier:g}x*\n"
         else:
             for (min_placement, max_placement), multiplier in DEFAULT_PLACEMENT_MULTIPLIERS.items():
                 if min_placement == 1:
-                    embed.description += f"1° posto: {multiplier}"
+                    embed.description += f"1° posto: *{multiplier:g}x*\n"
                 else:
-                    embed.description += f"{min_placement}°{f'-{max_placement}°' if max_placement is not None else '+'} posto: *{multiplier}x*\n"
+                    embed.description += f"{min_placement}°{f'-{max_placement}°' if max_placement is not None else '+'} posto: *{multiplier:g}x*\n"
 
     embed.description += "\n**Team**\n"
 
