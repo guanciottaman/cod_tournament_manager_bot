@@ -234,6 +234,7 @@ class DebugCommands(commands.Cog):
             await interaction.response.send_message("Non hai i permessi per generare i risultati!", ephemeral=True)
             return
         await interaction.response.defer(ephemeral=True)
+        logger.info("Generating results...")
 
         event = await get_event_info(event_id, interaction.guild.id)
         if not event:
