@@ -239,11 +239,13 @@ class DebugCommands(commands.Cog):
         if not event:
             await interaction.followup.send("Evento non valido", ephemeral=True)
             return
+        logger.info(event)
 
         teams = await get_teams(event_id)
         if not teams:
             await interaction.followup.send("Nessun team trovato", ephemeral=True)
             return
+        logger.info(teams)
 
         existing_matches = set(await get_inserted_match_numbers(event_id))
 
@@ -260,7 +262,7 @@ class DebugCommands(commands.Cog):
         kill_points_value = settings["kill_points"] if settings else 1
 
         placement_settings = await get_placement_settings(event_id)
-        logging.info(f"System: {placement_settings.system}\nPoints: {placement_settings.points}\nMultipliers: {placement_settings.multipliers}")
+        logger.info(f"System: {placement_settings.system}\nPoints: {placement_settings.points}\nMultipliers: {placement_settings.multipliers}")
         inserted = 0
         buffer: list[dict[str, Any]] = []
         for match_number in range(1, matches_number + 1):
