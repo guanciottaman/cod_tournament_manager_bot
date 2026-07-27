@@ -1,5 +1,8 @@
 from db.db import *
 from models.ranking import TeamRankingEntry, MVPRanking
+from models.placement_settings import PlacementSettings
+from services.event_service import get_placement_settings
+from config.consts import DEFAULT_PLACEMENT_MULTIPLIERS, DEFAULT_PLACEMENT_POINTS
 
 from collections import defaultdict
 import re
@@ -11,6 +14,41 @@ def extract_clan(team_name: str):
 def clean_player_name(name: str) -> str:
     return name.split("#")[0]
 
+def get_multiplier(
+    placement: int,
+    multipliers: dict[tuple[int, int | None], float]
+) -> float:
+
+    for (min_place, max_place), multiplier in multipliers.items():
+        if min_place <= placement and (
+            max_place is None or placement <= max_place
+        ):
+            return multiplier
+
+    return 1.0
+
+def calculate_match_score(
+    kills: int,
+    kill_points: int,
+    placement: int,
+    placement_settings: PlacementSettings
+) -> float:
+    placement_system = placement_settings.system
+    if placement_system == "points":
+        if placement_settings.points:
+            return kills * kill_points + placement_settings.points.get(placement, 0)
+        else:
+            return kills * kill_points + DEFAULT_PLACEMENT_POINTS.get(placement, 0)
+    elif placement_system == "multipliers":
+        if placement_settings.multipliers:
+            return kills * kill_points * get_multiplier(placement, placement_settings.multipliers)
+        else:
+            return kills * kill_points * get_multiplier(
+                placement,
+                DEFAULT_PLACEMENT_MULTIPLIERS
+            )
+    else:
+        return 0
 
 async def get_team_match_data(
     event_id: int,
@@ -107,14 +145,6 @@ async def compute_team_ranking(
 
     kill_points, drop_worst_match = (settings["kill_points"], settings["drop_worst_match"]) if settings else (1, False)
 
-    placement_map = await fetch_all("""
-        SELECT position, points
-        FROM placement_points
-        WHERE event_id = $1
-    """, (event_id,))
-
-    placement_dict = {row["position"]: row["points"] for row in placement_map}
-
     match_kills: defaultdict[int, int] = defaultdict(int)
 
     player_rows_query = """
@@ -134,20 +164,19 @@ async def compute_team_ranking(
         match_kills[row["team_score_id"]] += row["kills"]
 
     # 5. build per-team ranking
-    team_matches: dict[int, list[dict[str, int]]] = defaultdict(list)
+    team_matches: dict[int, list[dict[str, Any]]] = defaultdict(list)
     
 
     for row in teams:
         team_matches[row["team_id"]] = []
 
+    placement_settings = await get_placement_settings(event_id)
+
     for row in rows:
 
         kills = match_kills.get(row["team_score_id"], 0)
 
-        match_score = (
-            (kills * kill_points)
-            + placement_dict.get(row["placement"], 0)
-        )
+        match_score = calculate_match_score(kills, kill_points, row["placement"], placement_settings)
 
         team_matches[row["team_id"]].append({
             "score": match_score,

@@ -4,7 +4,7 @@ from dataclasses import dataclass
 class TeamRankingEntry:
     team_id: int
     name: str
-    score: int
+    score: float
     kills: int
 
 @dataclass

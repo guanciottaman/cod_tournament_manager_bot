@@ -2,7 +2,7 @@ import discord
 
 from typing import Any
 
-from services.event_service import get_event_info, get_placement_points, get_teams_by_event
+from services.event_service import get_event_info, get_placement_settings, get_teams_by_event
 from services.lobby_service import get_lobbies
 from services.server_service import get_ranking_channel_id, get_lobbies_channel_id
 from ui.embeds.event_builders import build_event_embed
@@ -13,6 +13,7 @@ from ui.resolvers.termina_evento_cb import termina_evento_callback
 from ui.resolvers.lobby_config_cb import start_lobby_config
 from ui.resolvers.start_event_cb import start_event_callback
 from ui.resolvers.set_lobbies_codes_cb import set_lobby_codes_callback
+from ui.modals.send_lobby_code import SendLobbyCodeModal
 from ui.resolvers.info_lobby_cb import info_lobbies_callback
 from ui.resolvers.controlla_risultati_cb import controlla_risultati_callback
 
@@ -79,6 +80,9 @@ class ControllaRisultati(discord.ui.Button[Any]):
         if event is None:
             await interaction.response.send_message("Evento non trovato!", ephemeral=True)
             return
+        if event.status != "running":
+            await interaction.response.send_message("Non puoi controllare i risultati in questa fase dell'evento", ephemeral=True)
+            return
         await controlla_risultati_callback(interaction, event)
 
 class RicaricaButton(discord.ui.Button[Any]):
@@ -99,14 +103,34 @@ class RicaricaButton(discord.ui.Button[Any]):
         if event is None:
             await interaction.response.send_message("Evento non trovato!", ephemeral=True)
             return
-        placement_points = await get_placement_points(self.event_id)
+        placement_settings = await get_placement_settings(self.event_id)
         teams = await get_teams_by_event(self.event_id)
         await interaction.response.edit_message(
             embed=build_event_embed(
-                event, interaction.guild, placement_points, teams
+                event, interaction.guild, placement_settings, teams
             ),
             view=EventPanelView(self.event_id)
         )
+
+
+class InfoLobby(discord.ui.Button[Any]):
+    def __init__(self, event_id: int):
+        super().__init__(
+            label="Info lobby",
+            emoji="ℹ️",
+            style=discord.ButtonStyle.blurple,
+            row=1,
+            custom_id=f"event_panel:info_lobby:{event_id}"
+        )
+        self.event_id = event_id
+
+    async def callback(self, interaction: discord.Interaction):
+        if interaction.guild is None:
+            return
+        event = await get_event_info(self.event_id, interaction.guild.id)
+        if event is None:
+            return
+        await info_lobbies_callback(interaction, event)
 
 class ImpostaCanaliLobby(discord.ui.Button[Any]):
     def __init__(self, event_id: int):
@@ -124,6 +148,9 @@ class ImpostaCanaliLobby(discord.ui.Button[Any]):
             return
         event = await get_event_info(self.event_id, interaction.guild.id)
         if event is None:
+            return
+        if event.status != "setup":
+            await interaction.response.send_message("Non puoi impostare i canali delle lobby in questa fase dell'evento", ephemeral=True)
             return
         await set_lobby_codes_callback(interaction, event)
 
@@ -146,6 +173,9 @@ class InviaLobby(discord.ui.Button[Any]):
         event = await get_event_info(self.event_id, interaction.guild.id)
         if event is None:
             return
+        if event.status not in ("setup", "running"):
+            await interaction.response.send_message("Non puoi mandare le lobby in questa fase dell'evento", ephemeral=True)
+            return
         embed = build_info_lobby_embed(event.name, lobbies, show_kd=False)
 
         guild = interaction.guild
@@ -164,14 +194,14 @@ class InviaLobby(discord.ui.Button[Any]):
         await lobbies_channel.send(embed=embed)
         await interaction.followup.send(f"Lobby mandate nel canale {lobbies_channel.mention}", ephemeral=True)
 
-class InfoLobby(discord.ui.Button[Any]):
+class MandaCodiceLobby(discord.ui.Button[Any]):
     def __init__(self, event_id: int):
         super().__init__(
-            label="Info lobby",
-            emoji="ℹ️",
+            label="Manda codice lobby",
+            emoji="🔖",
             style=discord.ButtonStyle.blurple,
             row=1,
-            custom_id=f"event_panel:info_lobby:{event_id}"
+            custom_id=f"event_panel:manda_codice_lobby:{event_id}"
         )
         self.event_id = event_id
 
@@ -181,7 +211,12 @@ class InfoLobby(discord.ui.Button[Any]):
         event = await get_event_info(self.event_id, interaction.guild.id)
         if event is None:
             return
-        await info_lobbies_callback(interaction, event)
+        if event.status != "running":
+            await interaction.response.send_message("Non puoi mandare codici lobby in questa fase dell'evento", ephemeral=True)
+            return
+        await interaction.response.send_modal(
+            SendLobbyCodeModal(event)
+        )
 
 class InfoTeam(discord.ui.Button[Any]):
     def __init__(self, event_id: int):
@@ -238,7 +273,7 @@ class SpostaTeam(discord.ui.Button[Any]):
         if event is None:
             await interaction.response.send_message("Evento non trovato!", ephemeral=True)
             return
-        if event.status != "setup":
+        if event.status not in ("setup", "running"):
             await interaction.response.send_message("Non puoi spostare team in questa fase dell'evento!", ephemeral=True)
             return
         teams = await get_teams_by_event(self.event_id)
@@ -314,6 +349,9 @@ class PenalizzaTeam(discord.ui.Button[Any]):
         event_id = self.event_id
         event = await get_event_info(self.event_id, interaction.guild.id)
         if event is None:
+            return
+        if event.status != "running":
+            await interaction.response.send_message("Non puoi penalizzare un team in questa fase dell'evento", ephemeral=True)
             return
         teams = await get_teams_by_event(event_id)
         embed = discord.Embed(
@@ -440,9 +478,10 @@ class EventPanelView(discord.ui.View):
         self.add_item(ControllaRisultati(event_id))
         self.add_item(RicaricaButton(event_id))
 
+        self.add_item(InfoLobby(event_id))
         self.add_item(ImpostaCanaliLobby(event_id))
         self.add_item(InviaLobby(event_id))
-        self.add_item(InfoLobby(event_id))
+        self.add_item(MandaCodiceLobby(event_id))
 
         self.add_item(InfoTeam(event_id))
         self.add_item(SpostaTeam(event_id))

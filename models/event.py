@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from typing import Literal
 import datetime
 
 @dataclass
@@ -16,3 +17,4 @@ class Event:
     lobby_mode: str
     lobbies_number: int | None
     teams_category_id: int
+    placement_system: Literal["points", "multipliers"]

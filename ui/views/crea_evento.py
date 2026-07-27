@@ -26,9 +26,9 @@ class CreaEventoView1(discord.ui.View):
         if event is None:
             await interaction.response.send_message("C'è stato un errore!", ephemeral=True)
             return
-        placement_points = await get_placement_points(self.event_id)
+        placement_settings = await get_placement_settings(self.event_id)
         teams = await get_teams_by_event(self.event_id)
-        embed = build_event_embed(event, interaction.guild, placement_points, teams)
+        embed = build_event_embed(event, interaction.guild, placement_settings, teams)
         await interaction.response.edit_message(embed=embed, view=self)
 
     @discord.ui.select(
@@ -45,9 +45,9 @@ class CreaEventoView1(discord.ui.View):
         event = await get_event_info(self.event_id, interaction.guild.id)
         if event is None:
             return
-        placement_points = await get_placement_points(self.event_id)
+        placement_settings = await get_placement_settings(self.event_id)
         teams = await get_teams_by_event(self.event_id)
-        embed = build_event_embed(event, interaction.guild, placement_points, teams)
+        embed = build_event_embed(event, interaction.guild, placement_settings, teams)
         await interaction.response.edit_message(embed=embed, view=self)
     
     @discord.ui.select(
@@ -87,9 +87,9 @@ class CreaEventoView1(discord.ui.View):
         if event is None:
             await interaction.response.send_message("C'è stato un errore!", ephemeral=True)
             return
-        placement_points = await get_placement_points(self.event_id)
+        placement_settings = await get_placement_settings(self.event_id)
         teams = await get_teams_by_event(self.event_id)
-        embed = build_event_embed(event, interaction.guild, placement_points, teams)
+        embed = build_event_embed(event, interaction.guild, placement_settings, teams)
         await interaction.response.edit_message(embed=embed, view=self)
     
     @discord.ui.button(
@@ -104,9 +104,9 @@ class CreaEventoView1(discord.ui.View):
         if event is None:
             await interaction.response.send_message("C'è stato un errore!", ephemeral=True)
             return
-        placement_points = await get_placement_points(self.event_id)
+        placement_settings = await get_placement_settings(self.event_id)
         teams = await get_teams_by_event(self.event_id)
-        embed = build_event_embed(event, interaction.guild, placement_points, teams)
+        embed = build_event_embed(event, interaction.guild, placement_settings, teams)
         await interaction.response.edit_message(
             embed=embed,
             view=CreaEventoView2(self.event_id)
@@ -115,7 +115,7 @@ class CreaEventoView1(discord.ui.View):
     @discord.ui.button(
         label="Modifica punti",
         style=discord.ButtonStyle.secondary,
-        row=4
+        row=3
     )
     async def edit_placement_points(self, interaction: discord.Interaction, button: discord.ui.Button[Any]):
         await interaction.response.send_modal(KillPointsModal(self.event_id, self))
@@ -190,9 +190,9 @@ class CreaEventoView2(discord.ui.View):
         if event is None:
             await interaction.response.send_message("C'è stato un errore!", ephemeral=True)
             return
-        placement_points = await get_placement_points(self.event_id)
+        placement_settings = await get_placement_settings(self.event_id)
         teams = await get_teams_by_event(self.event_id)
-        embed = build_event_embed(event, interaction.guild, placement_points, teams)
+        embed = build_event_embed(event, interaction.guild, placement_settings, teams)
         await interaction.response.edit_message(embed=embed, view=self)
 
     @discord.ui.select(
@@ -211,15 +211,48 @@ class CreaEventoView2(discord.ui.View):
         if event is None:
             await interaction.response.send_message("C'è stato un errore!", ephemeral=True)
             return
-        placement_points = await get_placement_points(self.event_id)
+        placement_settings = await get_placement_settings(self.event_id)
         teams = await get_teams_by_event(self.event_id)
-        embed = build_event_embed(event, interaction.guild, placement_points, teams)
+        embed = build_event_embed(event, interaction.guild, placement_settings, teams)
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    @discord.ui.select(
+        placeholder="Sistema di piazzamento",
+        options=[
+            discord.SelectOption(
+                label="Punti",
+                description="Verranno aggiunti ai punti delle kill i punti del posizionamento",
+                emoji="📊",
+                value="points"
+            ),
+            discord.SelectOption(
+                label="Moltiplicatori",
+                description="Verranno moltiplicati i punti delle kill in base al posizionamento",
+                emoji="✖️",
+                value="multipliers"
+            )
+        ],
+        min_values=1,
+        max_values=1
+    )
+    async def set_placement_system(self, interaction: discord.Interaction, select: discord.ui.Select[Any]):
+        if interaction.guild is None:
+            return
+        selected = select.values[0]
+        await set_placement_system(self.event_id, selected)
+        event = await get_event_info(self.event_id, interaction.guild.id)
+        if event is None:
+            await interaction.response.send_message("C'è stato un errore!", ephemeral=True)
+            return
+        placement_settings = await get_placement_settings(self.event_id)
+        teams = await get_teams_by_event(self.event_id)
+        embed = build_event_embed(event, interaction.guild, placement_settings, teams)
         await interaction.response.edit_message(embed=embed, view=self)
 
     @discord.ui.button(
         label="⬅️",
         style=discord.ButtonStyle.blurple,
-        row=2
+        row=3
     )
     async def previous_page(self, interaction: discord.Interaction, button: discord.ui.Button[Any]):
         if interaction.guild is None:
@@ -228,13 +261,21 @@ class CreaEventoView2(discord.ui.View):
         if event is None:
             await interaction.response.send_message("C'è stato un errore!", ephemeral=True)
             return
-        placement_points = await get_placement_points(self.event_id)
+        placement_settings = await get_placement_settings(self.event_id)
         teams = await get_teams_by_event(self.event_id)
-        embed = build_event_embed(event, interaction.guild, placement_points, teams)
+        embed = build_event_embed(event, interaction.guild, placement_settings, teams)
         await interaction.response.edit_message(
             embed=embed,
             view=CreaEventoView1(self.event_id)
         )
+
+    @discord.ui.button(
+        label="Modifica punti",
+        style=discord.ButtonStyle.secondary,
+        row=3
+    )
+    async def edit_placement_points(self, interaction: discord.Interaction, button: discord.ui.Button[Any]):
+        await interaction.response.send_modal(KillPointsModal(self.event_id, self))
 
     @discord.ui.button(
         label="Crea evento",

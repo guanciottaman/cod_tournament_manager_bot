@@ -1,10 +1,11 @@
 import discord
 import asyncpg
 
-from typing import Any
+from typing import Any, Literal
 
 from models.event import Event
 from models.team import Team
+from models.placement_settings import PlacementSettings
 from db.db import *
 
 async def get_event_info(event_id: int, guild_id: int) -> Event | None:
@@ -20,7 +21,7 @@ async def get_event_info(event_id: int, guild_id: int) -> Event | None:
 
     row_settings = await fetch_one("""
         SELECT kill_points, players_per_team, drop_worst_match,
-            matches_number, lobby_mode, lobbies_number, teams_category_id
+            matches_number, lobby_mode, lobbies_number, teams_category_id, placement_system
         FROM events_settings
         WHERE event_id = $1
     """, (event_id,))
@@ -41,7 +42,8 @@ async def get_event_info(event_id: int, guild_id: int) -> Event | None:
         matches_number=row_settings["matches_number"],
         lobby_mode=row_settings["lobby_mode"],
         lobbies_number=row_settings["lobbies_number"],
-        teams_category_id=row_settings["teams_category_id"]
+        teams_category_id=row_settings["teams_category_id"],
+        placement_system=row_settings["placement_system"]
     )
     return event
 
@@ -53,7 +55,7 @@ async def get_event_settings(event_id: int):
     """, (event_id,))
     return row
 
-async def get_placement_points(event_id: int) -> list[tuple[int, int]]:
+async def get_placement_points(event_id: int) -> dict[int, int]:
     rows = await fetch_all(
         """
         SELECT position, points
@@ -64,10 +66,10 @@ async def get_placement_points(event_id: int) -> list[tuple[int, int]]:
         (event_id,)
     )
 
-    return [
-        (row["position"], row["points"])
+    return {
+        row["position"]: row["points"]
         for row in rows
-    ]
+    }
 
 async def get_drop_worst_match(event_id: int) -> bool:
     row = await fetch_one(
@@ -95,7 +97,8 @@ async def get_events_for_guild(
             s.matches_number,
             s.lobby_mode,
             s.lobbies_number,
-            s.teams_category_id
+            s.teams_category_id,
+            s.placement_system
 
         FROM events e
         LEFT JOIN events_settings s ON s.event_id = e.event_id
@@ -125,7 +128,8 @@ async def get_events_for_guild(
             matches_number=row["matches_number"],
             lobby_mode=row["lobby_mode"],
             lobbies_number=row["lobbies_number"],
-            teams_category_id=row["teams_category_id"]
+            teams_category_id=row["teams_category_id"],
+            placement_system=row["placement_system"]
         )
         for row in rows
     ]
@@ -146,7 +150,8 @@ async def get_active_events() -> list[Event]:
             s.matches_number,
             s.lobby_mode,
             s.lobbies_number,
-            s.teams_category_id
+            s.teams_category_id,
+            s.placement_system
 
         FROM events e
         LEFT JOIN events_settings s ON s.event_id = e.event_id
@@ -169,7 +174,8 @@ async def get_active_events() -> list[Event]:
             matches_number=row["matches_number"],
             lobby_mode=row["lobby_mode"],
             lobbies_number=row["lobbies_number"],
-            teams_category_id=row["teams_category_id"]
+            teams_category_id=row["teams_category_id"],
+            placement_system=row["placement_system"]
         )
         for row in rows
     ]
@@ -233,6 +239,71 @@ async def set_lobbies_number(event_id: int, value: int):
     await execute(
         "UPDATE events_settings SET lobbies_number = $1 WHERE event_id = $2",
         (value, event_id)
+    )
+
+async def set_placement_system(event_id: int, value: str):
+    await execute(
+        "UPDATE events_settings SET placement_system = $1 WHERE event_id = $2",
+        (value, event_id)
+    )
+
+async def get_placement_system(event_id: int) -> Literal["points", "multipliers"] | None:
+    row = await fetch_one(
+        "SELECT placement_system FROM events_settings WHERE event_id = $1",
+        (event_id,)
+    )
+    return row["placement_system"] if row else None
+
+async def set_placement_multipliers(event_id: int, placement_multipliers: dict[tuple[int, int | None], float]):
+    await execute(
+        "DELETE FROM placement_multipliers WHERE event_id = $1",
+        (event_id,)
+    )
+    async with get_pool().acquire() as conn:
+        async with conn.transaction():
+            for (min_placement, max_placement), multiplier in placement_multipliers.items():
+                await execute(
+                    """
+                        INSERT INTO placement_multipliers(
+                            event_id,
+                            min_placement,
+                            max_placement,
+                            multiplier
+                        ) VALUES ($1, $2, $3, $4)
+                    """, (event_id, min_placement, max_placement, multiplier)
+                )
+
+async def get_placement_multipliers(event_id: int) -> dict[tuple[int, int | None], float]:
+    placement_multipliers: dict[tuple[int, int | None], float] = {}
+    rows = await fetch_all(
+        """
+            SELECT multiplier, min_placement, max_placement
+            FROM placement_multipliers
+            WHERE event_id = $1
+        """,
+        (event_id,)
+    )
+    for row in rows:
+        placement_multipliers[(row["min_placement"], row["max_placement"])] = row["multiplier"]
+    return placement_multipliers
+
+async def get_placement_settings(event_id: int) -> PlacementSettings:
+    system = await get_placement_system(event_id)
+
+    if system == "multipliers":
+        multipliers = await get_placement_multipliers(event_id)
+        return PlacementSettings(
+            system="multipliers",
+            points=None,
+            multipliers=multipliers
+        )
+
+    points = await get_placement_points(event_id)
+
+    return PlacementSettings(
+        system="points",
+        points=points,
+        multipliers=None
     )
 
 async def set_category_channel_id(event_id: int, value: int):

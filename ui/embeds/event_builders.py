@@ -7,33 +7,13 @@ from services.event_service import *
 from models.team import TeamScore
 from models.ranking import TeamRankingEntry, MVPRanking
 from models.server_config import ServerConfig
-
-DEFAULT_PLACEMENT_POINTS = {
-    "1": 15,
-    "2": 12,
-    "3": 10,
-    "4": 8,
-    "5": 6
-}
-
-LOBBY_MODES = {
-    "random": "Casuale",
-    "random_max": "Casuale (massimo 16 team/lobby)",
-    "kd": "KD",
-    "kd_balanced": "KD bilanciato"
-}
-
-STATUSES = {
-    "draft": "In creazione",
-    "ready": "Registrazione team",
-    "setup": "Lobby create",
-    "running": "In corso"
-}
+from models.placement_settings import PlacementSettings
+from config.consts import STATUSES, LOBBY_MODES, DEFAULT_PLACEMENT_MULTIPLIERS, DEFAULT_PLACEMENT_POINTS
 
 def build_event_embed(
     event: Event,
     guild: discord.Guild,
-    placement_points: list[tuple[int, int]],
+    placement_settings: PlacementSettings,
     teams: list[Team],
     embed_title: str="Configurazione evento"
 ) -> discord.Embed:
@@ -55,12 +35,26 @@ def build_event_embed(
         f"**Punti piazzamento:**\n"
     )
 
-    if placement_points:
-        for position, points in placement_points:
-            embed.description += f"{position}° posto: *{points} punti*\n"
-    else:
-        for position, points in DEFAULT_PLACEMENT_POINTS.items():
-            embed.description += f"{position}° posto: *{points} punti*\n"
+    if placement_settings.system == "points":
+        if placement_settings.points:
+            for position, points in placement_settings.points.items():
+                embed.description += f"{position}° posto: *{points} punti*\n"
+        else:
+            for position, points in DEFAULT_PLACEMENT_POINTS.items():
+                embed.description += f"{position}° posto: *{points} punti*\n"
+    elif placement_settings.system == "multipliers":
+        if placement_settings.multipliers:
+            for (min_placement, max_placement), multiplier in placement_settings.multipliers.items():
+                if min_placement == 1:
+                    embed.description += f"1° posto: {multiplier}"
+                else:
+                    embed.description += f"{min_placement}°{f'-{max_placement}°' if max_placement is None else '+'} posto: *{multiplier}x*\n"
+        else:
+            for (min_placement, max_placement), multiplier in DEFAULT_PLACEMENT_MULTIPLIERS.items():
+                if min_placement == 1:
+                    embed.description += f"1° posto: {multiplier}"
+                else:
+                    embed.description += f"{min_placement}°{f'-{max_placement}°' if max_placement is None else '+'} posto: *{multiplier}x*\n"
 
     embed.description += "\n**Team**\n"
 

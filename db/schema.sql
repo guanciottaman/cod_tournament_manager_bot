@@ -26,6 +26,7 @@ CREATE TABLE IF NOT EXISTS events_settings(
     lobby_mode TEXT DEFAULT 'random',
     lobbies_number INTEGER,
     teams_category_id BIGINT,
+    placement_system,
 
     FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE
 );
@@ -37,6 +38,23 @@ CREATE TABLE IF NOT EXISTS placement_points(
     points INTEGER,
 
     FOREIGN KEY (event_id) REFERENCES events(event_id) ON DELETE CASCADE
+);
+
+CREATE TABLE placement_multipliers (
+    event_id BIGINT NOT NULL,
+    min_placement INTEGER NOT NULL,
+    max_placement INTEGER,
+    multiplier NUMERIC(5,2) NOT NULL,
+
+    PRIMARY KEY (event_id, min_placement),
+
+    FOREIGN KEY (event_id)
+        REFERENCES events(event_id)
+        ON DELETE CASCADE,
+
+    CHECK (min_placement >= 1),
+    CHECK (max_placement IS NULL OR max_placement >= min_placement),
+    CHECK (multiplier >= 0)
 );
 
 CREATE TABLE IF NOT EXISTS event_hosts(
