@@ -89,7 +89,7 @@ async def generate_match_results(
     shuffled = teams[:]
     random.shuffle(shuffled)
 
-    team_ids = tuple(t.team_id for t in shuffled)
+    team_ids = [t.team_id for t in shuffled]
 
     if not team_ids:
         return []
@@ -98,7 +98,7 @@ async def generate_match_results(
         SELECT team_id, member_id, member_name
         FROM team_members
         WHERE team_id = ANY($1)
-    """, team_ids)
+    """, (team_ids,))
 
     # dizionario da team_id -> (player_id, name)
     players_map: dict[int, list[tuple[int, str]]] = {}
