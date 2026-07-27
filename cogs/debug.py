@@ -259,7 +259,6 @@ class DebugCommands(commands.Cog):
         kill_points_value = settings["kill_points"] if settings else 1
 
         placement_settings = await get_placement_settings(event_id)
-        logger.info(f"System: {placement_settings.system}\nPoints: {placement_settings.points}\nMultipliers: {placement_settings.multipliers}")
         inserted = 0
         buffer: list[dict[str, Any]] = []
         for match_number in range(1, matches_number + 1):
@@ -271,6 +270,7 @@ class DebugCommands(commands.Cog):
             match_results: list[dict[str, Any]] = await generate_match_results(
                 teams
             )
+            logger.info(match_results)
             match_data: dict[str, Any] = {
                 "match": match_number,
                 "teams": []
