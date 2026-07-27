@@ -2,7 +2,7 @@ import discord
 
 from models.event import Event
 from services.lobby_service import get_lobbies, get_teams
-from services.event_service import delete_event, delete_lobbies_roles
+from services.event_service import delete_event, delete_lobbies_roles, delete_teams_category, delete_lobbies_category
 from services.ranking_service import *
 from services.live_ranking_service import stop_live
 
@@ -133,5 +133,7 @@ async def termina_evento_callback(
                 continue
             await channel.delete()
         await stop_live(event_id)
+        await delete_teams_category(event_id, interaction.guild)
+        await delete_lobbies_category(event_id, interaction.guild)
         await delete_lobbies_roles(event_id, interaction.guild)
         await delete_event(interaction.guild.id, event_id)

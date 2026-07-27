@@ -7,52 +7,41 @@ from ui.embeds.panel_embed_builder import build_panel_embed
 from config.permissions import RANKING_CHANNEL_PERMS, READ_HISTORY_PERMS
 
 
+async def create_panel_channel(interaction: discord.Interaction, admin_role_id: int):
+    if interaction.guild is None:
+        return
+    admin_role = interaction.guild.get_role(admin_role_id)
+    if admin_role is not None:
+        overwrites = {
+            interaction.guild.default_role: discord.PermissionOverwrite(view_channel=False),
+            interaction.guild.me: discord.PermissionOverwrite(
+                view_channel=True,
+                send_messages=True,
+                embed_links=True,
+                manage_messages=True
+            ),
+            admin_role: discord.PermissionOverwrite(
+                view_channel=True,
+                send_messages=False,
+                use_application_commands=True
+            )
+        }
+        panel_channel = await interaction.guild.create_text_channel(
+            name="pannello di controllo",
+            overwrites=overwrites  # type: ignore
+        )
+        await set_panel_channel_id(interaction.guild.id, panel_channel.id)
+        from ui.views.server_panel import ServerPanelView
+        await panel_channel.send(
+            embed=build_panel_embed(interaction.guild),
+            view=ServerPanelView()
+        )
+
 class SetupViewPage1(discord.ui.View):
     def __init__(self, guild_id: int, config: ServerConfig | None = None, edit_mode: bool = False):
         super().__init__(timeout=None)
         self.config = ServerConfig(guild_id) if config is None else config
         self.edit_mode = edit_mode
-
-    @discord.ui.select(
-        cls=discord.ui.ChannelSelect,
-        channel_types=[discord.ChannelType.text],
-        placeholder="Seleziona il canale per il pannello di gestione",
-        min_values=1,
-        max_values=1,
-        row=0
-    )
-    async def select_panel_channel(self, interaction: discord.Interaction, select: discord.ui.ChannelSelect[Any]):
-        if interaction.guild is None:
-            await interaction.response.send_message("Non puoi usarmi dai DM", ephemeral=True)
-            return
-        selected = select.values[0]
-        self.config.panel_channel_id = selected.id
-        panel_channel = interaction.guild.get_channel(self.config.panel_channel_id)
-        if panel_channel is None:
-            await interaction.response.send_message("Canale non trovato!", ephemeral=True)
-            return
-        missing = await check_channel_permissions(panel_channel, interaction.guild, RANKING_CHANNEL_PERMS)
-        if missing:
-            embed = discord.Embed(
-                title="Permessi mancanti",
-                color=discord.Color.red(),
-                description=(
-                    f"Mancano i seguenti permessi per il canale {panel_channel.mention}:\n"
-                    + "\n".join(f"- {perm}" for perm in missing)
-                )
-            )
-
-            await interaction.response.send_message(
-                embed=embed,
-                ephemeral=True
-            )
-            return
-        await interaction.response.edit_message(
-            embed=build_server_config_embed(
-                interaction.guild,
-                self.config
-            )
-        )
 
     @discord.ui.select(
         cls=discord.ui.ChannelSelect,
@@ -158,7 +147,6 @@ class SetupViewPage1(discord.ui.View):
             return
         if not self.edit_mode:
             if not all([
-                self.config.panel_channel_id,
                 self.config.ranking_channel_id,
                 self.config.admin_role_id,
                 self.config.live_ranking_channel_id,
@@ -182,7 +170,6 @@ class SetupViewPage1(discord.ui.View):
                 return
         else:
             if self.edit_mode and not any([
-                self.config.panel_channel_id,
                 self.config.ranking_channel_id,
                 self.config.admin_role_id,
                 self.config.live_ranking_channel_id,
@@ -204,19 +191,8 @@ class SetupViewPage1(discord.ui.View):
             f"Il tuo server è stato {'registrato' if not self.edit_mode else 'modificato'} con successo!",
             ephemeral=True
         )
-        if self.config.panel_channel_id is not None:
-            panel_channel = interaction.guild.get_channel(self.config.panel_channel_id)
-            if not isinstance(panel_channel, discord.TextChannel):
-                await interaction.followup.send(
-                    "Devi selezionare un canale testuale!",
-                    ephemeral=True
-                )
-                return
-            from ui.views.server_panel import ServerPanelView
-            await panel_channel.send(
-                embed=build_panel_embed(interaction.guild),
-                view=ServerPanelView()
-            )
+        if self.config.admin_role_id is not None:
+            await create_panel_channel(interaction, self.config.admin_role_id)
 
 
 class SetupViewPage2(discord.ui.View):
@@ -349,7 +325,6 @@ class SetupViewPage2(discord.ui.View):
             return
         if not self.edit_mode:
             if not all([
-                self.config.panel_channel_id,
                 self.config.ranking_channel_id,
                 self.config.admin_role_id,
                 self.config.live_ranking_channel_id,
@@ -373,7 +348,6 @@ class SetupViewPage2(discord.ui.View):
                 return
         else:
             if self.edit_mode and not any([
-                self.config.panel_channel_id,
                 self.config.ranking_channel_id,
                 self.config.admin_role_id,
                 self.config.live_ranking_channel_id,
@@ -395,19 +369,9 @@ class SetupViewPage2(discord.ui.View):
             f"Il tuo server è stato {'registrato' if not self.edit_mode else 'modificato'} con successo!",
             ephemeral=True
         )
-        if self.config.panel_channel_id is not None:
-            panel_channel = interaction.guild.get_channel(self.config.panel_channel_id)
-            if not isinstance(panel_channel, discord.TextChannel):
-                await interaction.followup.send(
-                    "Devi selezionare un canale testuale!",
-                    ephemeral=True
-                )
-                return
-            from ui.views.server_panel import ServerPanelView
-            await panel_channel.send(
-                embed=build_panel_embed(interaction.guild),
-                view=ServerPanelView()
-            )
+        if self.config.admin_role_id is not None:
+            await create_panel_channel(interaction, self.config.admin_role_id)
+        
 
 class DeleteServerView(discord.ui.View):
     def __init__(self):

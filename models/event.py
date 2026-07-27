@@ -16,5 +16,5 @@ class Event:
     matches_number: int
     lobby_mode: str
     lobbies_number: int | None
-    teams_category_id: int
+    teams_category_id: int | None
     placement_system: Literal["points", "multipliers"]

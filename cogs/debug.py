@@ -247,9 +247,7 @@ class DebugCommands(commands.Cog):
         existing_matches = await get_inserted_match_numbers(event_id)
 
         matches_number = event.matches_number
-        logger.info(
-            f"Match esistenti: {existing_matches}, totali: {matches_number}"
-        )
+
         settings = await fetch_one("""
             SELECT kill_points
             FROM events_settings
@@ -270,7 +268,7 @@ class DebugCommands(commands.Cog):
             match_results: list[dict[str, Any]] = await generate_match_results(
                 teams
             )
-            logger.info(match_results)
+
             match_data: dict[str, Any] = {
                 "match": match_number,
                 "teams": []
@@ -315,9 +313,6 @@ class DebugCommands(commands.Cog):
                     match=match_number,
                     players=r["players"],
                     prove=IMAGE_POOL
-                )
-                logger.info(
-                    f"Inserito match {match_number} team {r['team_id']}"
                 )
             buffer.append(match_data)
 

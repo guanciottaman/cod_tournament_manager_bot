@@ -1,11 +1,73 @@
 import discord
 
+from models.event import Event
 from ui.embeds.lobby_builders import *
 from ui.modals.lobbies_names import LobbiesNamesModal
 from services.lobby_service import *
 from services.team_service import get_teams
-from services.event_service import set_event_status, create_lobbies_roles, assign_lobby_roles
+from services.event_service import set_event_status, create_lobbies_roles, assign_lobby_roles, get_lobby_role, set_lobby_codes_channels
 
+async def create_lobbies_channels(
+    interaction: discord.Interaction,
+    event: Event
+):
+    if interaction.guild is None:
+        return
+
+    lobbies = await get_lobbies(event.event_id)
+
+    category = await interaction.guild.create_category(
+        name=f"Lobby Codes {event.name}"
+    )
+
+    channels: dict[int, int] = {}
+
+    for lobby in lobbies:
+        role_id = await get_lobby_role(
+            event.event_id,
+            lobby.lobby_id
+        )
+
+        if role_id is None:
+            continue
+
+        role = interaction.guild.get_role(role_id)
+
+        if role is None:
+            continue
+
+        overwrites = {
+            interaction.guild.default_role: discord.PermissionOverwrite(
+                view_channel=False
+            ),
+            interaction.guild.me: discord.PermissionOverwrite(
+                view_channel=True,
+                send_messages=True,
+                manage_channels=True
+            ),
+            role: discord.PermissionOverwrite(
+                view_channel=True,
+                send_messages=True
+            )
+        }
+
+        channel = await interaction.guild.create_text_channel(
+            name=f"lobby-{lobby.name}",
+            category=category,
+            overwrites=overwrites # type: ignore
+        )
+
+        channels[lobby.lobby_id] = channel.id
+
+    await set_lobby_codes_channels(
+        event.event_id,
+        channels
+    )
+
+    await interaction.followup.send(
+        "Canali lobby creati automaticamente!",
+        ephemeral=True
+    )
 
 class LobbyConfigView(discord.ui.View):
     def __init__(self, event_id: int, teams_count: int, lobby_mode: str, lobby_ids: list[int], lobbies_number: int):
@@ -154,6 +216,7 @@ class LobbyConfigView(discord.ui.View):
         await create_lobbies_roles(self.event_id, interaction.guild)
         for lobby in lobbies:
             await assign_lobby_roles(self.event_id, lobby.lobby_id, interaction.guild)
+        await create_lobbies_channels(interaction, event)
 
         await set_event_status(self.event_id, "setup")
 

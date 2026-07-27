@@ -83,10 +83,6 @@ def build_server_config_embed(
     guild: discord.Guild,
     server_config: ServerConfig
 ) -> discord.Embed:
-    if server_config.panel_channel_id is not None:
-        panel_channel = guild.get_channel(server_config.panel_channel_id)
-    else:
-        panel_channel = None
     if server_config.ranking_channel_id is not None:
         ranking_channel = guild.get_channel(server_config.ranking_channel_id)
     else:
@@ -108,7 +104,6 @@ def build_server_config_embed(
         color=discord.Color.blue()
     )
     description = f"**Server:** {guild.name}\n"
-    description += f"**Canale pannello: ** {panel_channel.mention if panel_channel is not None else 'Nessuno'}\n"
     description += f"**Canale classifiche:** {ranking_channel.mention if ranking_channel is not None else 'Nessuno'}\n"
     description += f"**Ruolo admin:** {admin_role.mention if admin_role is not None else 'Nessuno'}\n"
     description += f"**Canale classifiche live:** {live_ranking_channel.mention if live_ranking_channel is not None else 'Nessuno'}\n"

@@ -573,6 +573,28 @@ async def delete_lobbies_roles(event_id: int, guild: discord.Guild):
         except (discord.Forbidden, discord.HTTPException):
             pass
 
+async def delete_lobbies_category(event_id: int, guild: discord.Guild):
+    lobbies_channels = await get_lobby_codes_channels(event_id)
+    if lobbies_channels is None:
+        return
+    lc = guild.get_channel(lobbies_channels[0])
+    if lc is None:
+        return
+    lc_category = lc.category
+    if lc_category is None:
+        return
+    await lc_category.delete()
+
+async def delete_teams_category(event_id: int, guild: discord.Guild):
+    row = await fetch_one("SELECT teams_category_id FROM events_settings WHERE event_id = ?", (event_id,))
+    if row is None:
+        return
+    teams_category_id = row["teams_category_id"]
+    category = guild.get_channel(teams_category_id)
+    if category is None:
+        return
+    await category.delete()
+
 async def assign_lobby_roles(event_id: int, lobby_id: int, guild: discord.Guild):
     role_id = await get_lobby_role(event_id, lobby_id)
     if role_id is None:

@@ -147,7 +147,6 @@ class Events(commands.Cog):
             interaction.guild,
             ServerConfig(
                 interaction.guild.id,
-                config.panel_channel_id,
                 config.ranking_channel_id,
                 config.admin_role_id,
                 config.live_ranking_channel_id,
@@ -680,11 +679,14 @@ class Events(commands.Cog):
         if interaction.guild is None:
             await interaction.response.send_message("Non puoi usarmi dai DM!", ephemeral=True)
             return
-        config = await get_server_config(interaction.guild.id)
-        if config is None or config.panel_channel_id is None:
-            await interaction.response.send_message("Non hai configurato correttamente il server! Usa /modifica_config_server o /setup_server se non hai ancora configurato il server.")
+        panel_channel_id = await get_panel_channel_id(interaction.guild.id)
+        if panel_channel_id is None:
+            await interaction.response.send_message("Il canale non è stato creato correttamente!", ephemeral=True)
             return
-        panel_channel = interaction.guild.get_channel(config.panel_channel_id)
+        panel_channel = interaction.guild.get_channel(panel_channel_id)
+        if panel_channel is None:
+            await interaction.response.send_message("Canale non trovato!", ephemeral=True)
+            return
         if not isinstance(panel_channel, discord.TextChannel):
             await interaction.response.send_message(
                 "Devi selezionare un canale testuale!",

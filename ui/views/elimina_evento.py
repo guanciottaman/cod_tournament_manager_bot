@@ -2,7 +2,7 @@ import discord
 
 from typing import Any
 
-from services.event_service import delete_event, delete_lobbies_roles
+from services.event_service import delete_event, delete_lobbies_roles, delete_teams_category, delete_lobbies_category
 from services.live_ranking_service import stop_live
 
 class EliminaEventoView(discord.ui.View):
@@ -25,6 +25,8 @@ class EliminaEventoView(discord.ui.View):
         if interaction.guild is None:
             return
         await stop_live(self.event_id)
+        await delete_teams_category(self.event_id, interaction.guild)
+        await delete_lobbies_category(event_id, interaction.guild)
         await delete_lobbies_roles(self.event_id, interaction.guild)
         await delete_event(interaction.guild.id, self.event_id)
         await interaction.response.send_message("Evento eliminato con successo!", ephemeral=True)

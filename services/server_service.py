@@ -19,6 +19,19 @@ async def check_server_registered(guild_id: int) -> bool:
 
     return exists is not None
 
+async def set_panel_channel_id(guild_id: int, channel_id: int):
+    await execute(
+        "UPDATE server_configs SET panel_channel_id = $1 WHERE guild_id = $2",
+        (channel_id, guild_id)
+    )
+
+async def get_panel_channel_id(guild_id: int) -> int | None:
+    row = await fetch_one(
+        "SELECT panel_channel_id FROM server_configs WHERE guild_id = $1",
+        (guild_id,)
+    )
+    return row["panel_channel_id"] if row is not None else None
+
 async def create_server_config(
     guild_id: int,
     config: ServerConfig
@@ -26,11 +39,10 @@ async def create_server_config(
     try:
         await execute("""
             INSERT INTO server_configs
-            (guild_id, panel_channel_id, ranking_channel_id, admin_role_id, live_ranking_channel_id, lobbies_channel_id)
+            (guild_id, ranking_channel_id, admin_role_id, live_ranking_channel_id, lobbies_channel_id)
             VALUES ($1, $2, $3, $4, $5, $6)
         """, (
                 guild_id,
-                config.panel_channel_id,
                 config.ranking_channel_id,
                 config.admin_role_id,
                 config.live_ranking_channel_id,
@@ -61,7 +73,6 @@ async def get_server_config(guild_id: int) -> ServerConfig | None:
         return None
     return ServerConfig(
         guild_id,
-        server_config["panel_channel_id"],
         server_config["ranking_channel_id"],
         server_config["admin_role_id"],
         server_config["live_ranking_channel_id"],
@@ -74,10 +85,6 @@ async def edit_server_config(
 ) -> None:
     updates: list[str] = []
     params: list[int] = []
-
-    if config.panel_channel_id is not None:
-        params.append(config.panel_channel_id)
-        updates.append(f"panel_channel_id = ${len(params)}")
 
     if config.ranking_channel_id is not None:
         params.append(config.ranking_channel_id)
