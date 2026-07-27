@@ -234,7 +234,6 @@ class DebugCommands(commands.Cog):
             await interaction.response.send_message("Non hai i permessi per generare i risultati!", ephemeral=True)
             return
         await interaction.response.defer(ephemeral=True)
-        logger.info("Generating results...")
 
         event = await get_event_info(event_id, interaction.guild.id)
         if not event:
@@ -248,9 +247,7 @@ class DebugCommands(commands.Cog):
 
         existing_matches = set(await get_inserted_match_numbers(event_id))
 
-        matches_number = getattr(event, "matches_number", None)
-        if not matches_number:
-            matches_number = max(1, len(teams) // 10)
+        matches_number = event.matches_number
         logger.info(
             f"Match esistenti: {existing_matches}, totali: {matches_number}"
         )
@@ -263,6 +260,7 @@ class DebugCommands(commands.Cog):
         kill_points_value = settings["kill_points"] if settings else 1
 
         placement_settings = await get_placement_settings(event_id)
+        logging.info(f"System: {placement_settings.system}\nPoints: {placement_settings.points}\nMultipliers: {placement_settings.multipliers}")
         inserted = 0
         buffer: list[dict[str, Any]] = []
         for match_number in range(1, matches_number + 1):
