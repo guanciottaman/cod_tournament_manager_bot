@@ -1,7 +1,37 @@
 from db import db
 from db.db import execute, fetch_one, fetch_all
-from models.team import Team, TeamScore, PlayerScore
+from models.team import Team, TeamScore, PlayerScore, TeamChannel
 
+
+team_channels: dict[int, TeamChannel]
+
+async def init_team_channels_cache():
+    global team_channels_cache
+
+    rows = await fetch_all("""
+        SELECT
+            channel_id,
+            team_id,
+            event_id,
+            leader_discord_id
+        FROM teams
+        WHERE channel_id IS NOT NULL
+    """)
+
+    team_channels_cache = {
+        row["channel_id"]: TeamChannel(
+            team_id=row["team_id"],
+            event_id=row["event_id"],
+            leader_id=row["leader_discord_id"],
+        )
+        for row in rows
+    }
+
+def get_team_channel(channel_id: int) -> TeamChannel | None:
+    return team_channels_cache.get(channel_id)
+
+def is_team_channel(channel_id: int) -> bool:
+    return channel_id in team_channels_cache
 
 async def get_teams(event_id: int, lobby_id: int | None = None, setup_mode: bool = False) -> list[Team]:
     query = """
@@ -97,11 +127,32 @@ async def insert_teams(
 
     return team_id, player_ids
 
-async def set_team_channel_id(event_id: int, team_id: int, channel_id: int):
-    await execute(
-        "UPDATE teams SET channel_id = $1 WHERE event_id = $2 AND team_id = $3",
+async def set_team_channel_id(
+    event_id: int,
+    team_id: int,
+    channel_id: int
+) -> bool:
+    row = await fetch_one(
+        """
+        UPDATE teams
+        SET channel_id = $1
+        WHERE event_id = $2
+          AND team_id = $3
+        RETURNING leader_discord_id
+        """,
         (channel_id, event_id, team_id)
     )
+
+    if row is None:
+        return False
+
+    team_channels_cache[channel_id] = TeamChannel(
+        team_id=team_id,
+        event_id=event_id,
+        leader_id=row["leader_discord_id"]
+    )
+
+    return True
 
 async def get_team_channel_id(event_id: int, team_id: int) -> int | None:
     row = await fetch_one(
@@ -170,6 +221,27 @@ async def assign_free_slot(
 
     return (team_id, lobby_id, member_ids)
 
+async def delete_team(team_id: int, status: str):
+    row = await fetch_one(
+        "SELECT channel_id FROM teams WHERE team_id = $1",
+        (team_id,)
+    )
+
+    channel_id = row["channel_id"] if row else None
+    team_channels_cache.pop(channel_id)
+    if status == "setup":
+        await execute("""
+            UPDATE teams
+            SET previous_lobby_id = lobby_id,
+                lobby_id = NULL,
+                leader_discord_id = NULL,
+                channel_id = NULL
+            WHERE team_id = $1
+        """, (team_id,))
+    else:
+        await execute("DELETE FROM teams WHERE team_id = $1", (team_id,))
+    
+
 async def edit_teams(team_id: int, players_names: list[str], team_name: str | None = None) -> list[int]:
     if team_name is not None:
         await execute("UPDATE teams SET name = $1 WHERE team_id = $2", (team_name, team_id))
@@ -234,7 +306,7 @@ async def insert_results(
     placement: int,
     match: int,
     players: list[tuple[int, str, int]],
-    prove: list[str]
+    prove: tuple[str, str]
 ) -> int | None:
     row = await fetch_one("""
         INSERT INTO team_scores (

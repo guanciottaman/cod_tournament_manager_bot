@@ -310,20 +310,6 @@ async def get_team_members(team_id: int) -> list[str]:
 
     return [row["member_name"] for row in rows]
 
-
-async def delete_team(team_id: int, status: str):
-    if status == "setup":
-        await execute("""
-            UPDATE teams
-            SET previous_lobby_id = lobby_id,
-                lobby_id = NULL,
-                leader_discord_id = NULL
-            WHERE team_id = $1
-        """, (team_id,))
-    else:
-        await execute("DELETE FROM teams WHERE team_id = $1", (team_id,))
-
-
 async def set_kill_points_db(event_id: int, kill_points: int):
     await execute(
         "UPDATE events_settings SET kill_points = $1 WHERE event_id = $2",

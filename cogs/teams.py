@@ -19,7 +19,9 @@ class Teams(commands.Cog):
     
     @app_commands.command(name="registra_team", description="Registra il tuo team a un evento")
     async def registra_team(self, interaction: discord.Interaction):
-        events = await get_events_for_guild(interaction.guild_id, ["ready", "setup"])
+        if interaction.guild is None:
+            return
+        events = await get_events_for_guild(interaction.guild.id, ["ready", "setup"])
         embed = discord.Embed(
             title="Scegli l'evento a cui iscriverti",
             color=discord.Colour.red(),
@@ -47,7 +49,9 @@ class Teams(commands.Cog):
 
     @app_commands.command(name="modifica_team", description="Modifica il tuo team")
     async def modifica_team(self, interaction: discord.Interaction):
-        events = await get_events_for_guild(interaction.guild_id, ["ready", "setup", "running"])
+        if interaction.guild is None:
+            return
+        events = await get_events_for_guild(interaction.guild.id, ["ready", "setup", "running"])
         embed = discord.Embed(
             title="Scegli l'evento a cui ti sei iscritto",
             color=discord.Colour.red(),
@@ -119,14 +123,16 @@ class Teams(commands.Cog):
         prova1: discord.Attachment,
         prova2: discord.Attachment
     ):
-        events = await get_events_for_guild(interaction.guild_id, ["running"])
+        if interaction.guild is None:
+            return
+        events = await get_events_for_guild(interaction.guild.id, ["running"])
         embed = discord.Embed(
             title="Scegli l'evento a cui ti sei iscritto",
             color=discord.Colour.red(),
             description="Questa è una lista degli eventi attivi.\nScegli l'evento del team che hai iscritto."
         )
         async def wrapper(interaction: discord.Interaction, event: Event):
-            await inserisci_risultato_callback(interaction, event, prova1, prova2)
+            await inserisci_risultato_callback(interaction, event, (prova1.url, prova2.url))
         await resolve_event(interaction, embed, events, wrapper)
 
 

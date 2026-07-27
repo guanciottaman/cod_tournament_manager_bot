@@ -17,7 +17,7 @@ class RegistraRisultatiModal(discord.ui.Modal, title="Registra i risultati"):
             team_id: int,
             players_names: list[str],
             match_selected: int,
-            prove: list[str],
+            prove: tuple[str, str],
             mode: str = "insert",
             admin_mode: bool = False,
             team_score_id: int = 0,

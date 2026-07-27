@@ -30,3 +30,9 @@ class TeamScore:
     created_at: str
     player_scores: list[PlayerScore]
     screenshots: list[str]
+
+@dataclass
+class TeamChannel:
+    team_id: int
+    leader_id: int
+    event_id: int

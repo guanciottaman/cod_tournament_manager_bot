@@ -65,7 +65,7 @@ class ControllaRisultati(discord.ui.Button[Any]):
     def __init__(self, event_id: int):
         super().__init__(
             label="Controlla risultati",
-            emoji="ℹ️",
+            emoji="☑️",
             style=discord.ButtonStyle.blurple,
             row=0,
             custom_id=f"event_panel:controlla_risultati:{event_id}"

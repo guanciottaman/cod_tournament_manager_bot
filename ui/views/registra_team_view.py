@@ -1,8 +1,8 @@
 import discord
 
-from services.event_service import get_event_info, get_team_from_leader, delete_team
+from services.event_service import get_event_info, get_team_from_leader
 from services.team_service import (
-    get_team_id, get_players_names, get_inserted_matches_count_per_team, get_team_kds, get_team_channel_id
+    get_team_id, get_players_names, get_inserted_matches_count_per_team, get_team_kds, get_team_channel_id, delete_team
 )
 from services.server_service import get_admin_role_id
 from ui.modals.registra_team import RegistraTeamModal

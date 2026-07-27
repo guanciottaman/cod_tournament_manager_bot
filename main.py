@@ -14,9 +14,11 @@ from config.config import TOKEN
 from ui.views.server_panel import ServerPanelView
 from ui.views.event_panel_view import EventPanelView
 from ui.views.registra_team_view import RegistraTeamView
+from ui.resolvers.inserisci_risultato_cb import inserisci_risultato_message
 from cogs.events import build_member_cache
 from services.server_service import is_blacklisted, init_blacklist_cache
-from services.event_service import get_active_events
+from services.event_service import get_active_events, get_event_info
+from services.team_service import get_team_channel, init_team_channels_cache
 
 
 logging.basicConfig(
@@ -43,6 +45,7 @@ extensions = [
 
 intents = discord.Intents.default()
 intents.members = True
+intents.message_content = True
 
 class CustomTree(app_commands.CommandTree):
     async def interaction_check(self, interaction: discord.Interaction):
@@ -58,6 +61,42 @@ class Bot(commands.Bot):
     async def on_ready(self):
         if self.user is not None:
             logger.info(f"Bot online come {self.user.display_name}")
+
+    async def on_message(self, message: discord.Message):
+        if self.user is None:
+            return
+
+        if message.author.id == self.user.id:
+            return
+
+        if message.guild is None:
+            return
+
+        team_channel = get_team_channel(message.channel.id)
+        if team_channel is None:
+            return
+
+        if message.author.id != team_channel.leader_id:
+            return
+
+        images = [
+            a for a in message.attachments
+            if a.content_type and a.content_type.startswith("image/")
+        ]
+
+        if len(images) != 2:
+            return
+
+        event = await get_event_info(team_channel.event_id, message.guild.id)
+        if event is None:
+            return
+
+        await inserisci_risultato_message(
+            message,
+            event,
+            (images[0].url, images[1].url)
+        )
+                
     
     async def error_handler(self, interaction: discord.Interaction, error: app_commands.AppCommandError):
         msg = None
@@ -82,6 +121,7 @@ class Bot(commands.Bot):
         await init_db()
         logger.info("DB OK")
         await init_blacklist_cache()
+        await init_team_channels_cache()
 
         logger.info("BLACKLIST OK")
 

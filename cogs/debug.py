@@ -32,10 +32,10 @@ LAST_NAMES = [
     "Prime", "Nova", "Ghost", "X"
 ]
 
-IMAGE_POOL = [
+IMAGE_POOL: tuple[str, str] = (
     "https://cdn.discordapp.com/attachments/1496915639170891847/1511440911282864259/1776018259429.png?ex=6a20768a&is=6a1f250a&hm=d9fce02d1ad92a70e33d078ee323da062e211c808433865dc33643b54a7993c8&",
     "https://cdn.discordapp.com/attachments/1496915639170891847/1511440911807156304/appunti.png?ex=6a20768a&is=6a1f250a&hm=a756c98e8c2869ca302212ad5f5186e172c8b14b5c64f27964c927c77b499a6a&"
-]
+)
 
 
 def generate_team_name():
@@ -71,8 +71,8 @@ def generate_kd():
 
 async def generate_match_results(
     teams: list[Team],
-) -> list[dict]:
-    match = []
+) -> list[dict[str, Any]]:
+    matches: list[dict[str, Any]] = []
 
     shuffled = teams[:]
     random.shuffle(shuffled)
@@ -98,7 +98,7 @@ async def generate_match_results(
 
         players_map.setdefault(team_id, []).append((member_id, member_name))
 
-    temp = []
+    temp: list[tuple[Team, int, list[tuple[int, str, int]]]] = []
 
     for t in shuffled:
         players = players_map.get(t.team_id, [])
@@ -120,14 +120,14 @@ async def generate_match_results(
     temp.sort(key=lambda x: x[1], reverse=True)
 
     for placement, (team, _, players) in enumerate(temp, start=1):
-        match.append({
+        matches.append({
             "team_id": team.team_id,
             "team_name": team.name,
             "placement": placement,
             "players": players
         })
 
-    return match
+    return matches
 
 class DebugCommands(commands.Cog):
     def __init__(self, bot: commands.Bot):
@@ -145,7 +145,8 @@ class DebugCommands(commands.Cog):
 
         if admin_role is None:
             return False
-
+        if not isinstance(interaction.user, discord.Member):
+            return False
         return admin_role in interaction.user.roles
 
     @app_commands.command(name="gen_teams", description="Genera team random per un evento")
@@ -159,6 +160,8 @@ class DebugCommands(commands.Cog):
         event_id: int,
         amount: int
     ):
+        if interaction.guild is None:
+            return
         if not await self.check_admin_role(interaction):
             await interaction.response.send_message("Non hai i permessi per generare i team!", ephemeral=True)
             return
@@ -168,7 +171,7 @@ class DebugCommands(commands.Cog):
                 ephemeral=True
             )
             return
-        event = await get_event_info(event_id, interaction.guild_id)
+        event = await get_event_info(event_id, interaction.guild.id)
         if event is None:
             await interaction.response.send_message(f"L'evento con id {event_id} non esiste!", ephemeral=True)
             return
@@ -213,12 +216,14 @@ class DebugCommands(commands.Cog):
         interaction: discord.Interaction,
         event_id: int
     ):
+        if interaction.guild is None:
+            return
         if not await self.check_admin_role(interaction):
             await interaction.response.send_message("Non hai i permessi per generare i risultati!", ephemeral=True)
             return
         await interaction.response.defer(ephemeral=True)
 
-        event = await get_event_info(event_id, interaction.guild_id)
+        event = await get_event_info(event_id, interaction.guild.id)
         if not event:
             await interaction.followup.send("Evento non valido", ephemeral=True)
             return
@@ -249,25 +254,25 @@ class DebugCommands(commands.Cog):
 
         placement_dict = {row["position"]: row["points"] for row in placement_rows}
         inserted = 0
-        buffer = []
+        buffer: list[dict[str, Any]] = []
         for match_number in range(1, matches_number + 1):
             if match_number in existing_matches:
                 continue
 
             inserted += 1
 
-            match_results = await generate_match_results(
+            match_results: list[dict[str, Any]] = await generate_match_results(
                 teams
             )
-            match_data = {
+            match_data: dict[str, Any] = {
                 "match": match_number,
                 "teams": []
             }
 
             for r in match_results:
-                team_id = r["team_id"]
-                placement = r["placement"]
-                players = r["players"]
+                team_id: int = r["team_id"]
+                placement: int = r["placement"]
+                players: list[tuple[int, str, int]] = r["players"]
 
                 kills = sum(p[2] for p in players)
                 placement_pts = placement_dict.get(placement, 0)
