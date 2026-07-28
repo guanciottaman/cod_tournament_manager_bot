@@ -40,7 +40,7 @@ async def create_server_config(
         await execute("""
             INSERT INTO server_configs
             (guild_id, ranking_channel_id, admin_role_id, live_ranking_channel_id, lobbies_channel_id)
-            VALUES ($1, $2, $3, $4, $5, $6)
+            VALUES ($1, $2, $3, $4, $5)
         """, (
                 guild_id,
                 config.ranking_channel_id,
@@ -59,7 +59,6 @@ async def get_server_config(guild_id: int) -> ServerConfig | None:
     server_config = await fetch_one(
         """
             SELECT
-                panel_channel_id,
                 ranking_channel_id,
                 admin_role_id,
                 live_ranking_channel_id,
