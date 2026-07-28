@@ -9,7 +9,7 @@ from ui.embeds.lobby_builders import build_info_lobby_embed
 from ui.embeds.panel_embed_builder import build_panel_embed
 from ui.modals.nome_evento import NomeEventoModal
 from ui.views.elimina_evento import EliminaEventoView
-from ui.views.setup_view import SetupViewPage1, DeleteServerView
+from ui.views.setup_view import SetupView, DeleteServerView
 from ui.views.team_selector import TeamsSelectorView
 from ui.views.server_panel import ServerPanelView
 from ui.resolvers.lobby_config_cb import start_lobby_config
@@ -119,7 +119,7 @@ class Events(commands.Cog):
                 interaction.guild,
                 ServerConfig(interaction.guild.id)
             ),
-            view=SetupViewPage1(interaction.guild.id),
+            view=SetupView(interaction.guild.id),
             ephemeral=True
         )
     
@@ -142,7 +142,7 @@ class Events(commands.Cog):
         if config is None:
             await interaction.followup.send("C'è stato un problema!", ephemeral=True)
             return
-        view = SetupViewPage1(interaction.guild.id, config=config, edit_mode=True)
+        view = SetupView(interaction.guild.id, config=config, edit_mode=True)
         embed = build_server_config_embed(
             interaction.guild,
             ServerConfig(

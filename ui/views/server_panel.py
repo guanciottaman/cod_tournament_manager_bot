@@ -8,7 +8,7 @@ from services.event_service import get_events_for_guild
 from services.server_service import get_server_config, check_server_registered
 from ui.embeds.event_builders import build_server_config_embed
 from ui.modals.nome_evento import NomeEventoModal
-from ui.views.setup_view import SetupViewPage1, DeleteServerView
+from ui.views.setup_view import SetupView, DeleteServerView
 from ui.views.elimina_evento import EliminaEventoView
 
 
@@ -73,7 +73,7 @@ class ServerPanelView(discord.ui.View):
             return
         await interaction.response.send_message(
             embed=build_server_config_embed(interaction.guild, config),
-            view=SetupViewPage1(interaction.guild.id, config, True),
+            view=SetupView(interaction.guild.id, config, True),
             ephemeral=True
         )
 

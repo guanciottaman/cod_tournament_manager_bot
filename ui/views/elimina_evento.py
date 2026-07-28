@@ -26,7 +26,7 @@ class EliminaEventoView(discord.ui.View):
             return
         await stop_live(self.event_id)
         await delete_teams_category(self.event_id, interaction.guild)
-        await delete_lobbies_category(event_id, interaction.guild)
+        await delete_lobbies_category(self.event_id, interaction.guild)
         await delete_lobbies_roles(self.event_id, interaction.guild)
         await delete_event(interaction.guild.id, self.event_id)
         await interaction.response.send_message("Evento eliminato con successo!", ephemeral=True)
