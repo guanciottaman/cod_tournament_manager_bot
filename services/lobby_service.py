@@ -84,7 +84,10 @@ def generate_lobbies(
 
     return lobbies
 
-async def create_lobbies_db(event_id: int, names: list[str]) -> list[int]:
+async def create_lobbies_db(
+    event_id: int,
+    names: list[str]
+) -> list[int]:
     await execute(
         "DELETE FROM lobbies WHERE event_id = $1",
         (event_id,)
