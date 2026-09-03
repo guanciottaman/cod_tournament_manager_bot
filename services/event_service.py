@@ -586,7 +586,7 @@ async def delete_lobbies_category(event_id: int, guild: discord.Guild):
     await lc_category.delete()
 
 async def delete_teams_category(event_id: int, guild: discord.Guild):
-    row = await fetch_one("SELECT teams_category_id FROM events_settings WHERE event_id = ?", (event_id,))
+    row = await fetch_one("SELECT teams_category_id FROM events_settings WHERE event_id = $1", (event_id,))
     if row is None:
         return
     teams_category_id = row["teams_category_id"]
