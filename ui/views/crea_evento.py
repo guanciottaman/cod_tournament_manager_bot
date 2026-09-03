@@ -266,31 +266,6 @@ class CreaEventoView2(discord.ui.View):
         await interaction.response.edit_message(embed=embed, view=self)
 
     @discord.ui.select(
-        cls=discord.ui.ChannelSelect,
-        channel_types=[discord.ChannelType.category],
-        placeholder="Seleziona la categoria dei ticket dei team",
-        min_values=1,
-        max_values=1,
-        row=1,
-    )
-    async def set_category_channel_select(
-        self, interaction: discord.Interaction, select: discord.ui.ChannelSelect[Any]
-    ):
-        if interaction.guild is None:
-            return
-        await set_category_channel_id(self.event_id, select.values[0].id)
-        event = await get_event_info(self.event_id, interaction.guild.id)
-        if event is None:
-            await interaction.response.send_message(
-                "C'è stato un errore!", ephemeral=True
-            )
-            return
-        placement_settings = await get_placement_settings(self.event_id)
-        teams = await get_teams_by_event(self.event_id)
-        embed = build_event_embed(event, interaction.guild, placement_settings, teams)
-        await interaction.response.edit_message(embed=embed, view=self)
-
-    @discord.ui.select(
         placeholder="Sistema di piazzamento",
         options=[
             discord.SelectOption(

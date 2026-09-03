@@ -12,6 +12,7 @@ class SendLobbyCodeModal(discord.ui.Modal, title="Codice lobby"):
         placeholder="Inserisci il codice da mandare alla lobby",
     )
     def __init__(self, event: Event):
+        super().__init__(title="Codice lobby")
         self.event = event
 
     async def on_submit(self, interaction: discord.Interaction):
