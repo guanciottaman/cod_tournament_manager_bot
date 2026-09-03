@@ -107,7 +107,7 @@ class RicaricaButton(discord.ui.Button[Any]):
         teams = await get_teams_by_event(self.event_id)
         await interaction.response.edit_message(
             embed=build_event_embed(
-                event, interaction.guild, placement_settings, teams
+                event, interaction.guild, placement_settings, teams, embed_title="Gestione evento"
             ),
             view=EventPanelView(self.event_id)
         )

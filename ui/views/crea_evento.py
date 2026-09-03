@@ -6,8 +6,83 @@ from ui.embeds.event_builders import build_event_embed
 from ui.modals.placement_modal import KillPointsModal
 from ui.views.registra_team_view import RegistraTeamView
 from ui.views.event_panel_view import EventPanelView
+from config.consts import LOBBY_MODES
 
+<<<<<<< HEAD
 
+=======
+async def create_event_panel(interaction: discord.Interaction, admin_role_id: int, event: Event):
+    if interaction.guild is None:
+        await interaction.followup.send("Non puoi usarmi dai DM", ephemeral=True)
+        return
+    admin_role = interaction.guild.get_role(admin_role_id)
+    if admin_role is None:
+        await interaction.followup.send("Ruolo admin non trovato!", ephemeral=True)
+        return
+    overwrites = {
+        interaction.guild.default_role: discord.PermissionOverwrite(view_channel=False),
+        interaction.guild.me: discord.PermissionOverwrite(
+            view_channel=True,
+            send_messages=True,
+            embed_links=True,
+            manage_messages=True
+        ),
+        admin_role: discord.PermissionOverwrite(
+            view_channel=True,
+            send_messages=False,
+            use_application_commands=True
+        )
+    }
+    channel = await interaction.guild.create_text_channel(
+        name=f"Gestione {event.name}",
+        overwrites=overwrites # type: ignore
+    )
+    placement_settings = await get_placement_settings(event.event_id)
+    teams = await get_teams_by_event(event.event_id)
+    await channel.send(
+        embed=build_event_embed(event, interaction.guild, placement_settings, teams, embed_title="Gestione evento"),
+        view=EventPanelView(event.event_id)
+    )
+
+async def create_registration_panel(interaction: discord.Interaction, admin_role_id: int, event: Event):
+    if interaction.guild is None:
+        await interaction.followup.send("Non puoi usarmi dai DM", ephemeral=True)
+        return
+    admin_role = interaction.guild.get_role(admin_role_id)
+    if admin_role is None:
+        await interaction.followup.send("Ruolo admin non trovato!", ephemeral=True)
+        return
+    overwrites = {
+        interaction.guild.default_role: discord.PermissionOverwrite(
+            view_channel=True,
+            send_messages=False
+        ),
+        interaction.guild.me: discord.PermissionOverwrite(
+            view_channel=True,
+            send_messages=True,
+            embed_links=True,
+            manage_messages=True
+        ),
+        admin_role: discord.PermissionOverwrite(
+            view_channel=True,
+            send_messages=True,
+            use_application_commands=True
+        )
+    }
+    channel = await interaction.guild.create_text_channel(
+        name=f"Registrazioni {event.name}",
+        overwrites=overwrites # type: ignore
+    )
+    
+    await channel.send(
+        embed=discord.Embed(
+            title=event.name,
+            color=discord.Color.blue(),
+            description=f"**Giocatori per team:** {event.players_per_team}\n**Match:** {event.matches_number}\n**Modalità:** {LOBBY_MODES[event.lobby_mode]}\n**Scarta partita peggiore:** {'ON' if event.drop_worst_match else 'OFF'}\n\nUsa i bottoni qui sotto per registrare il tuo team, modificarlo o eliminarlo."
+        ),
+        view=RegistraTeamView(event.event_id)
+    )
+>>>>>>> 5037a53 (.)
 
 async def create_event_callback(
     interaction: discord.Interaction,
