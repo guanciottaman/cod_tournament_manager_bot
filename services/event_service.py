@@ -7,9 +7,6 @@ from models.event import Event
 from models.team import Team
 from models.placement_settings import PlacementSettings
 from db.db import *
-from ui.views.registra_team_view import RegistraTeamView
-from ui.views.event_panel_view import EventPanelView
-from ui.embeds.event_builders import build_event_embed
 
 async def get_event_info(event_id: int, guild_id: int) -> Event | None:
     row_events = await fetch_one("""
@@ -736,68 +733,6 @@ async def check_event_config_complete(event_id: int, guild_id: int) -> list[str]
         missing.append("Canali codici lobby")
 
     return missing
-
-async def create_event_panel(
-    interaction: discord.Interaction, admin_role_id: int, event: Event
-):
-    if interaction.guild is None:
-        await interaction.followup.send("Non puoi usarmi dai DM", ephemeral=True)
-        return
-    admin_role = interaction.guild.get_role(admin_role_id)
-    if admin_role is None:
-        await interaction.followup.send("Ruolo admin non trovato!", ephemeral=True)
-        return
-    overwrites = {
-        interaction.guild.default_role: discord.PermissionOverwrite(view_channel=False),
-        interaction.guild.me: discord.PermissionOverwrite(
-            view_channel=True,
-            send_messages=True,
-            embed_links=True,
-            manage_messages=True,
-        ),
-        admin_role: discord.PermissionOverwrite(
-            view_channel=True, send_messages=False, use_application_commands=True
-        ),
-    }
-    channel = await interaction.guild.create_text_channel(
-        name=f"Gestione {event.name}", overwrites=overwrites  # type: ignore
-    )
-    placement_settings = await get_placement_settings(event.event_id)
-    teams = await get_teams_by_event(event.event_id)
-    await channel.send(
-        embed=build_event_embed(event, interaction.guild, placement_settings, teams),
-        view=EventPanelView(event.event_id),
-    )
-
-
-async def create_registration_panel(
-    interaction: discord.Interaction, admin_role_id: int, event: Event
-):
-    if interaction.guild is None:
-        await interaction.followup.send("Non puoi usarmi dai DM", ephemeral=True)
-        return
-    admin_role = interaction.guild.get_role(admin_role_id)
-    if admin_role is None:
-        await interaction.followup.send("Ruolo admin non trovato!", ephemeral=True)
-        return
-    overwrites = {
-        interaction.guild.default_role: discord.PermissionOverwrite(
-            view_channel=True, send_messages=False
-        ),
-        interaction.guild.me: discord.PermissionOverwrite(
-            view_channel=True,
-            send_messages=True,
-            embed_links=True,
-            manage_messages=True,
-        ),
-        admin_role: discord.PermissionOverwrite(
-            view_channel=True, send_messages=True, use_application_commands=True
-        ),
-    }
-    channel = await interaction.guild.create_text_channel(
-        name=f"Registrazioni {event.name}", overwrites=overwrites  # type: ignore
-    )
-    await channel.send(view=RegistraTeamView(event.event_id))
 
 
 async def create_teams_category(
