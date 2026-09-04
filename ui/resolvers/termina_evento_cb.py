@@ -27,7 +27,7 @@ def build_team_ranking_description(title: str, rows: list[TeamRankingEntry]) -> 
         kills = row.kills
 
         description += (
-            f"{format_rank(i+1)} **{team}** | {score} pts | {kills} kill\n"
+            f"{format_rank(i+1)} **{team}** | {score:.2f} pts | {kills} kill\n"
         )
     return description
 
