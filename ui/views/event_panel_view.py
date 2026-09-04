@@ -457,7 +457,6 @@ class EventPanelView(discord.ui.View):
         self.add_item(RicaricaButton(event_id))
 
         self.add_item(InfoLobby(event_id))
-        self.add_item(ImpostaCanaliLobby(event_id))
         self.add_item(InviaLobby(event_id))
         self.add_item(MandaCodiceLobby(event_id))
 
