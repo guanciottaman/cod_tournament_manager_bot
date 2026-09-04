@@ -132,28 +132,6 @@ class InfoLobby(discord.ui.Button[Any]):
             return
         await info_lobbies_callback(interaction, event)
 
-class ImpostaCanaliLobby(discord.ui.Button[Any]):
-    def __init__(self, event_id: int):
-        super().__init__(
-            label="Imposta canali lobby",
-            emoji="🗒️",
-            style=discord.ButtonStyle.blurple,
-            row=1,
-            custom_id=f"event_panel:imposta_canali_lobby:{event_id}"
-        )
-        self.event_id = event_id
-
-    async def callback(self, interaction: discord.Interaction):
-        if interaction.guild is None:
-            return
-        event = await get_event_info(self.event_id, interaction.guild.id)
-        if event is None:
-            return
-        if event.status != "setup":
-            await interaction.response.send_message("Non puoi impostare i canali delle lobby in questa fase dell'evento", ephemeral=True)
-            return
-        await set_lobby_codes_callback(interaction, event)
-
 class InviaLobby(discord.ui.Button[Any]):
     def __init__(self, event_id: int):
         super().__init__(

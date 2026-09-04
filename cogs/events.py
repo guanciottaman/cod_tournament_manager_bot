@@ -590,25 +590,6 @@ class Events(commands.Cog):
             await controlla_risultati_callback(interaction, event, status, page)
         
         await resolve_event(interaction, embed, events, wrapper)
-    
-    @app_commands.command(
-        name="set_lobbies_codes_channels",
-        description="Imposta i canali dove mandare i codici lobby per un certo evento"
-    )
-    async def set_lobbies_codes_channels(self, interaction: discord.Interaction):
-        if interaction.guild is None:
-            return
-        if not await check_admin_role(interaction):
-            await interaction.response.send_message("Non hai il ruolo necessario per impostare i canali dove mandare i codici lobby!", ephemeral=True)
-            return
-        events: list[Event] = await get_events_for_guild(interaction.guild.id, ["setup", "running"])
-        embed = discord.Embed(
-            title="Imposta canali codici lobby",
-            color=discord.Colour.blue(),
-            description="Questa è una lista degli eventi in corso.\nScegli l'evento di cui vuoi impostare i canali codici lobby."
-        )
-        
-        await resolve_event(interaction, embed, events, set_lobby_codes_callback)
 
     @app_commands.command(name="termina_evento", description="Termina un evento")
     async def termina_evento(self, interaction: discord.Interaction):
