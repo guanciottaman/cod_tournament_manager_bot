@@ -41,7 +41,8 @@ async def create_registration_panel(
             event,
             interaction.guild,
             placement_settings,
-            teams
+            teams,
+            embed_title="Registrazioni evento"
         ),
         view=RegistraTeamView(event.event_id)
     )
@@ -96,9 +97,9 @@ async def create_event_callback(
             "Ruolo admin non configurato!", ephemeral=True
         )
         return
+    await create_teams_category(interaction, admin_role_id, event)
     await create_event_panel(interaction, admin_role_id, event)
     await create_registration_panel(interaction, admin_role_id, event)
-    await create_teams_category(interaction, admin_role_id, event)
     await set_event_status(event_id, "ready")
     await interaction.followup.send(f"Evento creato con successo!", ephemeral=True)
 
