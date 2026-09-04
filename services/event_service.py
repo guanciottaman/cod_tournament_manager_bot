@@ -575,7 +575,7 @@ async def delete_lobbies_roles(event_id: int, guild: discord.Guild):
 
 async def delete_lobbies_category(event_id: int, guild: discord.Guild):
     lobbies_channels = await get_lobby_codes_channels(event_id)
-    if lobbies_channels is None:
+    if not lobbies_channels:
         return
     lc = guild.get_channel(lobbies_channels[0])
     if lc is None:
