@@ -43,12 +43,11 @@ class TeamsSelectorView(discord.ui.View):
             self.teams_by_lobby[t.lobby].append(t)
         
         if self.use_lobbies and lobbies is not None:
-            self.lobbies = lobbies
-
+            self.lobbies: list[Lobby] = lobbies or []
             self.lobby_map: dict[int, Lobby] = {
-                l.lobby_id: l for l in self.lobbies
+                lobby.lobby_id: lobby for lobby in self.lobbies
             }
-            self.lobby_ids: list[int] = list(self.lobby_map.keys())
+            self.lobby_ids: list[int] = sorted(self.lobby_map.keys())
             self.lobby_ids.sort()
         self.add_item(self.build_select())
 
@@ -91,21 +90,32 @@ class TeamsSelectorView(discord.ui.View):
 
     def build_select(self) -> discord.ui.Select[Any]:
         if self.use_lobbies:
+            if not self.lobby_ids:
+                return discord.ui.Select(
+                    placeholder="Nessuna lobby disponibile",
+                    options=[
+                        discord.SelectOption(
+                            label="Nessuna lobby",
+                            value="empty",
+                        )
+                    ],
+                    disabled=True,
+                )
+
+            self.page = max(0, min(self.page, len(self.lobby_ids) - 1))
+
             lobby = self.lobby_map[self.lobby_ids[self.page]]
-            page_teams: list[Team] = self.teams_by_lobby[lobby.lobby_id]
-            placeholder = f"{lobby.name} (pagina {self.page + 1}/{len(self.lobbies)})"
+            page_teams = self.teams_by_lobby[lobby.lobby_id]
+            placeholder = (
+                f"{lobby.name} "
+                f"(pagina {self.page + 1}/{len(self.lobby_ids)})"
+            )
         else:
             start = self.page * 25
             end = start + 25
             page_teams = self.teams[start:end]
             placeholder = f"Seleziona team (pagina {self.page + 1})"
 
-        if not page_teams:
-            return discord.ui.Select(
-                placeholder="Nessun team disponibile",
-                options=[discord.SelectOption(label="Vuoto", value="0")],
-                disabled=True
-            )
 
         if self.interaction is None:
             return discord.ui.Select(

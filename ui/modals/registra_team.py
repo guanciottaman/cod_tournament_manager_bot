@@ -344,7 +344,7 @@ class TeamKDModal(discord.ui.Modal, title="Inserisci KD team"):
             inp: discord.ui.TextInput[Any] = discord.ui.TextInput(
                 label=f"KD {p}",
                 placeholder="Inserisci KD",
-                default=None if kds is None else str(self.kds[i]),
+                default=None if kds is None else f"{self.kds[i]:.2f}",
                 min_length=1,
                 max_length=5
             )
