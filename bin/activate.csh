@@ -16,10 +16,12 @@ setenv PATH "$VIRTUAL_ENV/"bin":$PATH"
 setenv VIRTUAL_ENV_PROMPT cod_tournament_manager_bot
 
 
-set _OLD_VIRTUAL_PROMPT="$prompt"
+if ($?prompt) then
+    set _OLD_VIRTUAL_PROMPT="$prompt"
 
-if (! "$?VIRTUAL_ENV_DISABLE_PROMPT") then
-    set prompt = "("cod_tournament_manager_bot") $prompt:q"
+    if (! "$?VIRTUAL_ENV_DISABLE_PROMPT") then
+        set prompt = "("cod_tournament_manager_bot") $prompt:q"
+    endif
 endif
 
 alias pydoc python -m pydoc

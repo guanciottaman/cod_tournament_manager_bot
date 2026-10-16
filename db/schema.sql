@@ -13,6 +13,8 @@ CREATE TABLE IF NOT EXISTS events(
     name TEXT,
     status TEXT DEFAULT 'active',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    registration_channel_id BIGINT,
+    management_channel_id BIGINT,
 
     FOREIGN KEY (guild_id) REFERENCES server_configs(guild_id) ON DELETE CASCADE
 );

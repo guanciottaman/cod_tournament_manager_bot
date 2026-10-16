@@ -599,6 +599,38 @@ async def delete_teams_category(event_id: int, guild: discord.Guild):
         return
     await category.delete()
 
+
+async def delete_event_channels(event_id: int, guild: discord.Guild):
+    row = await fetch_one(
+        """
+        SELECT registration_channel_id, management_channel_id
+        FROM events
+        WHERE event_id = $1 AND guild_id = $2
+        """,
+        (event_id, guild.id),
+    )
+
+    if row is None:
+        return
+
+    channel_ids = (
+        row["registration_channel_id"],
+        row["management_channel_id"],
+    )
+
+    for channel_id in channel_ids:
+        if channel_id is None:
+            continue
+
+        channel = guild.get_channel(channel_id)
+
+        if channel is None:
+            continue
+
+        await channel.delete(
+            reason=f"Eliminazione evento {event_id}"
+        )
+
 async def assign_lobby_roles(event_id: int, lobby_id: int, guild: discord.Guild):
     role_id = await get_lobby_role(event_id, lobby_id)
     if role_id is None:
