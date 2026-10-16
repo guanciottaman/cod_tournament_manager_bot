@@ -600,6 +600,32 @@ async def delete_teams_category(event_id: int, guild: discord.Guild):
     await category.delete()
 
 
+async def set_event_channel_id(
+    event_id: int,
+    guild_id: int,
+    channel_type: str,
+    channel_id: int,
+):
+    columns = {
+        "registration": "registration_channel_id",
+        "management": "management_channel_id",
+    }
+
+    column = columns.get(channel_type)
+    if column is None:
+        raise ValueError("Tipo di canale non valido")
+
+    await execute(
+        f"""
+        UPDATE events
+        SET {column} = $1
+        WHERE event_id = $2 AND guild_id = $3
+        """,
+        (channel_id, event_id, guild_id),
+    )
+
+
+
 async def delete_event_channels(event_id: int, guild: discord.Guild):
     logging.info(
         "Eliminazione canali evento %s nel server %s",

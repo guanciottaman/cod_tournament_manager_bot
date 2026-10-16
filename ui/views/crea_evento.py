@@ -34,6 +34,12 @@ async def create_registration_panel(
     channel = await interaction.guild.create_text_channel(
         name=f"Registrazioni {event.name}", overwrites=overwrites  # type: ignore
     )
+    await set_event_channel_id(
+        event.event_id,
+        interaction.guild.id,
+        "registration",
+        channel.id,
+    )
     placement_settings = await get_placement_settings(event.event_id)
     teams = await get_teams_by_event(event.event_id)
     await channel.send(
@@ -71,6 +77,12 @@ async def create_event_panel(
     }
     channel = await interaction.guild.create_text_channel(
         name=f"Gestione {event.name}", overwrites=overwrites  # type: ignore
+    )
+    await set_event_channel_id(
+        event.event_id,
+        interaction.guild.id,
+        "management",
+        channel.id,
     )
     placement_settings = await get_placement_settings(event.event_id)
     teams = await get_teams_by_event(event.event_id)
