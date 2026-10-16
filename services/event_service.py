@@ -620,11 +620,13 @@ async def delete_event_channels(event_id: int, guild: discord.Guild):
 
     for channel_id in channel_ids:
         if channel_id is None:
+            logging.info("Channel not found")
             continue
 
         channel = guild.get_channel(channel_id)
 
         if channel is None:
+            logging.info("Channel not present")
             continue
 
         await channel.delete(
