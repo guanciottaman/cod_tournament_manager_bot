@@ -601,6 +601,12 @@ async def delete_teams_category(event_id: int, guild: discord.Guild):
 
 
 async def delete_event_channels(event_id: int, guild: discord.Guild):
+    logging.info(
+        "Eliminazione canali evento %s nel server %s",
+        event_id,
+        guild.id,
+    )
+
     row = await fetch_one(
         """
         SELECT registration_channel_id, management_channel_id
@@ -610,7 +616,10 @@ async def delete_event_channels(event_id: int, guild: discord.Guild):
         (event_id, guild.id),
     )
 
+    logging.info("Risultato query canali evento %s: %r", event_id, row)
+
     if row is None:
+        logging.warning("Evento %s non trovato nel database", event_id)
         return
 
     channel_ids = (
@@ -620,18 +629,45 @@ async def delete_event_channels(event_id: int, guild: discord.Guild):
 
     for channel_id in channel_ids:
         if channel_id is None:
-            logging.info("Channel not found")
+            logging.info("ID canale non configurato")
             continue
 
-        channel = guild.get_channel(channel_id)
+        try:
+            channel = guild.get_channel(channel_id)
 
-        if channel is None:
-            logging.info("Channel not present")
-            continue
+            if channel is None:
+                logging.info(
+                    "Canale %s non in cache, provo fetch_channel",
+                    channel_id,
+                )
+                channel = await guild.fetch_channel(channel_id)
 
-        await channel.delete(
-            reason=f"Eliminazione evento {event_id}"
-        )
+            logging.info(
+                "Elimino canale %s (%s)",
+                channel.name,
+                channel.id,
+            )
+
+            await channel.delete(
+                reason=f"Eliminazione evento {event_id}"
+            )
+
+            logging.info("Canale %s eliminato", channel_id)
+
+        except discord.NotFound:
+            logging.warning("Canale %s già inesistente", channel_id)
+
+        except discord.Forbidden:
+            logging.exception(
+                "Permessi insufficienti per eliminare il canale %s",
+                channel_id,
+            )
+
+        except discord.HTTPException:
+            logging.exception(
+                "Errore Discord eliminando il canale %s",
+                channel_id,
+            )
 
 async def assign_lobby_roles(event_id: int, lobby_id: int, guild: discord.Guild):
     role_id = await get_lobby_role(event_id, lobby_id)
