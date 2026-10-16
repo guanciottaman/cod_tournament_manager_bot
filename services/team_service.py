@@ -339,13 +339,28 @@ async def edit_results(
     team_score_id: int,
     placement: int,
     players_kills: list[tuple[int, str, int]],
+    admin_mode: bool = False,
 ):
-    await execute("""
-        UPDATE team_scores SET 
-            placement = $1,
-            status = 'edited'
-        WHERE event_id = $2 AND team_id = $3 AND id = $4 AND status = 'pending'
-    """, (placement, event_id, team_id, team_score_id))
+    if admin_mode:
+        await execute("""
+            UPDATE team_scores SET
+                placement = $1,
+                status = 'edited'
+            WHERE event_id = $2
+                AND team_id = $3
+                AND id = $4
+                AND status IN ('pending', 'edited')
+        """, (placement, event_id, team_id, team_score_id))
+    else:
+        await execute("""
+            UPDATE team_scores SET
+                placement = $1
+            WHERE event_id = $2
+                AND team_id = $3
+                AND id = $4
+                AND status = 'pending'
+        """, (placement, event_id, team_id, team_score_id))
+
     for player_id, _, kills in players_kills:
         await execute("""
             UPDATE player_scores SET kills = $1

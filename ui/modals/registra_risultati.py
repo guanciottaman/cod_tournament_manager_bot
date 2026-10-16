@@ -114,7 +114,8 @@ class RegistraRisultatiModal(discord.ui.Modal, title="Registra i risultati"):
                 self.team_id,
                 self.team_score_id,
                 placement,
-                players_kills
+                players_kills,
+                self.admin_mode
             )
             embed = discord.Embed(
                 title="Risultato modificato",
